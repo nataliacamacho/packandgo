@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "149321863361",
+    "project_id": "packandgo-mexico",
+    "storage_bucket": "packandgo-mexico.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:149321863361:android:7fb33f28c34f89eaa54440",
+        "android_client_info": {
+          "package_name": "com.example.proyecto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEiEYAEvqNA8EfyRMuiVqKnVft6vN9vTY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
