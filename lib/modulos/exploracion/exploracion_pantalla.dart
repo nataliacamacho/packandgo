@@ -20,11 +20,11 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   void initState() {
     super.initState();
 
-    _paginas = [
-      const _ExploracionContenido(),
-      const BusquedaPantalla(),
-      const ViajesPantalla(),
-      const CuentaPantalla(),
+    _paginas = const [
+      _ExploracionContenido(),
+      BusquedaPantalla(),
+      ViajesPantalla(),
+      CuentaPantalla(),
     ];
   }
 
@@ -33,45 +33,51 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     return Scaffold(
       body: _paginas[_paginaActual],
 
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF0066D2),
-        currentIndex: _paginaActual,
-        type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        iconSize: 35,
-        onTap: (index) {
-          setState(() {
-            _paginaActual = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Explorar",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: "Búsqueda",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.wallet_travel),
-            label: "Viajes",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Cuenta",
-          ),
-        ],
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF0066D2),
+          currentIndex: _paginaActual,
+          type: BottomNavigationBarType.fixed,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+          iconSize: 30,
+          onTap: (index) {
+            setState(() {
+              _paginaActual = index;
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: "Explorar",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              label: "Búsqueda",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.wallet_travel),
+              label: "Viajes",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: "Cuenta",
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _ExploracionContenido extends StatelessWidget {
-  const _ExploracionContenido({super.key});
+  const _ExploracionContenido();
 
   @override
   Widget build(BuildContext context) {
