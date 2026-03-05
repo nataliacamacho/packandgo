@@ -37,7 +37,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
       appBar: AppBar(
         title: Text(
           "Pack&Go",
-          style: GoogleFonts.poppins(fontSize: 36, color: Colors.white),
+          style: GoogleFonts.poppins(fontSize: 36, color: const Color.fromARGB(255, 255, 255, 255)),
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF0066D2),
@@ -57,7 +57,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                 "Crear Cuenta",
                 style: GoogleFonts.poppins(
                   fontSize: 25,
-                  color: Colors.white,
+                  color: const Color.fromARGB(255, 255, 255, 255),
                 ),
               ),
             ),
@@ -77,7 +77,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                           vertical: 40,
                         ),
                         decoration: const BoxDecoration(
-                          color: Colors.white,
+                          color: Color.fromARGB(255, 255, 255, 255),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(35),
                             topRight: Radius.circular(35),
