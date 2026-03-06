@@ -75,7 +75,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
                           vertical: 40,
                         ),
                         decoration: const BoxDecoration(
-                          color: Colors.white,
+                          color: Color.fromARGB(255, 255, 255, 255),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(35),
                             topRight: Radius.circular(35),
@@ -85,7 +85,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
 
-                            /// CORREO
                             TextField(
                               controller: correoController,
                               onChanged: (_) {
@@ -118,7 +117,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                             const SizedBox(height: 20),
 
-                            /// CONTRASEÑA
                             TextField(
                               controller: passwordController,
                               obscureText: true,
@@ -152,7 +150,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                             const SizedBox(height: 30),
 
-                            /// BOTÓN LOGIN
                             Center(
                               child: SizedBox(
                                 width: 150,
@@ -251,7 +248,6 @@ Center(
 const SizedBox(height: 15),
                             const SizedBox(height: 15),
 
-                            /// BOTÓN INVITADO
                             Center(
                               child: TextButton(
                                 onPressed: () async {
@@ -284,7 +280,6 @@ const SizedBox(height: 15),
 
                             const SizedBox(height: 20),
 
-                            /// REGISTRO
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [

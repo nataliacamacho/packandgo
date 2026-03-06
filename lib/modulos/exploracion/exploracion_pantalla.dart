@@ -32,6 +32,8 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _paginas[_paginaActual],
+      
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
 
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(
@@ -45,7 +47,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
           showSelectedLabels: false,
           showUnselectedLabels: false,
           selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white70,
+          unselectedItemColor: Colors.white60,
           iconSize: 30,
           onTap: (index) {
             setState(() {
@@ -94,7 +96,7 @@ class _ExploracionContenido extends StatelessWidget {
                 ),
               ),
               centerTitle: true,
-              backgroundColor: Colors.transparent,
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
               elevation: 0,
             ),
             
@@ -129,11 +131,11 @@ class _ExploracionContenido extends StatelessWidget {
               alignment: Alignment.center,
               child: ElevatedButton.icon(
                 onPressed: () {},
-                icon: const Icon(Icons.add, color: Colors.white),
+                icon: const Icon(Icons.add, color: Color.fromARGB(255, 255, 255, 255)),
                 label: Text(
                   "Crear Viaje",
                   style: GoogleFonts.poppins(
-                    color: Colors.white,
+                    color: const Color.fromARGB(255, 255, 255, 255),
                   ),
                 ),
                 style: ElevatedButton.styleFrom(

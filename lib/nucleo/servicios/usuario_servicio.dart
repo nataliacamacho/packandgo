@@ -30,7 +30,6 @@ class UsuarioServicio {
       throw Exception("No hay usuario autenticado");
     }
 
-    // 🔹 Actualizar nombre en Authentication
     if (nombreUsuario != null && nombreUsuario.isNotEmpty) {
       await user.updateDisplayName(nombreUsuario);
 
@@ -39,7 +38,6 @@ class UsuarioServicio {
       });
     }
 
-    // 🔹 Actualizar contraseña en Authentication
     if (nuevaPassword != null && nuevaPassword.isNotEmpty) {
       await user.updatePassword(nuevaPassword);
     }

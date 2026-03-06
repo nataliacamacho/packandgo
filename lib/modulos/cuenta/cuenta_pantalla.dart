@@ -88,7 +88,7 @@ class CuentaPantalla extends StatelessWidget {
                                     ),
                                   ),
                                 child: Text("Editar perfil", style: GoogleFonts.poppins(
-                                      color: Colors.white),
+                                      color: const Color.fromARGB(255, 255, 255, 255)),
                               ),
                               ),
                             ],

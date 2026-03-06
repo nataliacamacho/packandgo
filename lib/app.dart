@@ -16,6 +16,7 @@ class PackandGo extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true, 
         textTheme: GoogleFonts.poppinsTextTheme(), 
+        scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
         ),
       initialRoute: '/inicio',
       routes: {

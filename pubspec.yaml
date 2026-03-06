@@ -42,6 +42,12 @@ dependencies:
   http: ^1.6.0
   
 
+  mapbox_maps_flutter: ^2.0.0
+  geolocator: ^11.0.0
+  permission_handler: ^11.3.0
+  
+  
+
 dev_dependencies:
   flutter_native_splash: ^2.4.0
   flutter_test:

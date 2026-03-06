@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/nucleo/servicios/usuario_servicio.dart';
@@ -17,8 +15,10 @@ class _EditarPerfilState extends State<EditarPerfil> {
   final user = FirebaseAuth.instance.currentUser;
 
   late TextEditingController usuarioController;
-  late TextEditingController passwordController;
   late TextEditingController correoController;
+
+  late TextEditingController passwordActualController;
+  late TextEditingController nuevaPasswordController;
 
   bool cargando = false;
 
@@ -26,8 +26,11 @@ class _EditarPerfilState extends State<EditarPerfil> {
   void initState() {
     super.initState();
     usuarioController = TextEditingController();
-    passwordController = TextEditingController();
     correoController = TextEditingController();
+
+    passwordActualController = TextEditingController();
+    nuevaPasswordController = TextEditingController();
+
     _cargarDatosUsuario();
   }
 
@@ -37,29 +40,51 @@ class _EditarPerfilState extends State<EditarPerfil> {
     if (snapshot.exists) {
       final datos = snapshot.data()!;
       usuarioController.text = datos['nombreUsuario'] ?? '';
-      passwordController.text = datos['password'] ?? '';
       correoController.text = datos['correo'] ?? '';
     }
   }
 
   Future<void> _guardarCambios() async {
     if (user == null) return;
+
     setState(() {
       cargando = true;
     });
+
     try {
+      if (nuevaPasswordController.text.trim().isNotEmpty) {
+        final cred = EmailAuthProvider.credential(
+          email: user!.email!,
+          password: passwordActualController.text.trim(),
+        );
+
+        await user!.reauthenticateWithCredential(cred);
+
+        await user!.updatePassword(
+          nuevaPasswordController.text.trim(),
+        );
+      }
+
       await usuarioServicio.actualizarUsuario(
         nombreUsuario: usuarioController.text.trim(),
-        nuevaPassword: passwordController.text.trim(),
         correo: correoController.text.trim(),
       );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Datos actualizados correctamente')),
       );
+
+      passwordActualController.clear();
+      nuevaPasswordController.clear();
+
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de autenticación: ${e.message}')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al actualizar datos: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al actualizar datos: $e')),
+      );
     } finally {
       setState(() {
         cargando = false;
@@ -70,18 +95,20 @@ class _EditarPerfilState extends State<EditarPerfil> {
   @override
   void dispose() {
     usuarioController.dispose();
-    passwordController.dispose();
     correoController.dispose();
+    passwordActualController.dispose();
+    nuevaPasswordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
         title: Text("Pack&Go", style: GoogleFonts.poppins(fontSize: 36)),
         centerTitle: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 0,
       ),
       body: SafeArea(
@@ -126,14 +153,27 @@ class _EditarPerfilState extends State<EditarPerfil> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
+
                                   TextField(
-                                    controller: passwordController,
+                                    controller: passwordActualController,
+                                    obscureText: true,
                                     decoration: const InputDecoration(
-                                      labelText: 'Contraseña',
+                                      labelText: 'Contraseña actual',
                                       border: OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 20),
+
+                                  TextField(
+                                    controller: nuevaPasswordController,
+                                    obscureText: true,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Nueva contraseña',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+
                                   TextField(
                                     controller: usuarioController,
                                     decoration: const InputDecoration(
@@ -142,6 +182,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
                                     ),
                                   ),
                                   const SizedBox(height: 30),
+
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFFF6A230),
@@ -154,9 +195,12 @@ class _EditarPerfilState extends State<EditarPerfil> {
                                         : _guardarCambios,
                                     child: cargando
                                         ? const CircularProgressIndicator(
-                                            color: Colors.white,
+                                            color: Color.fromARGB(255, 255, 255, 255),
                                           )
-                                        : const Text('Guardar cambios', style: TextStyle(color: Colors.white)),
+                                        : const Text(
+                                            'Guardar cambios',
+                                            style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                                          ),
                                   ),
                                 ],
                               );
