@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto/nucleo/datos_semillas.dart';
+import 'package:proyecto/nucleo/servicios/foursquare_servicio.dart';
 
 class LoginPantalla extends StatefulWidget {
   const LoginPantalla({super.key});
@@ -236,7 +238,17 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 ),
                               ),
                             ),
-
+Center(
+  child: ElevatedButton(
+    onPressed: () async {
+      // Le pasamos la latitud y longitud de Guadalajara
+      await FoursquareServicio.buscarLugaresCercanos(20.659, -103.349);
+    },
+    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+    child: const Text("Probar API Foursquare", style: TextStyle(color: Colors.white)),
+  ),
+),
+const SizedBox(height: 15),
                             const SizedBox(height: 15),
 
                             /// BOTÓN INVITADO
