@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:proyecto/nucleo/datos_semillas.dart';
 import 'package:proyecto/nucleo/servicios/foursquare_servicio.dart';
 
 class LoginPantalla extends StatefulWidget {
