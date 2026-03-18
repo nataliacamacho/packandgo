@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -65,4 +62,14 @@ class DefaultFirebaseOptions {
     storageBucket: 'packandgo-mexico.firebasestorage.app',
     iosBundleId: 'com.example.proyecto',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBo785jYR0lMrCGaXTDHGPzAoIvMFS-HnI',
+    appId: '1:149321863361:web:df244549fcd9f6a2a54440',
+    messagingSenderId: '149321863361',
+    projectId: 'packandgo-mexico',
+    authDomain: 'packandgo-mexico.firebaseapp.com',
+    storageBucket: 'packandgo-mexico.firebasestorage.app',
+  );
+
 }

@@ -1,39 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // Este es el archivo que se generó solito
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:flutter/foundation.dart'; // para detectar si estamos en Web
+import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
-  // 1. Aseguramos que el motor de Flutter esté listo
+import 'app.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 2. Inicializamos Firebase con la configuración automática
+  await dotenv.load(fileName: ".env"); 
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pack&Go México',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      // Por ahora mostramos una pantalla simple para ver que funciona
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            '¡Pack&Go Conectado a Firebase!', 
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
+  MapboxOptions.setAccessToken('');
+  if (!kIsWeb) {
+    MapboxOptions.setAccessToken(dotenv.env['MAPBOX_ACCESS_TOKEN']?.trim() ?? '');
   }
+
+  runApp(const PackandGo());
 }
