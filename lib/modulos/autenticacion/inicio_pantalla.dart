@@ -148,14 +148,13 @@ class _LoginPantallaState extends State<LoginPantalla> {
                               ),
 
                             const SizedBox(height: 30),
-
+//boton ingresar
                             Center(
                               child: SizedBox(
                                 width: 150,
                                 height: 50,
                                 child: ElevatedButton(
                                   onPressed: () async {
-
                                     setState(() {
                                       errorCorreo = null;
                                       errorPassword = null;
@@ -163,58 +162,44 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                                     if (correoController.text.isEmpty) {
                                       setState(() {
-                                        errorCorreo =
-                                            "El correo es obligatorio";
+                                        errorCorreo = "El correo es obligatorio";
                                       });
                                       return;
                                     }
 
                                     if (passwordController.text.isEmpty) {
                                       setState(() {
-                                        errorPassword =
-                                            "La contraseña es obligatoria";
+                                        errorPassword = "La contraseña es obligatoria";
                                       });
                                       return;
                                     }
 
                                     try {
-
-                                      await FirebaseAuth.instance
-                                          .signInWithEmailAndPassword(
+                                      await FirebaseAuth.instance.signInWithEmailAndPassword(
                                         email: correoController.text.trim(),
                                         password: passwordController.text.trim(),
                                       );
 
                                       if (!context.mounted) return;
 
-                                      Navigator.pushReplacementNamed(
-                                          context, '/exploracion');
+                                      Navigator.pushReplacementNamed(context, '/exploracion');
 
                                     } on FirebaseAuthException catch (e) {
-
                                       if (e.code == 'user-not-found') {
                                         setState(() {
-                                          errorCorreo =
-                                              "No existe una cuenta con este correo";
+                                          errorCorreo = "No existe una cuenta con este correo";
                                         });
-                                      } 
-                                      else if (e.code == 'invalid-email') {
+                                      } else if (e.code == 'invalid-email') {
                                         setState(() {
-                                          errorCorreo =
-                                              "El formato del correo es incorrecto";
+                                          errorCorreo = "El formato del correo es incorrecto";
                                         });
-                                      } 
-                                      else if (e.code == 'wrong-password' ||
-                                               e.code == 'invalid-credential') {
+                                      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
                                         setState(() {
-                                          errorPassword =
-                                              "La contraseña es incorrecta";
+                                          errorPassword = "La contraseña es incorrecta";
                                         });
-                                      } 
-                                      else {
+                                      } else {
                                         setState(() {
-                                          errorCorreo =
-                                              "Error al iniciar sesión";
+                                          errorCorreo = "Error al iniciar sesión";
                                         });
                                       }
                                     }
@@ -234,19 +219,9 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 ),
                               ),
                             ),
-Center(
-  child: ElevatedButton(
-    onPressed: () async {
-      // Le pasamos la latitud y longitud de Guadalajara
-      await FoursquareServicio.buscarLugaresCercanos(20.659, -103.349);
-    },
-    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-    child: const Text("Probar API Foursquare", style: TextStyle(color: Colors.white)),
-  ),
-),
-const SizedBox(height: 15),
-                            const SizedBox(height: 15),
 
+                            const SizedBox(height: 15),
+//boton invitado
                             Center(
                               child: TextButton(
                                 onPressed: () async {
