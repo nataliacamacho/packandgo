@@ -12,7 +12,7 @@ class TarjetaLugar extends StatelessWidget {
     required this.nombre,
     required this.ubicacion,
     required this.lat,
-    required this.lng,
+    required this.lng, required Null Function() onTap,
   });
 
   @override

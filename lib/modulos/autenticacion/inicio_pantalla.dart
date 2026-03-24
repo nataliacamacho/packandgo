@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
-import 'package:proyecto/nucleo/servicios/foursquare_servicio.dart';
+
 
 class LoginPantalla extends StatefulWidget {
   const LoginPantalla({super.key});
@@ -12,7 +12,6 @@ class LoginPantalla extends StatefulWidget {
 }
 
 class _LoginPantallaState extends State<LoginPantalla> {
-
   final TextEditingController correoController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -29,7 +28,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
   }
 
   Future<void> obtenerUbicacion() async {
-
     final posicion = await ubicacionServicio.obtenerUbicacionActual();
 
     if (posicion != null) {
@@ -41,7 +39,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
   }
 
   Future<void> iniciarSesion() async {
-
     setState(() {
       errorCorreo = null;
       errorPassword = null;
@@ -62,7 +59,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
     }
 
     try {
-
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: correoController.text.trim(),
         password: passwordController.text.trim(),
@@ -70,29 +66,23 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
       await obtenerUbicacion();
 
-      if (!context.mounted) return;
+      if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, '/exploracion');
-
     } on FirebaseAuthException catch (e) {
-
       if (e.code == 'user-not-found') {
         setState(() {
           errorCorreo = "No existe una cuenta con este correo";
         });
-      } 
-      else if (e.code == 'invalid-email') {
+      } else if (e.code == 'invalid-email') {
         setState(() {
           errorCorreo = "El formato del correo es incorrecto";
         });
-      } 
-      else if (e.code == 'wrong-password' ||
-               e.code == 'invalid-credential') {
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         setState(() {
           errorPassword = "La contraseña es incorrecta";
         });
-      } 
-      else {
+      } else {
         setState(() {
           errorCorreo = "Error al iniciar sesión";
         });
@@ -101,19 +91,15 @@ class _LoginPantallaState extends State<LoginPantalla> {
   }
 
   Future<void> entrarComoInvitado() async {
-
     try {
-
       await FirebaseAuth.instance.signInAnonymously();
 
       await obtenerUbicacion();
 
-      if (!context.mounted) return;
+      if (!mounted) return;
 
-      Navigator.pushReplacementNamed(context, '/exploracion');
-
+      Navigator.pushReplacementNamed(context, '/navegacion');
     } on FirebaseAuthException {
-
       setState(() {
         errorCorreo = "Error al ingresar como invitado";
       });
@@ -122,12 +108,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF0066D2),
-
-
+      
       appBar: AppBar(
         title: Text(
           "Pack&Go",
@@ -137,14 +121,13 @@ class _LoginPantallaState extends State<LoginPantalla> {
         backgroundColor: const Color(0xFF0066D2),
         elevation: 0,
       ),
-
+      
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 40),
-            const SizedBox(height: 40),
-
+            
             Padding(
               padding: const EdgeInsets.only(left: 22, bottom: 15),
               child: Text(
@@ -155,14 +138,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
                 ),
               ),
             ),
-           ],
-          ),
-
-
+            
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-
                   return SingleChildScrollView(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
@@ -181,11 +160,11 @@ class _LoginPantallaState extends State<LoginPantalla> {
                             topRight: Radius.circular(35),
                           ),
                         ),
-
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
+                            
+                            // --- CAMPO CORREO ---
                             TextField(
                               controller: correoController,
                               onChanged: (_) {
@@ -203,7 +182,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 ),
                               ),
                             ),
-
+                            
                             if (errorCorreo != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 5, left: 10),
@@ -215,39 +194,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                   ),
                                 ),
                               ),
-                            TextField(
-                              controller: correoController,
-                              onChanged: (_) {
-                                setState(() {
-                                  errorCorreo = null;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                hintText: "Correo electrónico",
-                                filled: true,
-                                fillColor: Colors.grey[200],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                            ),
-
-                            if (errorCorreo != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
-                                child: Text(
-                                  errorCorreo!,
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-
+                              
                             const SizedBox(height: 20),
-                            const SizedBox(height: 20),
-
+                            
+                            // --- CAMPO CONTRASEÑA ---
                             TextField(
                               controller: passwordController,
                               obscureText: true,
@@ -266,7 +216,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 ),
                               ),
                             ),
-
+                            
                             if (errorPassword != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 5, left: 10),
@@ -278,39 +228,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                   ),
                                 ),
                               ),
-                            TextField(
-                              controller: passwordController,
-                              obscureText: true,
-                              onChanged: (_) {
-                                setState(() {
-                                  errorPassword = null;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                hintText: "Contraseña",
-                                filled: true,
-                                fillColor: Colors.grey[200],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                            ),
-
-                            if (errorPassword != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
-                                child: Text(
-                                  errorPassword!,
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-
+                              
                             const SizedBox(height: 30),
-
+                            
+                            // --- BOTÓN INGRESAR ---
                             Center(
                               child: SizedBox(
                                 width: 150,
@@ -332,19 +253,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 ),
                               ),
                             ),
-Center(
-  child: ElevatedButton(
-    onPressed: () async {
-      // Le pasamos la latitud y longitud de Guadalajara
-      await FoursquareServicio.buscarLugaresCercanos(20.659, -103.349);
-    },
-    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-    child: const Text("Probar API Foursquare", style: TextStyle(color: Colors.white)),
-  ),
-),
-const SizedBox(height: 15),
-                            const SizedBox(height: 15),
-
+                            
+                            const SizedBox(height: 20),
+                            
+                            // --- BOTÓN INVITADO ---
                             Center(
                               child: TextButton(
                                 onPressed: entrarComoInvitado,
@@ -357,14 +269,13 @@ const SizedBox(height: 15),
                                 ),
                               ),
                             ),
-
+                            
                             const SizedBox(height: 20),
-                            const SizedBox(height: 20),
-
+                            
+                            // --- ENLACE CREAR CUENTA ---
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-
                                 Text(
                                   "¿No tienes cuenta?",
                                   style: GoogleFonts.poppins(
@@ -372,11 +283,9 @@ const SizedBox(height: 15),
                                     color: Colors.grey[700],
                                   ),
                                 ),
-
                                 TextButton(
                                   onPressed: () {
-                                    Navigator.pushReplacementNamed(
-                                        context, '/registro');
+                                    Navigator.pushReplacementNamed(context, '/registro');
                                   },
                                   child: Text(
                                     "Crear cuenta",
@@ -387,7 +296,7 @@ const SizedBox(height: 15),
                                 ),
                               ],
                             ),
-
+                            
                           ],
                         ),
                       ),
@@ -396,8 +305,9 @@ const SizedBox(height: 15),
                 },
               ),
             ),
-          ,
+          ],
         ),
-      );
+      ),
+    );
   }
 }

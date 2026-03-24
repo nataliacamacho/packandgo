@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart';
-import '../../nucleo/servicios/foursquare_servicio.dart'; 
+import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart'; 
 import '../../nucleo/servicios/opentripmap_servicio.dart';
 import 'lugar_seleccionado_pantalla.dart';
 
@@ -269,32 +268,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
             ],
           ),
         ),
-      ),
-      
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF0066D2),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        currentIndex: 0,
-        onTap: (index) {
-          switch (index) {
-            case 0: break;
-            case 1: break;
-            case 2: break;
-            case 3: break;
-            case 4: Navigator.pushNamed(context, '/EditarPerfil'); break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home, size: 32), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.search, size: 32), label: 'Buscar'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box, size: 32), label: 'Crear'),
-          BottomNavigationBarItem(icon: Icon(Icons.luggage, size: 32), label: 'Viaje'),
-          BottomNavigationBarItem(icon: Icon(Icons.person, size: 32), label: 'Perfil'),
-        ],
       ),
     );
   }

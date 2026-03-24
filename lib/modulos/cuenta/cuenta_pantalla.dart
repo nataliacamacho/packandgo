@@ -1,9 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:proyecto/modulos/cuenta/editar_pantalla.dart';
-import 'package:proyecto/nucleo/servicios/usuario_servicio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/modulos/cuenta/editar_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/usuario_servicio.dart';
@@ -14,9 +10,6 @@ class CuentaPantalla extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usuarioServicio = UsuarioServicio();
-    final user = FirebaseAuth.instance.currentUser;
-
     final usuarioServicio = UsuarioServicio();
     final user = FirebaseAuth.instance.currentUser;
 

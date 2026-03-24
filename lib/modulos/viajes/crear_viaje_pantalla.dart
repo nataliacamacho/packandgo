@@ -106,10 +106,6 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                 onTipoChanged: (_) {},
                 onEstiloChanged: (_) {},
                 onPrecioChanged: (_) {},
-                mostrarDestino: true,
-                mostrarTipo: false,
-                mostrarEstilo: false,
-                mostrarPrecio: false,
               ),
 
               const SizedBox(height: 20),
