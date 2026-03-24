@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart';
 import '../../nucleo/servicios/foursquare_servicio.dart'; 
-import 'lugar_seleccionado_pantalla.dart';
 import '../../nucleo/servicios/opentripmap_servicio.dart';
+import 'lugar_seleccionado_pantalla.dart';
+
 class ExploracionPantalla extends StatefulWidget {
   const ExploracionPantalla({super.key});
 
@@ -75,7 +78,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
   @override
   Widget build(BuildContext context) {
-
     String nombre = 'Desconocido';
     String urlImagen = '';
 
@@ -162,7 +164,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
                               const SizedBox(width: 15),
 
-                              // --- ESTE ES EL BLOQUE DE LA TARJETA CENTRAL QUE DEBES REEMPLAZAR ---
+                              // --- BLOQUE DE LA TARJETA CENTRAL ---
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () {
@@ -199,7 +201,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                                         Padding(
                                           padding: const EdgeInsets.all(15.0),
                                           child: Text(
-                                            // Usamos la misma variable 'nombre' que ya tenías definida arriba
                                             nombre,
                                             style: const TextStyle(
                                               color: Colors.white, 
@@ -217,6 +218,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                               ),
                               const SizedBox(width: 15),
 
+                              // Flecha Derecha
                               GestureDetector(
                                 onTap: indiceActual < lugaresRecomendados.length - 1 ? _siguienteLugar : null,
                                 child: Container(
@@ -232,38 +234,38 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                             ],
                           ),
               ),
-            const SizedBox(height: 40),
+              const SizedBox(height: 40),
 
-              Center(
-                child: ElevatedButton(
-                  onPressed: () {},
+              // --- BOTÓN CREAR VIAJE (Fusionado con el de Natalia) ---
+              Align(
+                alignment: Alignment.center,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CrearViajePantalla(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: Text(
+                    "Crear Viaje",
+                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066D2),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    backgroundColor: const Color(0xFFF6A230),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 15,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF6A230),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        "Crear Viaje",
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
