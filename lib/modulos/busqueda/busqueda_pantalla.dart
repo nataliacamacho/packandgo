@@ -3,9 +3,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/compartidos/widgets/barra_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/filtros_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/tarjeta_lugar.dart';
+import 'package:proyecto/modulos/busqueda/lugarelegido_pantalla.dart';
 
 class BusquedaPantalla extends StatefulWidget {
+class BusquedaPantalla extends StatefulWidget {
   const BusquedaPantalla({super.key});
+
+  @override
+  State<BusquedaPantalla> createState() => _BusquedaPantallaState();
+}
+
+class _BusquedaPantallaState extends State<BusquedaPantalla> {
+  String query = "";
+  String? destinoSeleccionado;
+  String? tipoSeleccionado;
+  String? estiloSeleccionado;
+  String? precioSeleccionado;
+
 
   @override
   State<BusquedaPantalla> createState() => _BusquedaPantallaState();
@@ -53,42 +67,35 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
               tipoSeleccionado: tipoSeleccionado,
               estiloSeleccionado: estiloSeleccionado,
               precioSeleccionado: precioSeleccionado,
-
-              onDestinoChanged: (valor) {
-                setState(() {
-                  destinoSeleccionado = valor;
-                });
-              },
-
-              onTipoChanged: (valor) {
-                setState(() {
-                  tipoSeleccionado = valor;
-                });
-              },
-
-              onEstiloChanged: (valor) {
-                setState(() {
-                  estiloSeleccionado = valor;
-                });
-              },
-
-              onPrecioChanged: (valor) {
-                setState(() {
-                  precioSeleccionado = valor;
-                });
-              },
+              onDestinoChanged: (v) => setState(() => destinoSeleccionado = v),
+              onTipoChanged: (v) => setState(() => tipoSeleccionado = v),
+              onEstiloChanged: (v) => setState(() => estiloSeleccionado = v),
+              onPrecioChanged: (v) => setState(() => precioSeleccionado = v),
             ),
 
             const SizedBox(height: 16),
 
             Expanded(
               child: ListView(
-                children: const [
+                children: [
                   TarjetaLugar(
                     nombre: "Teotihuacán",
                     ubicacion: "Estado de México",
                     lat: 19.6925,
                     lng: -98.8430,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LugarelegidoPantalla(
+                            nombre: "Teotihuacán",
+                            ubicacion: "Estado de México",
+                            lat: 19.6925,
+                            lng: -98.8430,
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   TarjetaLugar(
@@ -96,6 +103,19 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                     ubicacion: "Yucatán",
                     lat: 20.6843,
                     lng: -88.5678,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LugarelegidoPantalla(
+                            nombre: "Chichén Itzá",
+                            ubicacion: "Yucatán",
+                            lat: 20.6843,
+                            lng: -88.5678,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

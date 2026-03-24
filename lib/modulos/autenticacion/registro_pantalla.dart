@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegistroPantalla extends StatefulWidget {
   const RegistroPantalla({super.key});
@@ -34,6 +36,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF0066D2),
 
+
       appBar: AppBar(
         title: Text(
           "Pack&Go",
@@ -50,6 +53,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
           children: [
 
             const SizedBox(height: 40),
+            const SizedBox(height: 40),
 
             Padding(
               padding: const EdgeInsets.only(left: 22, bottom: 15),
@@ -58,7 +62,16 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                 style: GoogleFonts.poppins(
                   fontSize: 25,
                   color: const Color.fromARGB(255, 255, 255, 255),
+            Padding(
+              padding: const EdgeInsets.only(left: 22, bottom: 15),
+              child: Text(
+                "Crear Cuenta",
+                style: GoogleFonts.poppins(
+                  fontSize: 25,
+                  color: const Color.fromARGB(255, 255, 255, 255),
                 ),
+              ),
+            ),
               ),
             ),
 
@@ -281,7 +294,32 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                               ),
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "¿Ya tienes cuenta?",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pushReplacementNamed(
+                                        context, '/inicio');
+                                  },
+                                  child: Text(
+                                    "Iniciar sesión",
+                                    style: GoogleFonts.poppins(
+                                      color: const Color(0xFF0066D2),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),

@@ -4,6 +4,7 @@ import 'modulos/exploracion/exploracion_pantalla.dart';
 import 'modulos/autenticacion/registro_pantalla.dart';
 import 'modulos/cuenta/editar_pantalla.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'modulos/autenticacion/auth_gate.dart';
 
 class PackandGo extends StatelessWidget {
   const PackandGo({super.key});
@@ -18,7 +19,7 @@ class PackandGo extends StatelessWidget {
         textTheme: GoogleFonts.poppinsTextTheme(), 
         scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
         ),
-      initialRoute: '/inicio',
+      home: const AuthGate(),
       routes: {
         '/inicio': (context) => const LoginPantalla(),
         '/registro': (context) => const RegistroPantalla(),
