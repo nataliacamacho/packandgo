@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:proyecto/modulos/viajes/apartados/hospedaje/hospedaje_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
 import 'modulos/autenticacion/inicio_pantalla.dart';
 import 'modulos/exploracion/exploracion_pantalla.dart';
 import 'modulos/autenticacion/registro_pantalla.dart';
@@ -25,6 +27,8 @@ class PackandGo extends StatelessWidget {
         '/registro': (context) => const RegistroPantalla(),
         '/exploracion': (context) => ExploracionPantalla(),
         '/EditarPerfil': (context) => const EditarPerfil(),
+        '/transporte': (context) => const TransportePantalla(destino: ''),
+        '/hospedaje': (context) => const HospedajePantalla(destino: '',),
       },
     );
   }

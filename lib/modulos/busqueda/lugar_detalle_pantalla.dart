@@ -70,7 +70,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
     await mapboxMap.setCamera(
       CameraOptions(
         center: Point(coordinates: Position(lng, lat)),
-        zoom: 14,
+        zoom: 16,
       ),
     );
 
