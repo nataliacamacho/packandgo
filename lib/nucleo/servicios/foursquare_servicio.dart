@@ -18,20 +18,34 @@ class FoursquareServicio {
       'https://api.foursquare.com/v3/places/search'
       '?ll=$lat,$lng'
       '&radius=3000'
-      '&limit=20',
+      '&limit=10',
     );
 
     try {
       final respuesta = await http.get(
         url,
-        headers: {'Accept': 'application/json', 'Authorization': apiKey},
-      );
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': apiKey,
+          'Content-Type': 'application/json',
+        },
+      )
+      .timeout(const Duration(seconds: 10));
 
       print("📡 STATUS CODE: ${respuesta.statusCode}");
       print("📦 BODY: ${respuesta.body}");
+      print("🔑 API KEY: $apiKey");
+
+      if (respuesta.statusCode == 200) {
+        final data = json.decode(respuesta.body);
+        return data['results']; // 👈 AQUÍ está lo importante
+      } else {
+        print("❌ Error en la API");
+        return [];
+      }
     } catch (e) {
       print("❌ ERROR: $e");
-    }
       return [];
+    }
   }
 }
