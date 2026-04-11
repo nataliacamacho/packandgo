@@ -1,9 +1,17 @@
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:proyecto/compartidos/widgets/barra_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/filtros_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/tarjeta_lugar.dart';
 import 'package:proyecto/modulos/busqueda/lugarelegido_pantalla.dart';
+import 'package:proyecto/nucleo/servicios/foursquare_servicio.dart';
+import 'package:proyecto/nucleo/servicios/opentripmap_servicio.dart';
+import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
 
 class BusquedaPantalla extends StatefulWidget {
   const BusquedaPantalla({super.key});
