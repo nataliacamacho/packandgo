@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
 
 class DetalleViajePantalla extends StatelessWidget {
   final String idViaje;
@@ -15,13 +16,13 @@ class DetalleViajePantalla extends StatelessWidget {
     required this.fechaInicio,
     required this.fechaFin,
     required this.descripcion,
+    required String destino,
   });
 
   @override
   Widget build(BuildContext context) {
     String fechaInicioTexto =
         "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}";
-
     String fechaFinTexto = "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}";
 
     return Scaffold(
@@ -43,7 +44,6 @@ class DetalleViajePantalla extends StatelessWidget {
                   width: double.infinity,
                   decoration: const BoxDecoration(color: Color(0xFF0066D2)),
                 ),
-
                 Positioned(
                   bottom: 20,
                   left: 20,
@@ -59,17 +59,16 @@ class DetalleViajePantalla extends StatelessWidget {
                           color: Colors.white,
                         ),
                       ),
-
                       const SizedBox(height: 4),
 
                       if (descripcion.isNotEmpty)
-                      Text(
-                        descripcion.isNotEmpty ? "$descripcion" : "",
-                        style: GoogleFonts.poppins(
-                          color: const Color.fromARGB(179, 255, 255, 255),
-                          fontSize: 16,
+                        Text(
+                          descripcion,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
 
                       const SizedBox(height: 5),
 
@@ -98,11 +97,64 @@ class DetalleViajePantalla extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            item(Icons.directions_car, "Transporte", "Opciones para llegar al destino"),
-            item(Icons.hotel, "Hospedaje", "Hoteles disponibles en la zona"),
-            item(Icons.backpack, "Maleta", "Lista recomendada para tu viaje"),
-            item(Icons.map, "Itinerario", "Planea tus actividades por día"),
-            item(Icons.book, "Diario Personal", "Registra tus recuerdos"),
+            item(
+              context,
+              Icons.directions_car,
+              "Transporte",
+              "Opciones para llegar al destino",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TransportePantalla(
+                      destino: nombre.isNotEmpty
+                          ? nombre
+                          : "Destino no disponible",
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            item(
+              context,
+              Icons.hotel,
+              "Hospedaje",
+              "Hoteles disponibles en la zona",
+              onTap: () {
+                Navigator.pushNamed(context, '/hospedaje');
+              },
+            ),
+
+            item(
+              context,
+              Icons.backpack,
+              "Maleta",
+              "Lista recomendada para tu viaje",
+              onTap: () {
+                Navigator.pushNamed(context, '/maleta');
+              },
+            ),
+
+            item(
+              context,
+              Icons.map,
+              "Itinerario",
+              "Planea tus actividades por día",
+              onTap: () {
+                Navigator.pushNamed(context, '/itinerario');
+              },
+            ),
+
+            item(
+              context,
+              Icons.book,
+              "Diario Personal",
+              "Registra tus recuerdos",
+              onTap: () {
+                Navigator.pushNamed(context, '/diario');
+              },
+            ),
 
             const SizedBox(height: 30),
           ],
@@ -111,7 +163,13 @@ class DetalleViajePantalla extends StatelessWidget {
     );
   }
 
-  Widget item(IconData icono, String titulo, String subtitulo) {
+  Widget item(
+    BuildContext context,
+    IconData icono,
+    String titulo,
+    String subtitulo, {
+    required VoidCallback onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Container(
@@ -127,14 +185,7 @@ class DetalleViajePantalla extends StatelessWidget {
           ],
         ),
         child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icono, color: const Color(0xFF0066D2)),
-          ),
+          leading: Icon(icono, color: const Color(0xFF0066D2)),
           title: Text(
             titulo,
             style: GoogleFonts.poppins(
@@ -142,12 +193,8 @@ class DetalleViajePantalla extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          subtitle: Text(subtitulo, style: GoogleFonts.poppins(
-              fontSize: 14,
-            ),
-            ),
-         
-          onTap: () {},
+          subtitle: Text(subtitulo, style: GoogleFonts.poppins(fontSize: 14)),
+          onTap: onTap,
         ),
       ),
     );

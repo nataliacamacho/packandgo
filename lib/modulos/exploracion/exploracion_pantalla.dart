@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart'; 
+import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
+import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart';
 import '../../nucleo/servicios/opentripmap_servicio.dart';
-import 'lugar_seleccionado_pantalla.dart';
+import '../../nucleo/servicios/ubicacion_servicio.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ExploracionPantalla extends StatefulWidget {
   const ExploracionPantalla({super.key});
@@ -13,168 +14,266 @@ class ExploracionPantalla extends StatefulWidget {
 
 class _ExploracionPantallaState extends State<ExploracionPantalla> {
   List<dynamic> lugaresRecomendados = [];
-  bool estaCargando = true; 
-  
-  // Llevamos la cuenta de qué tarjeta vamos viendo
-  int indiceActual = 0; 
+  bool estaCargando = true;
+  int indiceActual = 0;
+
+  final List<Map<String, dynamic>> ciudadesPopulares = [
+    {'name': 'Ciudad de México', 'lat': 19.4326, 'lng': -99.1332},
+    {'name': 'Guadalajara', 'lat': 20.6597, 'lng': -103.3496},
+    {'name': 'Monterrey', 'lat': 25.6866, 'lng': -100.3161},
+    {'name': 'Cancún', 'lat': 21.1619, 'lng': -86.8515},
+    {'name': 'Oaxaca', 'lat': 17.0732, 'lng': -96.7266},
+  ];
 
   @override
   void initState() {
     super.initState();
-    _cargarLugares();
+    _inicializarExploracion();
   }
 
-  Future<void> _cargarLugares() async {
-    // 1. Despertamos al nuevo mensajero de OpenTripMap
-    final lugaresCulturales = await OpenTripMapServicio.buscarLugaresCulturales(20.659, -103.349);
-    
-    // 2. El "Traductor": Acomodamos los datos para que tu carrusel y la pantalla de detalles los entiendan
-    List<dynamic> lugaresAdaptados = [];
-    
-    for (var item in lugaresCulturales) {
-      final propiedades = item['properties'];
-      
-      // OpenTripMap a veces manda monumentos sin nombre, así que filtramos solo los que sí tengan
-      if (propiedades != null && propiedades['name'] != '') {
-        lugaresAdaptados.add({
-          'name': propiedades['name'],
-          // OTM manda las categorías juntas, le ponemos una genérica para que se vea bien en tu diseño
-          'categories': [{'name': 'Cultura y Turismo'}], 
-          'location': {'formatted_address': 'Guadalajara, Jalisco'} 
+  // =========================
+  // 🔵 DETECTAR USUARIO NUEVO
+  // =========================
+  Future<bool> _esUsuarioNuevo() async {
+    // 🔴 AQUÍ LUEGO CONECTAS FIREBASE
+    // Ejemplo:
+    // final doc = await FirebaseFirestore.instance.collection('usuarios').doc(uid).get();
+    // return (doc.data()?['historial'] ?? []).isEmpty;
+
+    return true; // <- CAMBIA ESTO CUANDO CONECTES FIREBASE
+  }
+
+  // =========================
+  // CONTROLADOR PRINCIPAL
+  // =========================
+  Future<void> _inicializarExploracion() async {
+    final esNuevo = await _esUsuarioNuevo();
+
+    if (esNuevo) {
+      _cargarCiudadesPopulares();
+    } else {
+      _cargarLugaresPersonalizados();
+    }
+  }
+
+  // =========================
+  // 🔵 COLD START (NUEVO USUARIO)
+  // =========================
+  Future<void> _cargarCiudadesPopulares() async {
+    setState(() => estaCargando = true);
+
+    List<dynamic> adaptadas = ciudadesPopulares.map((c) {
+      return {
+        'name': c['name'],
+        'lat': c['lat'],
+        'lng': c['lng'],
+        'categories': [
+          {'name': 'popular_city'}
+        ],
+        'location': {'formatted_address': 'México'},
+      };
+    }).toList();
+
+    setState(() {
+      lugaresRecomendados = adaptadas;
+      estaCargando = false;
+      indiceActual = 0;
+    });
+  }
+
+  // =========================
+  // 🟡 USUARIO CON HISTORIAL
+  // =========================
+  Future<void> _cargarLugaresPersonalizados() async {
+    setState(() => estaCargando = true);
+
+    try {
+      final posicion = await UbicacionServicio().obtenerUbicacionActual();
+
+      if (posicion == null) {
+        throw Exception('No se pudo obtener la ubicación del usuario.');
+      }
+
+      final latUsuario = posicion.latitude;
+      final lngUsuario = posicion.longitude;
+
+      final lugaresCulturales =
+          await OpenTripMapServicio.buscarLugaresCulturales(
+        latUsuario,
+        lngUsuario,
+        radius: 500,
+      );
+
+      List<dynamic> lugaresAdaptados = [];
+
+      final categoriasDeseadas = [
+        'museum',
+        'monument',
+        'historic',
+        'park',
+        'natural',
+        'architecture',
+        'cultural',
+        'recreation_ground',
+      ];
+
+      for (var item in lugaresCulturales) {
+        final propiedades = item['properties'];
+        final coordinates = item['geometry']?['coordinates'];
+
+        final lng = coordinates != null ? coordinates[0] as double? : null;
+        final lat = coordinates != null ? coordinates[1] as double? : null;
+
+        if (propiedades != null &&
+            propiedades['name'] != '' &&
+            lat != null &&
+            lng != null) {
+          final kinds = propiedades['kinds'] as String?;
+
+          final listaCategorias = kinds != null
+              ? kinds.split(',').map((e) => {'name': e.trim()}).toList()
+              : [{'name': 'Desconocida'}];
+
+          if (listaCategorias.any(
+            (c) => categoriasDeseadas.contains(c['name']),
+          )) {
+            lugaresAdaptados.add({
+              'name': propiedades['name'],
+              'categories': listaCategorias,
+              'location': {
+                'formatted_address':
+                    propiedades['address'] ??
+                    '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
+              },
+              'lat': lat,
+              'lng': lng,
+            });
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          lugaresRecomendados = lugaresAdaptados;
+          estaCargando = false;
+          indiceActual = 0;
         });
       }
-    }
-
-    if (mounted) {
-      setState(() {
-        // Si encontró lugares, tomamos los primeros 5 para tu carrusel
-        if (lugaresAdaptados.isNotEmpty) {
-          lugaresRecomendados = lugaresAdaptados.take(5).toList();
-        }
-        estaCargando = false;
-        indiceActual = 0; 
-      });
+    } catch (e) {
+      debugPrint('Error: $e');
+      if (mounted) setState(() => estaCargando = false);
     }
   }
 
-  // Lógica para el botón derecho (Siguiente)
+  // =========================
+  // NAVEGACIÓN
+  // =========================
   void _siguienteLugar() {
     if (indiceActual < lugaresRecomendados.length - 1) {
-      setState(() {
-        indiceActual++;
-      });
+      setState(() => indiceActual++);
     }
   }
 
-  // Lógica para el botón izquierdo (Anterior)
   void _anteriorLugar() {
     if (indiceActual > 0) {
-      setState(() {
-        indiceActual--;
-      });
+      setState(() => indiceActual--);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     String nombre = 'Desconocido';
-    String urlImagen = '';
 
     if (lugaresRecomendados.isNotEmpty) {
       final lugar = lugaresRecomendados[indiceActual];
       nombre = lugar['name'] ?? 'Lugar sin nombre';
-      
-      // Armamos el rompecabezas de la foto de Foursquare
-      if (lugar['photos'] != null && lugar['photos'].isNotEmpty) {
-        final foto = lugar['photos'][0];
-        // Foursquare pide que metamos el tamaño entre el prefix y el suffix
-        urlImagen = '${foto['prefix']}500x500${foto['suffix']}';
-      }
     }
 
     return Scaffold(
       backgroundColor: Colors.white,
-      
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Pack&Go",
           style: TextStyle(
-            color: Color(0xFF0066D2), 
+            color: Color(0xFF0066D2),
             fontWeight: FontWeight.bold,
             fontSize: 28,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline, color: Color(0xFF0066D2), size: 32),
-            onPressed: () {
-               Navigator.pushNamed(context, '/EditarPerfil');
-            },
+            icon: const Icon(
+              Icons.person_outline,
+              color: Color(0xFF0066D2),
+              size: 32,
+            ),
+            onPressed: () => Navigator.pushNamed(context, '/EditarPerfil'),
           ),
         ],
       ),
-      
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
-                child: Text(
-                  "¡Tu app favorita de viajes!",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                ),
+              const Text(
+                "¡Tu app favorita de viajes!",
+                style: TextStyle(fontSize: 18),
               ),
               const SizedBox(height: 25),
-              const Text(
-                "Recomendaciones",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Recomendaciones",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
               ),
+
               const SizedBox(height: 15),
-              
-              // --- CARRUSEL CENTRAL ---
+
               SizedBox(
-                height: 250, 
-                child: estaCargando 
-                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF0066D2)))
+                height: 250,
+                child: estaCargando
+                    ? const Center(child: CircularProgressIndicator())
                     : lugaresRecomendados.isEmpty
-                        ? const Center(child: Text("No hay recomendaciones cerca."))
+                        ? const Center(child: Text("No hay recomendaciones"))
                         : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              
-                              // Flecha Izquierda
                               GestureDetector(
                                 onTap: indiceActual > 0 ? _anteriorLugar : null,
                                 child: Container(
                                   width: 40,
                                   height: 80,
                                   decoration: BoxDecoration(
-                                    // Si no hay lugares atrás, se pone gris
-                                    color: indiceActual > 0 ? const Color(0xFF0066D2) : Colors.grey[300], 
+                                    color: indiceActual > 0
+                                        ? const Color(0xFF0066D2)
+                                        : Colors.grey,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                                  child: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
 
                               const SizedBox(width: 15),
 
-                              // --- BLOQUE DE LA TARJETA CENTRAL ---
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () {
-                                    // 1. Tomamos los datos del lugar que se está mostrando
-                                    final lugarSeleccionado = lugaresRecomendados[indiceActual];
-                                    
-                                    // 2. Viajamos a la nueva pantalla llevándonos los datos
+                                    final lugar =
+                                        lugaresRecomendados[indiceActual];
+
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => LugarSeleccionadoPantalla(lugar: lugarSeleccionado),
+                                        builder: (_) => LugarDetallePantalla(
+                                          lugar: lugar,
+                                        ),
                                       ),
                                     );
                                   },
@@ -184,30 +283,31 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                                       borderRadius: BorderRadius.circular(15),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: [
                                         Expanded(
                                           child: Container(
                                             decoration: const BoxDecoration(
                                               color: Colors.blueAccent,
-                                              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                                              borderRadius:
+                                                  BorderRadius.vertical(
+                                                top: Radius.circular(15),
+                                              ),
                                             ),
-                                            child: const Center(
-                                              child: Icon(Icons.landscape, color: Colors.white, size: 70),
+                                            child: const Icon(
+                                              Icons.landscape,
+                                              color: Colors.white,
+                                              size: 70,
                                             ),
                                           ),
                                         ),
                                         Padding(
-                                          padding: const EdgeInsets.all(15.0),
+                                          padding: const EdgeInsets.all(15),
                                           child: Text(
                                             nombre,
                                             style: const TextStyle(
-                                              color: Colors.white, 
+                                              color: Colors.white,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 18,
                                             ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
@@ -215,56 +315,57 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(width: 15),
 
-                              // Flecha Derecha
                               GestureDetector(
-                                onTap: indiceActual < lugaresRecomendados.length - 1 ? _siguienteLugar : null,
+                                onTap: indiceActual <
+                                        lugaresRecomendados.length - 1
+                                    ? _siguienteLugar
+                                    : null,
                                 child: Container(
                                   width: 40,
                                   height: 80,
                                   decoration: BoxDecoration(
-                                    color: indiceActual < lugaresRecomendados.length - 1 ? const Color(0xFF0066D2) : Colors.grey[300],
+                                    color: indiceActual <
+                                            lugaresRecomendados.length - 1
+                                        ? const Color(0xFF0066D2)
+                                        : Colors.grey,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.arrow_forward_ios, color: Colors.white),
+                                  child: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
               ),
+
               const SizedBox(height: 40),
 
-              // --- BOTÓN CREAR VIAJE (Fusionado con el de Natalia) ---
-              Align(
-                alignment: Alignment.center,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CrearViajePantalla(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: Text(
-                    "Crear Viaje",
-                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF6A230),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 15,
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CrearViajePantalla(),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+                  );
+                },
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: Text(
+                  "Crear Viaje",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF6A230),
+                ),
               ),
-              const SizedBox(height: 40),
             ],
           ),
         ),

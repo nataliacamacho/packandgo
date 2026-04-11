@@ -1,17 +1,22 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+
 import 'package:proyecto/compartidos/widgets/barra_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/filtros_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/tarjeta_lugar.dart';
-import 'package:proyecto/modulos/busqueda/lugarelegido_pantalla.dart';
+import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
+
 import 'package:proyecto/nucleo/servicios/foursquare_servicio.dart';
 import 'package:proyecto/nucleo/servicios/opentripmap_servicio.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
+
+import 'package:proyecto/nucleo/utilidades/calculos_util.dart';
+import 'package:proyecto/nucleo/utilidades/mapeo_categorias.dart';
 
 class BusquedaPantalla extends StatefulWidget {
   const BusquedaPantalla({super.key});
@@ -27,8 +32,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   String? estiloSeleccionado;
   String? precioSeleccionado;
 
-  String preferenciaUsuario = "Turístico";
-
   bool cargando = false;
   String? error;
 
@@ -38,39 +41,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   void initState() {
     super.initState();
     buscarLugaresAPI();
-  }
-  // 🧠 ALGORITMO FASE 3: ETIQUETADO AUTOMÁTICO (PESOS)
-  List<Map<String, dynamic>> aplicarPesos(List<Map<String, dynamic>> lista) {
-    return lista.map((lugar) {
-      int peso = 0;
-      
-      // Regla 1: Si es de la categoría que le gusta al usuario (+50 pts)
-      if (lugar["categoriaPrincipal"] == preferenciaUsuario) peso += 50;
-      
-      // Regla 2: Cercanía. Si está a menos de 2km, le damos más prioridad (+30 pts)
-      if (lugar["distancia"] != null && lugar["distancia"] < 2.0) peso += 30;
-
-      // Regla 3: Si tiene precio económico (+10 pts)
-      if (lugar["precio"] == "\$") peso += 10;
-
-      lugar["relevancia"] = peso; // Guardamos el peso final
-      return lugar;
-    }).toList();
-  }
-
-  // 🧠 ALGORITMO FASE 3: QUICKSORT (ORDENAR POR RELEVANCIA)
-  List<Map<String, dynamic>> ordenarPorQuickSort(List<Map<String, dynamic>> lista) {
-    if (lista.length <= 1) return lista;
-
-    var pivote = lista[lista.length ~/ 2];
-    int pivoteRelevancia = pivote['relevancia'] ?? 0;
-
-    // Ordenamos de Mayor a Menor (los de más puntos van primero)
-    var mayores = lista.where((x) => (x['relevancia'] ?? 0) > pivoteRelevancia).toList();
-    var iguales = lista.where((x) => (x['relevancia'] ?? 0) == pivoteRelevancia).toList();
-    var menores = lista.where((x) => (x['relevancia'] ?? 0) < pivoteRelevancia).toList();
-
-    return [...ordenarPorQuickSort(mayores), ...iguales, ...ordenarPorQuickSort(menores)];
   }
 
   // 🔥 TOP 5 VARIADOS
@@ -390,94 +360,77 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        automaticallyImplyLeading: true,
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         title: Text("Pack&Go", style: GoogleFonts.poppins(fontSize: 36)),
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
-      
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           children: [
             const SizedBox(height: 16),
-            
+
             BarraBusqueda(
               onChanged: (valor) {
-                setState(() {
-                  query = valor;
-                });
+                setState(() => query = valor);
+
+                if (valor.length >= 3) {
+                  buscarPorTexto(valor); // 🔥 NUEVO
+                } else {
+                  buscarLugaresAPI(); // vuelve a normal
+                }
               },
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             FiltrosBusqueda(
               destinoSeleccionado: destinoSeleccionado,
               tipoSeleccionado: tipoSeleccionado,
               estiloSeleccionado: estiloSeleccionado,
               precioSeleccionado: precioSeleccionado,
-              onDestinoChanged: (v) => setState(() => destinoSeleccionado = v),
+              onDestinoChanged: (v) {
+                setState(() => destinoSeleccionado = v);
+                buscarLugaresAPI();
+              },
               onTipoChanged: (v) => setState(() => tipoSeleccionado = v),
               onEstiloChanged: (v) => setState(() => estiloSeleccionado = v),
               onPrecioChanged: (v) => setState(() => precioSeleccionado = v),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Expanded(
-              child: ListView(
-                children: [
-                  TarjetaLugar(
-                    nombre: "Teotihuacán",
-                    ubicacion: "Estado de México",
-                    lat: 19.6925,
-                    lng: -98.8430,
-                    // Aquí está el onTap directamente dentro de la tarjeta
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LugarelegidoPantalla(
-                            nombre: "Teotihuacán",
-                            ubicacion: "Estado de México",
-                            lat: 19.6925,
-                            lng: -98.8430,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  
-                  const SizedBox(height: 15),
-                  
-                  TarjetaLugar(
-                    nombre: "Chichén Itzá",
-                    ubicacion: "Yucatán",
-                    lat: 20.6843,
-                    lng: -88.5678,
-                    // Y aquí está el de la segunda tarjeta
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LugarelegidoPantalla(
-                            nombre: "Chichén Itzá",
-                            ubicacion: "Yucatán",
-                            lat: 20.6843,
-                            lng: -88.5678,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              child: cargando
+                  ? const Center(child: CircularProgressIndicator())
+                  : error != null
+                  ? Center(child: Text(error!))
+                  : lugaresFiltrados.isEmpty
+                  ? const Center(
+                      child: Text("No hay lugares con estas características"),
+                    )
+                  : ListView(
+                      children: lugaresFiltrados.map((lugar) {
+                        return TarjetaLugar(
+                          nombre: lugar["name"],
+                          ubicacion: lugar["location"]["formatted_address"],
+                          lat: lugar["lat"],
+                          lng: lugar["lng"],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    LugarDetallePantalla(lugar: lugar),
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+                    ),
             ),
           ],
         ),

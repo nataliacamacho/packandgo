@@ -9,11 +9,15 @@ class ViajesPantalla extends StatelessWidget {
   const ViajesPantalla({super.key});
 
   Stream<QuerySnapshot> obtenerViajes() {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      throw Exception("Usuario no autenticado");
+    }
 
     return FirebaseFirestore.instance
         .collection("viajes")
-        .where("usuarioId", isEqualTo: uid)
+        .where("usuarioId", isEqualTo: user.uid)
         .snapshots();
   }
 
@@ -36,6 +40,10 @@ class ViajesPantalla extends StatelessWidget {
                   .delete();
 
               Navigator.pop(context);
+
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Viaje eliminado")));
             },
             child: const Text("Eliminar"),
           ),
@@ -113,15 +121,15 @@ class ViajesPantalla extends StatelessWidget {
             itemCount: viajes.length,
             itemBuilder: (context, index) {
               final viaje = viajes[index];
-              final destino = viaje["destino"];
+              final data = viaje.data() as Map<String, dynamic>;
 
-              final fechaInicio = viaje["fechaInicio"].toDate();
-              final fechaFin = viaje["fechaFin"].toDate();
+              final destino = data["destino"] ?? "Sin destino";
+
+              final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
+              final fechaFin = (data["fechaFin"] as Timestamp).toDate();
 
               return Card(
                 margin: const EdgeInsets.all(12),
-                color: const Color.fromARGB(255, 255, 255, 255),
-
                 child: ListTile(
                   title: Text(destino),
 
@@ -130,10 +138,22 @@ class ViajesPantalla extends StatelessWidget {
                     "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}",
                   ),
 
-                  onLongPress: () {
-                    mostrarDialogoEliminar(context, viaje.id);
-                  },
+                  // 🔥 BOTÓN DE ELIMINAR (MEJOR UX)
+                  trailing: SizedBox(
+                    width: 40,
+                    child: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        print(
+                          "UID actual: ${FirebaseAuth.instance.currentUser!.uid}",
+                        );
+                        print("UID del viaje: ${data["usuarioId"]}");
+                        mostrarDialogoEliminar(context, viaje.id);
+                      },
+                    ),
+                  ),
 
+                  // 🔥 NAVEGACIÓN A DETALLE
                   onTap: () {
                     Navigator.push(
                       context,
@@ -142,8 +162,8 @@ class ViajesPantalla extends StatelessWidget {
                           nombre: destino,
                           fechaInicio: fechaInicio,
                           fechaFin: fechaFin,
-                          descripcion: viaje["descripcion"] ?? "",
-                          idViaje: viaje.id,
+                          descripcion: data["descripcion"] ?? "",
+                          idViaje: viaje.id, destino: destino,
                         ),
                       ),
                     );

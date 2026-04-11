@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 class RegistroPantalla extends StatefulWidget {
   const RegistroPantalla({super.key});
 
@@ -35,7 +34,6 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF0066D2),
 
-
       appBar: AppBar(
         title: Text(
           "Pack&Go",
@@ -60,7 +58,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                 style: GoogleFonts.poppins(
                   fontSize: 25,
                   color: const Color.fromARGB(255, 255, 255, 255),
-                ),
+            ),
               ),
             ),
 

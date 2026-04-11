@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:proyecto/modulos/cuenta/lista_viajes_pantalla.dart';
 import 'package:proyecto/modulos/exploracion/exploracion_pantalla.dart';
 import 'package:proyecto/modulos/busqueda/busqueda_pantalla.dart';
+import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart';
 import 'package:proyecto/modulos/viajes/viajes_pantalla.dart';
 import 'package:proyecto/modulos/cuenta/cuenta_pantalla.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto/modulos/viajes/detalle_viaje_pantalla.dart';
 
 class NavegacionPrincipal extends StatefulWidget {
   final int paginaInicial;
@@ -14,15 +19,102 @@ class NavegacionPrincipal extends StatefulWidget {
 }
 
 class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
-
   late int _paginaActual;
 
   final List<Widget> _paginas = const [
     ExploracionPantalla(),
     BusquedaPantalla(),
+    CrearViajePantalla(),
     ViajesPantalla(),
     CuentaPantalla(),
   ];
+
+  Future<void> _abrirViajeInteligente(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection("viajes")
+        .where("usuarioId", isEqualTo: user.uid)
+        .get();
+
+    final viajes = snapshot.docs;
+    final hoy = DateTime.now();
+
+    // 🔥 VIAJE ACTUAL
+    final actuales = viajes.where((viaje) {
+      final inicio = (viaje["fechaInicio"] as Timestamp).toDate();
+      final fin = (viaje["fechaFin"] as Timestamp).toDate();
+
+      return hoy.isAfter(inicio.subtract(const Duration(days: 1))) &&
+          hoy.isBefore(fin.add(const Duration(days: 1)));
+    }).toList();
+
+    if (actuales.length == 1) {
+      final viaje = actuales.first;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetalleViajePantalla(
+            nombre: viaje["destino"],
+            fechaInicio: (viaje["fechaInicio"] as Timestamp).toDate(),
+            fechaFin: (viaje["fechaFin"] as Timestamp).toDate(),
+            descripcion: viaje["descripcion"] ?? "",
+            idViaje: viaje.id, destino: '',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (actuales.length > 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              ListaViajesPantalla(titulo: "Viajes actuales", viajes: actuales),
+        ),
+      );
+      return;
+    }
+
+    // 🔥 VIAJE MÁS CERCANO
+    final futuros = viajes.where((viaje) {
+      final inicio = (viaje["fechaInicio"] as Timestamp).toDate();
+      return inicio.isAfter(hoy);
+    }).toList();
+
+    futuros.sort((a, b) {
+      final aFecha = (a["fechaInicio"] as Timestamp).toDate();
+      final bFecha = (b["fechaInicio"] as Timestamp).toDate();
+      return aFecha.compareTo(bFecha);
+    });
+
+    if (futuros.isNotEmpty) {
+      final viaje = futuros.first;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetalleViajePantalla(
+            nombre: viaje["destino"],
+            fechaInicio: (viaje["fechaInicio"] as Timestamp).toDate(),
+            fechaFin: (viaje["fechaFin"] as Timestamp).toDate(),
+            descripcion: viaje["descripcion"] ?? "",
+            idViaje: viaje.id, destino: viaje["destino"] ?? "",
+          ),
+        ),
+      );
+      return;
+    }
+
+    // ❌ SI NO HAY NADA
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("No tienes viajes disponibles")),
+    );
+  }
 
   @override
   void initState() {
@@ -36,24 +128,42 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
       body: _paginas[_paginaActual],
 
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF0066D2),
-        currentIndex: _paginaActual,
         type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFF0066D2),
+        selectedItemColor: const Color.fromARGB(255, 255, 255, 255),
+        unselectedItemColor: const Color.fromARGB(179, 255, 255, 255),
         showSelectedLabels: false,
         showUnselectedLabels: false,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white60,
-        iconSize: 30,
-        onTap: (index) {
-          setState(() {
-            _paginaActual = index;
-          });
+        currentIndex: _paginaActual,
+
+        onTap: (index) async {
+          if (index == 3) {
+            await _abrirViajeInteligente(context);
+          } else {
+            setState(() {
+              _paginaActual = index;
+            });
+          }
         },
+
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Explorar"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Búsqueda"),
-          BottomNavigationBarItem(icon: Icon(Icons.wallet_travel), label: "Viajes"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Cuenta"),
+          BottomNavigationBarItem(icon: Icon(Icons.home, size: 32), label: ''),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search, size: 32),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box, size: 32),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.luggage, size: 32),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, size: 32),
+            label: '',
+          ),
         ],
       ),
     );

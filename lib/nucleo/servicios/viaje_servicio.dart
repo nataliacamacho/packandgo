@@ -21,6 +21,7 @@ class ViajeServicio {
       "fechaInicio": fechaInicio,
       "fechaFin": fechaFin,
       "descripcion": descripcion,
+      'uid': FirebaseAuth.instance.currentUser!.uid,
       "fechaCreacion": Timestamp.now(),
     });
 

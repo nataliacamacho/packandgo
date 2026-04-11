@@ -63,12 +63,12 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DetalleViajePantalla(
-          idViaje: idViaje,
+        builder: (_) => DetalleViajePantalla(
           nombre: destinoSeleccionado!,
           fechaInicio: fechaInicio!,
           fechaFin: fechaFin!,
           descripcion: descripcionController.text,
+          idViaje: idViaje, destino: '',
         ),
       ),
     );
@@ -106,6 +106,10 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                 onTipoChanged: (_) {},
                 onEstiloChanged: (_) {},
                 onPrecioChanged: (_) {},
+                mostrarDestino: true,
+                mostrarTipo: false,
+                mostrarEstilo: false,
+                mostrarPrecio: false,
               ),
 
               const SizedBox(height: 20),

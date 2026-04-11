@@ -4,7 +4,7 @@ class LugarSeleccionadoPantalla extends StatelessWidget {
   // Esta variable es la "caja" donde recibiremos los datos del lugar al que le diste clic
   final Map<String, dynamic> lugar;
 
-  const LugarSeleccionadoPantalla({super.key, required this.lugar});
+  const LugarSeleccionadoPantalla({super.key, required this.lugar, required nombre});
 
   @override
   Widget build(BuildContext context) {

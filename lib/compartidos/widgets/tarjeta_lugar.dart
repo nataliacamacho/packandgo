@@ -1,36 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:proyecto/modulos/busqueda/lugarelegido_pantalla.dart';
 
 class TarjetaLugar extends StatelessWidget {
   final String nombre;
   final String ubicacion;
   final double lat;
   final double lng;
+  final VoidCallback? onTap;
 
   const TarjetaLugar({
     super.key,
     required this.nombre,
     required this.ubicacion,
     required this.lat,
-    required this.lng, required Null Function() onTap,
+    required this.lng,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LugarelegidoPantalla(
-              nombre: nombre,
-              ubicacion: ubicacion,
-              lat: lat,
-              lng: lng,
-            ),
-          ),
-        );
-      },
+      onTap: onTap,
       child: Card(
         color: const Color.fromARGB(255, 255, 255, 255),
         surfaceTintColor: Colors.transparent,
@@ -50,7 +39,7 @@ class TarjetaLugar extends StatelessWidget {
                 child: const Center(
                   child: Text(
                     "Img",
-                    style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               ),
