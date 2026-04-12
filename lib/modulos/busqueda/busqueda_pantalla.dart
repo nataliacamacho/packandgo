@@ -17,6 +17,7 @@ import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
 
 import 'package:proyecto/nucleo/utilidades/calculos_util.dart';
 import 'package:proyecto/nucleo/utilidades/mapeo_categorias.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BusquedaPantalla extends StatefulWidget {
   const BusquedaPantalla({super.key});
@@ -35,14 +36,81 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   bool cargando = false;
   String? error;
 
+  String idUsuarioActual = FirebaseAuth.instance.currentUser?.uid ?? "";
+  Map<String, dynamic> interesesUsuario = {};
   List<Map<String, dynamic>> lugares = [];
 
   @override
   void initState() {
     super.initState();
-    buscarLugaresAPI();
+    obtenerPreferenciaReal();
+    //buscarLugaresAPI();
+  }
+Future<void> obtenerPreferenciaReal() async {
+    if (idUsuarioActual.isEmpty) {
+      buscarLugaresAPI();
+      return;
+    }
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(idUsuarioActual)
+          .get();
+
+      if (doc.exists) {
+        setState(() {
+          interesesUsuario = doc.data()?['vector_intereses'] ?? {};
+        });
+      }
+      buscarLugaresAPI();
+    } catch (e) {
+      print("Error al obtener intereses: $e");
+      buscarLugaresAPI();
+    }
   }
 
+  // 🧠 ALGORITMO FASE 3: ETIQUETADO AUTOMÁTICO (PESOS Y UMBRAL)
+  // Basado en: PuntajeEtiqueta = ∑(pesopalabrai) [cite: 315]
+  List<Map<String, dynamic>> aplicarPesos(List<Map<String, dynamic>> lista) {
+    return lista.map((lugar) {
+      double R = (lugar["rating"] ?? 5.0).toDouble(); // Calificación (0-10) [cite: 396]
+      double P = (lugar["popularity"] ?? 5.0).toDouble(); // Popularidad [cite: 397]
+      
+      // D = Distancia inversa (mientras más cerca, más alto el valor) [cite: 398]
+      double D = 10 / ((lugar["distancia"] ?? 1.0) + 1); 
+      if (D > 10) D = 10;
+
+      // C = Coincidencia con etiquetas (Vector de intereses) [cite: 399]
+      double C = 0;
+      String catLugar = lugar["categoriaPrincipal"].toString().toLowerCase();
+      if (interesesUsuario.containsKey(catLugar)) {
+        // Umbral mínimo de 8 puntos para considerarlo relevante 
+        int puntosInteres = interesesUsuario[catLugar] ?? 0;
+        C = puntosInteres >= 8 ? 10.0 : (puntosInteres * 1.25); 
+      }
+
+      // 🔥 FÓRMULA EXACTA: (R * 0.4) + (P * 0.2) + (D * 0.2) + (C * 0.2) [cite: 395]
+      lugar["relevancia"] = (R * 0.4) + (P * 0.2) + (D * 0.2) + (C * 0.2);
+      
+      return lugar;
+    }).toList();
+  }
+
+  // 🧠 ALGORITMO FASE 3: QUICKSORT O(n log n) [cite: 400]
+  List<Map<String, dynamic>> ordenarPorQuickSort(List<Map<String, dynamic>> lista) {
+    if (lista.length <= 1) return lista;
+    var pivote = lista[lista.length ~/ 2];
+    double pivoteRelevancia = (pivote['relevancia'] ?? 0).toDouble();
+
+    var mayores = lista.where((x) => (x['relevancia'] ?? 0) > pivoteRelevancia).toList();
+    var iguales = lista.where((x) => (x['relevancia'] ?? 0) == pivoteRelevancia).toList();
+    var menores = lista.where((x) => (x['relevancia'] ?? 0) < pivoteRelevancia).toList();
+
+    return [...ordenarPorQuickSort(mayores), ...iguales, ...ordenarPorQuickSort(menores)];
+  }
+
+  
+// no tocar este método, es el que hace la selección final de los 5 lugares variados, no solo los más relevantes
   // 🔥 TOP 5 VARIADOS
   List<Map<String, dynamic>> seleccionarTop5Variados(
     List<Map<String, dynamic>> lista,
@@ -225,12 +293,20 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       }).toList();
 
       // 🔥 8. ORDENAR
-      filtradosFinal.sort((a, b) => a["distancia"].compareTo(b["distancia"]));
+    //  filtradosFinal.sort((a, b) => a["distancia"].compareTo(b["distancia"]));
+     
+      final lugaresConPesos = aplicarPesos(filtradosFinal); // Aplica la fórmula (R*0.4 + P*0.2 + D*0.2 + C*0.2)
+      final lugaresOrdenados = ordenarPorQuickSort(lugaresConPesos); // Ordena de mayor a menor relevancia [cite: 400]
+    
+      print("--- RANKING DE RELEVANCIA PACK&GO ---");
+
+      for (var lugar in lugaresOrdenados) {
+        print("${lugar['name']} - Relevancia: ${lugar['relevancia']}");
+      }
+      print("---------------------------------------");
 
       // 🔥 9. TOP 5 FINAL
-      final top5 = seleccionarTop5Variados(filtradosFinal);
-
-      if (!mounted) return;
+      final top5 = seleccionarTop5Variados(lugaresOrdenados);
 
       setState(() {
         lugares = top5;
