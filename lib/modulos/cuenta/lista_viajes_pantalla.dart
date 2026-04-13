@@ -33,9 +33,9 @@ class ListaViajesPantalla extends StatelessWidget {
 
               Navigator.pop(context);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Viaje eliminado")),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Viaje eliminado")));
             },
             child: const Text("Eliminar"),
           ),
@@ -50,18 +50,20 @@ class ListaViajesPantalla extends StatelessWidget {
     final hoy = DateTime.now();
 
     // Filtrar y ordenar viajes futuros
-    final viajesFuturos = viajes
-        .where((viaje) {
+    final viajesFuturos =
+        viajes.where((viaje) {
           final data = viaje.data() as Map<String, dynamic>;
           final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
           return fechaInicio.isAfter(hoy) || fechaInicio.isAtSameMomentAs(hoy);
-        })
-        .toList()
-      ..sort((a, b) {
-        final fechaA = (a.data() as Map<String, dynamic>)["fechaInicio"] as Timestamp;
-        final fechaB = (b.data() as Map<String, dynamic>)["fechaInicio"] as Timestamp;
-        return fechaA.toDate().compareTo(fechaB.toDate()); // del más cercano al más lejano
-      });
+        }).toList()..sort((a, b) {
+          final fechaA =
+              (a.data() as Map<String, dynamic>)["fechaInicio"] as Timestamp;
+          final fechaB =
+              (b.data() as Map<String, dynamic>)["fechaInicio"] as Timestamp;
+          return fechaA.toDate().compareTo(
+            fechaB.toDate(),
+          ); // del más cercano al más lejano
+        });
 
     return Scaffold(
       appBar: AppBar(
@@ -102,12 +104,16 @@ class ListaViajesPantalla extends StatelessWidget {
                             descripcion: data["descripcion"] ?? "",
                             idViaje: viaje.id,
                             destino: '',
+                            destinoLat: data["lat"],
+                            destinoLng: data["lng"],
                           ),
                         ),
                       );
                     },
                     onLongPress: () {
-                      print("UID actual: ${FirebaseAuth.instance.currentUser!.uid}");
+                      print(
+                        "UID actual: ${FirebaseAuth.instance.currentUser!.uid}",
+                      );
                       print("UID del viaje: ${data["usuarioId"]}");
                       mostrarDialogoEliminar(context, viaje.id);
                     },

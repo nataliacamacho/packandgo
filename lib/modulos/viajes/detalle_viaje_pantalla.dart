@@ -8,6 +8,9 @@ class DetalleViajePantalla extends StatelessWidget {
   final DateTime fechaInicio;
   final DateTime fechaFin;
   final String descripcion;
+  final String destino;
+  final double destinoLat;
+  final double destinoLng;
 
   const DetalleViajePantalla({
     super.key,
@@ -16,7 +19,9 @@ class DetalleViajePantalla extends StatelessWidget {
     required this.fechaInicio,
     required this.fechaFin,
     required this.descripcion,
-    required String destino,
+    required this.destino,
+    required this.destinoLat,
+    required this.destinoLng,
   });
 
   @override
@@ -107,9 +112,9 @@ class DetalleViajePantalla extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => TransportePantalla(
-                      destino: nombre.isNotEmpty
-                          ? nombre
-                          : "Destino no disponible",
+                      destino: destino,
+                      destinoLat: destinoLat,
+                      destinoLng: destinoLng,
                     ),
                   ),
                 );

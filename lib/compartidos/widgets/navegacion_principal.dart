@@ -62,7 +62,12 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
             fechaInicio: (viaje["fechaInicio"] as Timestamp).toDate(),
             fechaFin: (viaje["fechaFin"] as Timestamp).toDate(),
             descripcion: viaje["descripcion"] ?? "",
-            idViaje: viaje.id, destino: '',
+            idViaje: viaje.id,
+            destino: viaje["destino"] ?? "",
+
+            // 🔥 AQUÍ ESTABA EL ERROR
+            destinoLat: viaje["lat"],
+            destinoLng: viaje["lng"],
           ),
         ),
       );
@@ -103,7 +108,12 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
             fechaInicio: (viaje["fechaInicio"] as Timestamp).toDate(),
             fechaFin: (viaje["fechaFin"] as Timestamp).toDate(),
             descripcion: viaje["descripcion"] ?? "",
-            idViaje: viaje.id, destino: viaje["destino"] ?? "",
+            idViaje: viaje.id,
+            destino: viaje["destino"] ?? "",
+
+            // 🔥 AQUÍ ESTABA EL ERROR
+            destinoLat: viaje["lat"],
+            destinoLng: viaje["lng"],
           ),
         ),
       );

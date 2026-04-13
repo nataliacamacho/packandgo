@@ -128,6 +128,9 @@ class ViajesPantalla extends StatelessWidget {
               final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
               final fechaFin = (data["fechaFin"] as Timestamp).toDate();
 
+              final destinoLat = data["lat"] ?? 0.0;
+              final destinoLng = data["lng"] ?? 0.0;
+
               return Card(
                 margin: const EdgeInsets.all(12),
                 child: ListTile(
@@ -163,7 +166,10 @@ class ViajesPantalla extends StatelessWidget {
                           fechaInicio: fechaInicio,
                           fechaFin: fechaFin,
                           descripcion: data["descripcion"] ?? "",
-                          idViaje: viaje.id, destino: destino,
+                          idViaje: viaje.id,
+                          destino: destino,
+                          destinoLat: destinoLat,
+                          destinoLng: destinoLng,
                         ),
                       ),
                     );

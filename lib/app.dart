@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/viajes/apartados/hospedaje/hospedaje_pantalla.dart';
-import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
 import 'modulos/autenticacion/inicio_pantalla.dart';
 import 'modulos/exploracion/exploracion_pantalla.dart';
 import 'modulos/autenticacion/registro_pantalla.dart';
@@ -17,18 +16,22 @@ class PackandGo extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(
-        useMaterial3: true, 
-        textTheme: GoogleFonts.poppinsTextTheme(), 
+        useMaterial3: true,
+        textTheme: GoogleFonts.poppinsTextTheme(),
         scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        ),
+      ),
+
       home: const AuthGate(),
+
       routes: {
         '/inicio': (context) => const LoginPantalla(),
         '/registro': (context) => const RegistroPantalla(),
         '/exploracion': (context) => ExploracionPantalla(),
         '/EditarPerfil': (context) => const EditarPerfil(),
-        '/transporte': (context) => const TransportePantalla(destino: ''),
-        '/hospedaje': (context) => const HospedajePantalla(destino: '',),
+
+        // ⚠️ SOLO pantallas SIN parámetros
+        '/hospedaje': (context) =>
+            HospedajePantalla(destino: 'Destino seleccionado'),
       },
     );
   }

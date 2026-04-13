@@ -1,10 +1,10 @@
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 
 class MapaServicio {
-
-  static const String _token = "TU_ACCESS_TOKEN_AQUI";
+  final token = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
 
   /// Obtener ubicación actual del usuario
   Future<Position> obtenerUbicacionActual() async {
@@ -23,16 +23,16 @@ class MapaServicio {
 
   /// Obtener ruta en carro
   Future<List<dynamic>> obtenerRuta(
-      double origenLat,
-      double origenLng,
-      double destinoLat,
-      double destinoLng) async {
-
+    double origenLat,
+    double origenLng,
+    double destinoLat,
+    double destinoLng,
+  ) async {
     final url =
         "https://api.mapbox.com/directions/v5/mapbox/driving/"
         "$origenLng,$origenLat;"
         "$destinoLng,$destinoLat"
-        "?geometries=geojson&access_token=$_token";
+        "?geometries=geojson&access_token=$token";
 
     final response = await http.get(Uri.parse(url));
 

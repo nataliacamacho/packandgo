@@ -1,126 +1,137 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/carro/carro_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/mixtas/rutamixta_pantalla.dart';
 
 class SelectorTransporte extends StatelessWidget {
-  const SelectorTransporte({super.key});
+  final double destinoLat;
+  final double destinoLng;
+  final String destinoNombre;
+
+  const SelectorTransporte({
+    super.key,
+    required this.destinoLat,
+    required this.destinoLng,
+    required this.destinoNombre,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 10),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _cardTransporte(
+            context,
+            titulo: "Carro",
+            subtitulo: "Ruta directa en carretera",
+            icono: Icons.directions_car,
+            color: const Color(0xFF0066D2),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CarroPantalla(
+                    destinoLat: destinoLat,
+                    destinoLng: destinoLng, 
+                    destinoNombre: destinoNombre,
+                  ),
+                ),
+              );
+            },
+          ),
 
-        _tarjetaTransporte(
-          context,
-          icono: Icons.directions_car,
-          titulo: "Carro",
-          descripcion: "Ruta en automóvil con mapa en tiempo real",
-          color: const Color(0xFF0066D2),
-          onTap: () {
-            Navigator.pushNamed(context, '/transporte/carro');
-          },
-        ),
+          const SizedBox(height: 10),
 
-        _tarjetaTransporte(
-          context,
-          icono: Icons.directions_bus,
-          titulo: "Autobús",
-          descripcion: "Rutas con horarios, precios y terminales",
-          color: Colors.orange,
-          onTap: () {
-            Navigator.pushNamed(context, '/transporte/autobus');
-          },
-        ),
+          _cardTransporte(
+            context,
+            titulo: "Autobús",
+            subtitulo: "Opciones de central de autobuses",
+            icono: Icons.directions_bus,
+            color: Colors.green,
+            onTap: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Próximamente 🚧")));
+            },
+          ),
 
-        _tarjetaTransporte(
-          context,
-          icono: Icons.flight,
-          titulo: "Avión",
-          descripcion: "Vuelos disponibles y estimaciones de precio",
-          color: Colors.purple,
-          onTap: () {
-            Navigator.pushNamed(context, '/transporte/avion');
-          },
-        ),
+          const SizedBox(height: 10),
 
-        _tarjetaTransporte(
-          context,
-          icono: Icons.route,
-          titulo: "Ruta Mixta",
-          descripcion: "Combina carro, bus y avión en una sola ruta",
-          color: Colors.green,
-          onTap: () {
-            Navigator.pushNamed(context, '/transporte/mixto');
-          },
-        ),
+          _cardTransporte(
+            context,
+            titulo: "Avión",
+            subtitulo: "Viajes en avión disponibles",
+            icono: Icons.flight,
+            color: Colors.orange,
+            onTap: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Próximamente ✈️")));
+            },
+          ),
 
-        const SizedBox(height: 20),
-      ],
+          const SizedBox(height: 10),
+
+          _cardTransporte(
+            context,
+            titulo: "Ruta mixta",
+            subtitulo: "Combinación de transportes",
+            icono: Icons.alt_route,
+            color: Colors.purple,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RutaMixtaPantalla(
+                    destinoLat: destinoLat,
+                    destinoLng: destinoLng,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _tarjetaTransporte(
+  Widget _cardTransporte(
     BuildContext context, {
-    required IconData icono,
     required String titulo,
-    required String descripcion,
+    required String subtitulo,
+    required IconData icono,
     required Color color,
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icono, color: color, size: 30),
-              ),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ListTile(
+          leading: Icon(icono, color: color),
 
-              const SizedBox(width: 15),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      titulo,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      descripcion,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          title: Text(
+            titulo,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
+
+          subtitle: Text(subtitulo, style: GoogleFonts.poppins(fontSize: 14)),
+
+          onTap: onTap,
         ),
       ),
     );
