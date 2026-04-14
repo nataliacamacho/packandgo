@@ -7,27 +7,23 @@ class ViajeServicio {
 
   Future<String> crearViaje({
     required String destino,
+    required String descripcion,
     required DateTime fechaInicio,
     required DateTime fechaFin,
-    required String descripcion,
     required double lat,
     required double lng,
+    required String origen, required String usuarioId,
   }) async {
-    final user = _auth.currentUser;
-
-    if (user == null) {
-      throw Exception("Usuario no autenticado");
-    }
-
-    final doc = await _firestore.collection("viajes").add({
-      "usuarioId": user.uid,
+    final doc = await FirebaseFirestore.instance.collection("viajes").add({
+      "usuarioId": usuarioId,
       "destino": destino,
+      "descripcion": descripcion,
       "fechaInicio": fechaInicio,
       "fechaFin": fechaFin,
-      "descripcion": descripcion,
-      "lat": lat, // 🔥 CLAVE
-      "lng": lng, // 🔥 CLAVE
-      "fechaCreacion": Timestamp.now(),
+      "lat": lat,
+      "lng": lng,
+      "origen": origen,
+      "cancelado": false,
     });
 
     return doc.id;

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
@@ -11,6 +12,7 @@ class DetalleViajePantalla extends StatelessWidget {
   final String destino;
   final double destinoLat;
   final double destinoLng;
+  final String origen;
 
   const DetalleViajePantalla({
     super.key,
@@ -22,13 +24,14 @@ class DetalleViajePantalla extends StatelessWidget {
     required this.destino,
     required this.destinoLat,
     required this.destinoLng,
+    required this.origen,
   });
 
   @override
   Widget build(BuildContext context) {
-    String fechaInicioTexto =
+    final fechaInicioTexto =
         "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}";
-    String fechaFinTexto = "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}";
+    final fechaFinTexto = "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}";
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -37,7 +40,6 @@ class DetalleViajePantalla extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,6 +104,9 @@ class DetalleViajePantalla extends StatelessWidget {
 
             const SizedBox(height: 10),
 
+            // =========================
+            // 🚗 TRANSPORTE (CORREGIDO)
+            // =========================
             item(
               context,
               Icons.directions_car,
@@ -112,6 +117,7 @@ class DetalleViajePantalla extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => TransportePantalla(
+                      origen: origen,
                       destino: destino,
                       destinoLat: destinoLat,
                       destinoLng: destinoLng,
@@ -161,7 +167,32 @@ class DetalleViajePantalla extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 10),
+
+            Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('viajes')
+                        .doc(idViaje)
+                        .update({'cancelado': true});
+              
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Viaje cancelado")),
+                    );
+              
+                    Navigator.pop(context);
+                  } catch (e) {
+                    print("❌ Error cancelando: $e");
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent.shade100),
+                child: const Text("Cancelar viaje", style: TextStyle(color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 10),
+
           ],
         ),
       ),

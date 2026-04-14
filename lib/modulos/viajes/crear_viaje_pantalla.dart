@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/compartidos/widgets/filtros_busqueda.dart';
@@ -62,14 +63,11 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
     try {
       // 🔥 GEOCODING
-      final coords =
-          await geocoding.obtenerCoordenadas(destinoSeleccionado!);
+      final coords = await geocoding.obtenerCoordenadas(destinoSeleccionado!);
 
       if (!mounted) return;
 
-      if (coords == null ||
-          coords['lat'] == null ||
-          coords['lng'] == null) {
+      if (coords == null || coords['lat'] == null || coords['lng'] == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("No se pudo obtener ubicación")),
         );
@@ -87,7 +85,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         fechaFin: fechaFin!,
         descripcion: descripcionController.text,
         lat: destinoLat,
-        lng: destinoLng,
+        lng: destinoLng, origen: '', 
+        usuarioId: FirebaseAuth.instance.currentUser!.uid,
       );
 
       if (!mounted) return;
@@ -105,6 +104,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
             destino: destinoSeleccionado!,
             destinoLat: destinoLat,
             destinoLng: destinoLng,
+            origen: '',
           ),
         ),
       );
@@ -113,9 +113,9 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error al crear el viaje")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error al crear el viaje")));
     }
 
     if (mounted) {
@@ -165,8 +165,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
                 const SizedBox(height: 20),
 
-                Text("Elegir fecha",
-                    style: GoogleFonts.poppins(fontSize: 16)),
+                Text("Elegir fecha", style: GoogleFonts.poppins(fontSize: 16)),
 
                 const SizedBox(height: 10),
 
@@ -211,8 +210,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
                       // 🔥 LOADING
                       child: cargando
-                          ? const CircularProgressIndicator(
-                              color: Colors.white)
+                          ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               "Crear viaje",
                               style: TextStyle(color: Colors.white),

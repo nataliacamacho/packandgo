@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/carro/carro_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/mixtas/rutamixta_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/autobus/autobus_pantalla.dart';
 
 class SelectorTransporte extends StatelessWidget {
   final double destinoLat;
   final double destinoLng;
   final String destinoNombre;
+  final String origen;
 
   const SelectorTransporte({
     super.key,
     required this.destinoLat,
     required this.destinoLng,
     required this.destinoNombre,
+    required this.origen,
   });
 
   @override
@@ -33,8 +36,9 @@ class SelectorTransporte extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => CarroPantalla(
                     destinoLat: destinoLat,
-                    destinoLng: destinoLng, 
+                    destinoLng: destinoLng,
                     destinoNombre: destinoNombre,
+                    origen: origen,
                   ),
                 ),
               );
@@ -50,9 +54,17 @@ class SelectorTransporte extends StatelessWidget {
             icono: Icons.directions_bus,
             color: Colors.green,
             onTap: () {
-              ScaffoldMessenger.of(
+              Navigator.push(
                 context,
-              ).showSnackBar(const SnackBar(content: Text("Próximamente 🚧")));
+                MaterialPageRoute(
+                  builder: (_) => PantallaAutobus(
+                    destino: destinoNombre,
+                    destinoLat: destinoLat,
+                    destinoLng: destinoLng,
+                    origen: origen,
+                  ),
+                ),
+              );
             },
           ),
 
@@ -86,6 +98,8 @@ class SelectorTransporte extends StatelessWidget {
                   builder: (_) => RutaMixtaPantalla(
                     destinoLat: destinoLat,
                     destinoLng: destinoLng,
+                    origen: origen, 
+                    destinoNombre: destinoNombre,
                   ),
                 ),
               );

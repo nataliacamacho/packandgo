@@ -1,10 +1,11 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class UbicacionServicio {
-  /// Devuelve la ubicación actual del usuario
-  /// Puede retornar null si el GPS está desactivado o permisos denegados
+  /// ===============================
+  /// 📍 OBTENER UBICACIÓN ACTUAL
+  /// ===============================
   Future<Position?> obtenerUbicacionActual() async {
-    // 1️⃣ Verifica que el servicio de ubicación esté activado
     bool servicioActivo = await Geolocator.isLocationServiceEnabled();
     print("🛰️ Servicio activo: $servicioActivo");
 
@@ -13,7 +14,6 @@ class UbicacionServicio {
       return null;
     }
 
-    // 2️⃣ Verifica permisos
     LocationPermission permiso = await Geolocator.checkPermission();
     print("🔐 Permiso inicial: $permiso");
 
@@ -32,7 +32,6 @@ class UbicacionServicio {
       return null;
     }
 
-    // 3️⃣ Obtiene la posición actual
     try {
       final posicion = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -48,23 +47,45 @@ class UbicacionServicio {
     }
   }
 
-  // ===============================
-  // 🔥 Obtener solo coordenadas
-  // ===============================
+  /// ===============================
+  /// 📦 COORDENADAS SIMPLES
+  /// ===============================
   Future<Map<String, double>?> obtenerCoordenadas() async {
     final posicion = await obtenerUbicacionActual();
 
     if (posicion == null) return null;
 
-    return {
-      'lat': posicion.latitude,
-      'lng': posicion.longitude,
-    };
+    return {'lat': posicion.latitude, 'lng': posicion.longitude};
   }
 
-  // ===============================
-  // 🔥 Calcular distancia en KM
-  // ===============================
+  /// ===============================
+  /// 🏙️ OBTENER CIUDAD ACTUAL
+  /// ===============================
+  Future<String?> obtenerCiudadActual() async {
+    final posicion = await obtenerUbicacionActual();
+
+    if (posicion == null) return null;
+
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        posicion.latitude,
+        posicion.longitude,
+      );
+
+      final ciudad = placemarks.first.locality;
+
+      print("🏙️ Ciudad detectada: $ciudad");
+
+      return ciudad;
+    } catch (e) {
+      print("❌ Error obteniendo ciudad: $e");
+      return null;
+    }
+  }
+
+  /// ===============================
+  /// 📏 DISTANCIA EN KM
+  /// ===============================
   double calcularDistanciaEnKm({
     required double origenLat,
     required double origenLng,
@@ -85,9 +106,9 @@ class UbicacionServicio {
     return distanciaKm;
   }
 
-  // ===============================
-  // 🔥 Validar si es viable en carro
-  // ===============================
+  /// ===============================
+  /// 🚗 VALIDAR RUTA EN CARRO
+  /// ===============================
   bool esRutaValidaEnCarro(double distanciaKm) {
     final esValida = distanciaKm <= 500;
 

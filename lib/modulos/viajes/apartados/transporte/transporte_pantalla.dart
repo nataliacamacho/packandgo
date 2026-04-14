@@ -5,12 +5,14 @@ class TransportePantalla extends StatelessWidget {
   final String destino;
   final double destinoLat;
   final double destinoLng;
+  final String origen;
 
   const TransportePantalla({
     super.key,
     required this.destino,
     required this.destinoLat,
-    required this.destinoLng,
+    required this.destinoLng, 
+    required this.origen,
   });
 
   @override
@@ -92,6 +94,7 @@ class TransportePantalla extends StatelessWidget {
           destinoLat: destinoLat,
           destinoLng: destinoLng,
           destinoNombre: destino,
+          origen: origen,
         ),
       ),
     );

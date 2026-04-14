@@ -163,13 +163,11 @@ class CuentaPantalla extends StatelessWidget {
                                 _botonSeccion(
                                   context,
                                   "Viajes futuros",
-                                  futuros,
                                 ),
                                 const SizedBox(height: 15),
                                 _botonSeccion(
                                   context,
                                   "Viajes pasados",
-                                  pasados,
                                 ),
                               ],
                             );
@@ -205,17 +203,13 @@ class CuentaPantalla extends StatelessWidget {
   }
 
   // 🔘 BOTONES DE SECCIÓN
-  Widget _botonSeccion(
-    BuildContext context,
-    String titulo,
-    List<QueryDocumentSnapshot> viajes,
-  ) {
+  Widget _botonSeccion(BuildContext context, String titulo) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ListaViajesPantalla(titulo: titulo, viajes: viajes),
+            builder: (_) => ListaViajesPantalla(titulo: titulo),
           ),
         );
       },
