@@ -8,6 +8,7 @@ import 'package:proyecto/modulos/cuenta/cuenta_pantalla.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto/modulos/viajes/detalle_viaje_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/viaje_estado.dart';
 
 class NavegacionPrincipal extends StatefulWidget {
   final int paginaInicial;
@@ -81,7 +82,7 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ListaViajesPantalla(titulo: "Viajes actuales"),
+          builder: (_) => ListaViajesPantalla(tipo: EstadoViaje.actual),
         ),
       );
       return;

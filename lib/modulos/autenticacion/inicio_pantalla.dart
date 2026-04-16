@@ -11,7 +11,6 @@ class LoginPantalla extends StatefulWidget {
 }
 
 class _LoginPantallaState extends State<LoginPantalla> {
-
   final TextEditingController correoController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -28,7 +27,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
   }
 
   Future<void> obtenerUbicacion() async {
-
     final posicion = await ubicacionServicio.obtenerUbicacionActual();
 
     if (posicion != null) {
@@ -40,7 +38,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
   }
 
   Future<void> iniciarSesion() async {
-
     setState(() {
       errorCorreo = null;
       errorPassword = null;
@@ -61,7 +58,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
     }
 
     try {
-
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: correoController.text.trim(),
         password: passwordController.text.trim(),
@@ -69,29 +65,24 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
       await obtenerUbicacion();
 
-      if (!context.mounted) return;
+      // ❌ ELIMINAR ESTO:
+      // Navigator.pushReplacementNamed(context, '/exploracion');
 
-      Navigator.pushReplacementNamed(context, '/exploracion');
-
+      // ✅ NO HAGAS NADA AQUÍ
     } on FirebaseAuthException catch (e) {
-
       if (e.code == 'user-not-found') {
         setState(() {
           errorCorreo = "No existe una cuenta con este correo";
         });
-      } 
-      else if (e.code == 'invalid-email') {
+      } else if (e.code == 'invalid-email') {
         setState(() {
           errorCorreo = "El formato del correo es incorrecto";
         });
-      } 
-      else if (e.code == 'wrong-password' ||
-               e.code == 'invalid-credential') {
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         setState(() {
           errorPassword = "La contraseña es incorrecta";
         });
-      } 
-      else {
+      } else {
         setState(() {
           errorCorreo = "Error al iniciar sesión";
         });
@@ -100,19 +91,13 @@ class _LoginPantallaState extends State<LoginPantalla> {
   }
 
   Future<void> entrarComoInvitado() async {
-
     try {
-
       await FirebaseAuth.instance.signInAnonymously();
-
       await obtenerUbicacion();
 
-      if (!context.mounted) return;
-
-      Navigator.pushReplacementNamed(context, '/exploracion');
-
+      // ❌ ELIMINAR navegación
+      // Navigator.pushReplacementNamed(context, '/exploracion');
     } on FirebaseAuthException {
-
       setState(() {
         errorCorreo = "Error al ingresar como invitado";
       });
@@ -121,7 +106,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF0066D2),
@@ -140,24 +124,19 @@ class _LoginPantallaState extends State<LoginPantalla> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const SizedBox(height: 40),
 
             Padding(
               padding: const EdgeInsets.only(left: 22, bottom: 15),
               child: Text(
                 "Inicio de Sesión",
-                style: GoogleFonts.poppins(
-                  fontSize: 25,
-                  color: Colors.white,
-                ),
+                style: GoogleFonts.poppins(fontSize: 25, color: Colors.white),
               ),
             ),
 
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-
                   return SingleChildScrollView(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
@@ -180,7 +159,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
                             TextField(
                               controller: correoController,
                               onChanged: (_) {
@@ -201,7 +179,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                             if (errorCorreo != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  left: 10,
+                                ),
                                 child: Text(
                                   errorCorreo!,
                                   style: const TextStyle(
@@ -234,7 +215,10 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                             if (errorPassword != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  left: 10,
+                                ),
                                 child: Text(
                                   errorPassword!,
                                   style: const TextStyle(
@@ -245,62 +229,13 @@ class _LoginPantallaState extends State<LoginPantalla> {
                               ),
 
                             const SizedBox(height: 30),
-//boton ingresar
+                            //boton ingresar
                             Center(
                               child: SizedBox(
                                 width: 150,
                                 height: 50,
                                 child: ElevatedButton(
-                                  onPressed: () async {
-                                    setState(() {
-                                      errorCorreo = null;
-                                      errorPassword = null;
-                                    });
-
-                                    if (correoController.text.isEmpty) {
-                                      setState(() {
-                                        errorCorreo = "El correo es obligatorio";
-                                      });
-                                      return;
-                                    }
-
-                                    if (passwordController.text.isEmpty) {
-                                      setState(() {
-                                        errorPassword = "La contraseña es obligatoria";
-                                      });
-                                      return;
-                                    }
-
-                                    try {
-                                      await FirebaseAuth.instance.signInWithEmailAndPassword(
-                                        email: correoController.text.trim(),
-                                        password: passwordController.text.trim(),
-                                      );
-
-                                      if (!context.mounted) return;
-
-                                      Navigator.pushReplacementNamed(context, '/exploracion');
-
-                                    } on FirebaseAuthException catch (e) {
-                                      if (e.code == 'user-not-found') {
-                                        setState(() {
-                                          errorCorreo = "No existe una cuenta con este correo";
-                                        });
-                                      } else if (e.code == 'invalid-email') {
-                                        setState(() {
-                                          errorCorreo = "El formato del correo es incorrecto";
-                                        });
-                                      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-                                        setState(() {
-                                          errorPassword = "La contraseña es incorrecta";
-                                        });
-                                      } else {
-                                        setState(() {
-                                          errorCorreo = "Error al iniciar sesión";
-                                        });
-                                      }
-                                    }
-                                  },
+                                  onPressed: iniciarSesion,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFFF6A230),
                                     shape: RoundedRectangleBorder(
@@ -318,7 +253,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
                             ),
 
                             const SizedBox(height: 15),
-//boton invitado
+                            //boton invitado
                             Center(
                               child: TextButton(
                                 onPressed: entrarComoInvitado,
@@ -337,7 +272,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-
                                 Text(
                                   "¿No tienes cuenta?",
                                   style: GoogleFonts.poppins(
@@ -349,7 +283,9 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.pushReplacementNamed(
-                                        context, '/registro');
+                                      context,
+                                      '/registro',
+                                    );
                                   },
                                   child: Text(
                                     "Crear cuenta",
@@ -360,7 +296,6 @@ class _LoginPantallaState extends State<LoginPantalla> {
                                 ),
                               ],
                             ),
-
                           ],
                         ),
                       ),

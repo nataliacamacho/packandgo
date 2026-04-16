@@ -12,9 +12,10 @@ class ViajeServicio {
     required DateTime fechaFin,
     required double lat,
     required double lng,
-    required String origen, required String usuarioId,
+    required String origen,
+    required String usuarioId,
   }) async {
-    final doc = await FirebaseFirestore.instance.collection("viajes").add({
+    final doc = await _firestore.collection("viajes").add({
       "usuarioId": usuarioId,
       "destino": destino,
       "descripcion": descripcion,
@@ -24,6 +25,8 @@ class ViajeServicio {
       "lng": lng,
       "origen": origen,
       "cancelado": false,
+      "realizado": null,
+      "eliminado": false,
     });
 
     return doc.id;

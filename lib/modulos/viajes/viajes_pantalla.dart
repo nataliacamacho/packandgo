@@ -21,37 +21,6 @@ class ViajesPantalla extends StatelessWidget {
         .snapshots();
   }
 
-  void mostrarDialogoEliminar(BuildContext context, String idViaje) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Eliminar viaje"),
-        content: const Text("¿Seguro que quieres eliminar este viaje?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection("viajes")
-                  .doc(idViaje)
-                  .delete();
-
-              Navigator.pop(context);
-
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Viaje eliminado")));
-            },
-            child: const Text("Eliminar"),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,10 +43,14 @@ class ViajesPantalla extends StatelessWidget {
             return const Center(child: Text("Error al cargar los viajes"));
           }
 
-          final viajes = snapshot.data?.docs ?? [];
+          // 🔥 FILTRAMOS AQUÍ (NO EN EL BUILDER)
+          final viajes = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['eliminado'] != true;
+          }).toList();
 
           // =========================
-          // 🚨 SIN VIAJES (MEJORADO)
+          // 🚨 SIN VIAJES
           // =========================
           if (viajes.isEmpty) {
             return Center(
@@ -105,7 +78,7 @@ class ViajesPantalla extends StatelessWidget {
                     const SizedBox(height: 10),
 
                     Text(
-                      "Crea tu primer viaje para empezar a planear tus rutas, transporte y actividades.",
+                      "Crea tu primer viaje para empezar a planear todo.",
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     ),
@@ -115,10 +88,6 @@ class ViajesPantalla extends StatelessWidget {
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF6A230),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
                       ),
                       icon: const Icon(Icons.add, color: Colors.white),
                       label: const Text(
@@ -141,7 +110,7 @@ class ViajesPantalla extends StatelessWidget {
           }
 
           // =========================
-          // 📦 LISTA NORMAL
+          // 📦 LISTA
           // =========================
           return ListView.builder(
             itemCount: viajes.length,
@@ -156,22 +125,45 @@ class ViajesPantalla extends StatelessWidget {
               final destinoLat = data["lat"] ?? 0.0;
               final destinoLng = data["lng"] ?? 0.0;
 
+              final cancelado = data["cancelado"] ?? false;
+
               return Card(
                 margin: const EdgeInsets.all(12),
                 child: ListTile(
-                  title: Text(destino),
+                  title: Row(
+                    children: [
+                      Expanded(child: Text(destino)),
+
+                      // 🔥 ETIQUETA CANCELADO
+                      if (cancelado)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            "CANCELADO",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
 
                   subtitle: Text(
                     "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year} - "
                     "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}",
                   ),
 
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      mostrarDialogoEliminar(context, viaje.id);
-                    },
-                  ),
+                  // ❌ SIN BOTÓN
+                  trailing: null,
 
                   onTap: () {
                     Navigator.push(

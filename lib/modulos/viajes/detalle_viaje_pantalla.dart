@@ -27,11 +27,58 @@ class DetalleViajePantalla extends StatelessWidget {
     required this.origen,
   });
 
+  bool yaTerminoViaje() {
+    final hoy = DateTime.now();
+
+    final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
+    final fin = DateTime(fechaFin.year, fechaFin.month, fechaFin.day);
+
+    return hoySinHora.isAfter(fin);
+  }
+
+  void mostrarDialogoCancelar(BuildContext context, String idViaje) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Cancelar viaje"),
+        content: const Text(
+          "Este viaje se marcará como CANCELADO y se moverá a viajes pasados.\n\n¿Deseas continuar?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection("viajes")
+                  .doc(idViaje)
+                  .update({'cancelado': true});
+
+              Navigator.pop(context);
+
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Viaje cancelado")));
+            },
+            child: const Text(
+              "Sí, cancelar",
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fechaInicioTexto =
         "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}";
     final fechaFinTexto = "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}";
+
+    final viajeTerminado = yaTerminoViaje();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -67,7 +114,6 @@ class DetalleViajePantalla extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-
                       if (descripcion.isNotEmpty)
                         Text(
                           descripcion,
@@ -76,9 +122,7 @@ class DetalleViajePantalla extends StatelessWidget {
                             fontSize: 16,
                           ),
                         ),
-
                       const SizedBox(height: 5),
-
                       Row(
                         children: [
                           const Icon(
@@ -104,9 +148,6 @@ class DetalleViajePantalla extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // =========================
-            // 🚗 TRANSPORTE (CORREGIDO)
-            // =========================
             item(
               context,
               Icons.directions_car,
@@ -167,32 +208,92 @@ class DetalleViajePantalla extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            Center(
-              child: ElevatedButton(
-                onPressed: () async {
-                  try {
-                    await FirebaseFirestore.instance
-                        .collection('viajes')
-                        .doc(idViaje)
-                        .update({'cancelado': true});
-              
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Viaje cancelado")),
-                    );
-              
-                    Navigator.pop(context);
-                  } catch (e) {
-                    print("❌ Error cancelando: $e");
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent.shade100),
-                child: const Text("Cancelar viaje", style: TextStyle(color: Colors.white)),
+            // 🔥 BOTONES SOLO SI YA TERMINÓ
+            if (viajeTerminado)
+              Column(
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      await FirebaseFirestore.instance
+                          .collection('viajes')
+                          .doc(idViaje)
+                          .update({'realizado': true});
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Viaje realizado")),
+                      );
+
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                    child: const Text(
+                      "Se realizó",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await FirebaseFirestore.instance
+                          .collection('viajes')
+                          .doc(idViaje)
+                          .update({'realizado': false});
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("No se realizó")),
+                      );
+
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text(
+                      "No se realizó",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
 
+            // 🔥 MENSAJE SI AÚN NO TERMINA
+            if (!viajeTerminado)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    "Podrás marcar este viaje cuando termine",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // SOLO PARTE IMPORTANTE (AGREGAR BOTÓN CANCELAR)
+            if (!viajeTerminado)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      mostrarDialogoCancelar(context, idViaje);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                    ),
+                    child: const Text(
+                      "Cancelar viaje",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
