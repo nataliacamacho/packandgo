@@ -10,12 +10,14 @@ class CarroPantalla extends StatefulWidget {
   final double destinoLat;
   final double destinoLng;
   final String destinoNombre;
+  final String origen;
 
   const CarroPantalla({
     super.key,
     required this.destinoLat,
     required this.destinoLng,
-    required this.destinoNombre,
+    required this.destinoNombre, 
+    required this.origen,
   });
 
   @override
@@ -118,6 +120,8 @@ class _CarroPantallaState extends State<CarroPantalla> {
           builder: (_) => RutaMixtaPantalla(
             destinoLat: widget.destinoLat,
             destinoLng: widget.destinoLng,
+            destinoNombre: widget.destinoNombre,
+            origen: widget.origen,
           ),
         ),
       );

@@ -5,6 +5,7 @@ import 'package:proyecto/modulos/cuenta/editar_pantalla.dart';
 import 'package:proyecto/modulos/cuenta/lista_viajes_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/usuario_servicio.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:proyecto/nucleo/utilidades/viaje_estado.dart';
 
 class CuentaPantalla extends StatelessWidget {
   const CuentaPantalla({super.key});
@@ -163,13 +164,13 @@ class CuentaPantalla extends StatelessWidget {
                                 _botonSeccion(
                                   context,
                                   "Viajes futuros",
-                                  futuros,
+                                  EstadoViaje.futuro,
                                 ),
                                 const SizedBox(height: 15),
                                 _botonSeccion(
                                   context,
                                   "Viajes pasados",
-                                  pasados,
+                                  EstadoViaje.pasado,
                                 ),
                               ],
                             );
@@ -182,7 +183,6 @@ class CuentaPantalla extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () async {
                             await FirebaseAuth.instance.signOut();
-                            Navigator.pushReplacementNamed(context, '/inicio');
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFF6A230),
@@ -205,18 +205,12 @@ class CuentaPantalla extends StatelessWidget {
   }
 
   // 🔘 BOTONES DE SECCIÓN
-  Widget _botonSeccion(
-    BuildContext context,
-    String titulo,
-    List<QueryDocumentSnapshot> viajes,
-  ) {
+  Widget _botonSeccion(BuildContext context, String titulo, EstadoViaje tipo) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => ListaViajesPantalla(titulo: titulo, viajes: viajes),
-          ),
+          MaterialPageRoute(builder: (_) => ListaViajesPantalla(tipo: tipo)),
         );
       },
       child: Container(

@@ -8,6 +8,7 @@ import 'package:proyecto/modulos/cuenta/cuenta_pantalla.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto/modulos/viajes/detalle_viaje_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/viaje_estado.dart';
 
 class NavegacionPrincipal extends StatefulWidget {
   final int paginaInicial;
@@ -38,8 +39,10 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
         .collection("viajes")
         .where("usuarioId", isEqualTo: user.uid)
         .get();
-
-    final viajes = snapshot.docs;
+    final viajes = snapshot.docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['cancelado'] != true;
+    }).toList();
     final hoy = DateTime.now();
 
     // 🔥 VIAJE ACTUAL
@@ -64,6 +67,7 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
             descripcion: viaje["descripcion"] ?? "",
             idViaje: viaje.id,
             destino: viaje["destino"] ?? "",
+            origen: viaje["origen"] ?? "",
 
             // 🔥 AQUÍ ESTABA EL ERROR
             destinoLat: viaje["lat"],
@@ -78,8 +82,7 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              ListaViajesPantalla(titulo: "Viajes actuales", viajes: actuales),
+          builder: (_) => ListaViajesPantalla(tipo: EstadoViaje.actual),
         ),
       );
       return;
@@ -110,6 +113,7 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
             descripcion: viaje["descripcion"] ?? "",
             idViaje: viaje.id,
             destino: viaje["destino"] ?? "",
+            origen: viaje["origen"] ?? "",
 
             // 🔥 AQUÍ ESTABA EL ERROR
             destinoLat: viaje["lat"],
@@ -124,6 +128,11 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("No tienes viajes disponibles")),
     );
+
+    print("🔥 TOTAL VIAJES: ${viajes.length}");
+    print("🔥 HOY: $hoy");
+    print("🔥 ACTUALES: ${actuales.length}");
+    print("🔥 FUTUROS: ${futuros.length}");
   }
 
   @override

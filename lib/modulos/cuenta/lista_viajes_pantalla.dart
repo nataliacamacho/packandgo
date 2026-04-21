@@ -2,26 +2,85 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto/modulos/viajes/detalle_viaje_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/viaje_estado.dart';
 
 class ListaViajesPantalla extends StatelessWidget {
-  final String titulo;
-  final List<QueryDocumentSnapshot> viajes;
+  final EstadoViaje tipo;
 
-  const ListaViajesPantalla({
-    super.key,
-    required this.titulo,
-    required this.viajes,
-  });
+  const ListaViajesPantalla({super.key, required this.tipo});
 
-  void mostrarDialogoEliminar(BuildContext context, String idViaje) {
+  DateTime? _parseFecha(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
+  Color obtenerColor(bool cancelado, EstadoViaje estado, dynamic realizado) {
+    if (cancelado) return Colors.orange.shade200;
+
+    switch (estado) {
+      case EstadoViaje.futuro:
+        return Colors.blue.shade100;
+      case EstadoViaje.actual:
+        return Colors.green.shade100;
+      case EstadoViaje.pasado:
+        if (realizado == true) return Colors.green.shade200;
+        if (realizado == false) return Colors.red.shade200;
+        return Colors.grey.shade300;
+    }
+  }
+
+  void mostrarDialogoCancelar(BuildContext context, String idViaje) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Eliminar viaje"),
-        content: const Text("¿Seguro que quieres eliminar este viaje?"),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Cancelar viaje"),
+        content: const Text(
+          "Este viaje se marcará como CANCELADO y pasará a viajes pasados.",
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection("viajes")
+                  .doc(idViaje)
+                  .update({'cancelado': true});
+
+              Navigator.pop(dialogContext);
+
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Viaje cancelado")));
+            },
+            child: const Text(
+              "Sí, cancelar",
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void mostrarDialogoEliminarDefinitivo(BuildContext context, String idViaje) {
+    final messenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Eliminar viaje"),
+        content: const Text(
+          "Este viaje se eliminará PERMANENTEMENTE.\n\n"
+          "⚠️ No podrás recuperarlo después.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Cancelar"),
           ),
           TextButton(
@@ -31,96 +90,216 @@ class ListaViajesPantalla extends StatelessWidget {
                   .doc(idViaje)
                   .delete();
 
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
 
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Viaje eliminado")));
+              messenger.clearSnackBars();
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text("Viaje eliminado"),
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
-            child: const Text("Eliminar"),
+            child: const Text("Eliminar", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
+  String _textoEstadoLabel(EstadoViaje estado, bool cancelado) {
+    if (cancelado) return "Cancelado";
+
+    switch (estado) {
+      case EstadoViaje.actual:
+        return "Actual";
+      case EstadoViaje.futuro:
+        return "Futuro";
+      case EstadoViaje.pasado:
+        return "Pasado";
+    }
+  }
+
+  Color _colorEstadoLabel(EstadoViaje estado) {
+    switch (estado) {
+      case EstadoViaje.actual:
+        return Colors.green;
+      case EstadoViaje.futuro:
+        return Colors.blue;
+      case EstadoViaje.pasado:
+        return Colors.orange;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Fecha actual
-    final hoy = DateTime.now();
-
-    // Filtrar y ordenar viajes futuros
-    final viajesFuturos =
-        viajes.where((viaje) {
-          final data = viaje.data() as Map<String, dynamic>;
-          final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
-          return fechaInicio.isAfter(hoy) || fechaInicio.isAtSameMomentAs(hoy);
-        }).toList()..sort((a, b) {
-          final fechaA =
-              (a.data() as Map<String, dynamic>)["fechaInicio"] as Timestamp;
-          final fechaB =
-              (b.data() as Map<String, dynamic>)["fechaInicio"] as Timestamp;
-          return fechaA.toDate().compareTo(
-            fechaB.toDate(),
-          ); // del más cercano al más lejano
-        });
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(titulo),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        title: Text(
+          tipo == EstadoViaje.actual
+              ? "Viajes actuales"
+              : tipo == EstadoViaje.futuro
+              ? "Viajes futuros"
+              : "Viajes pasados",
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
       ),
-      body: viajesFuturos.isEmpty
-          ? Center(child: Text("No se encontraron $titulo"))
-          : ListView.builder(
-              itemCount: viajesFuturos.length,
-              itemBuilder: (context, index) {
-                final viaje = viajesFuturos[index];
-                final data = viaje.data() as Map<String, dynamic>;
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('viajes')
+            .where(
+              'usuarioId',
+              isEqualTo: FirebaseAuth.instance.currentUser!.uid,
+            )
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                final destino = data["destino"] ?? "Sin destino";
+          final viajes = snapshot.data!.docs;
 
-                final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
-                final fechaFin = (data["fechaFin"] as Timestamp).toDate();
+          final actuales = <QueryDocumentSnapshot>[];
+          final futuros = <QueryDocumentSnapshot>[];
+          final pasados = <QueryDocumentSnapshot>[];
 
-                return Card(
-                  color: const Color.fromARGB(255, 255, 255, 255),
-                  margin: const EdgeInsets.all(12),
-                  surfaceTintColor: Colors.transparent,
-                  elevation: 3,
-                  child: ListTile(
-                    title: Text(destino),
-                    subtitle: Text(
-                      "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}",
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DetalleViajePantalla(
-                            nombre: destino,
-                            fechaInicio: fechaInicio,
-                            fechaFin: fechaFin,
-                            descripcion: data["descripcion"] ?? "",
-                            idViaje: viaje.id,
-                            destino: '',
-                            destinoLat: data["lat"],
-                            destinoLng: data["lng"],
+          for (var doc in viajes) {
+            final data = doc.data() as Map<String, dynamic>;
+
+            if (data['eliminado'] == true) continue;
+
+            final fechaInicio = _parseFecha(data['fechaInicio']);
+            final fechaFin = _parseFecha(data['fechaFin']);
+
+            if (fechaInicio == null || fechaFin == null) continue;
+
+            final cancelado = data['cancelado'] ?? false;
+
+            if (cancelado) {
+              pasados.add(doc);
+              continue;
+            }
+
+            final estado = ViajeEstadoUtil.obtenerEstado(
+              fechaInicio: fechaInicio,
+              fechaFin: fechaFin,
+            );
+
+            if (estado == EstadoViaje.actual) actuales.add(doc);
+            if (estado == EstadoViaje.futuro) futuros.add(doc);
+            if (estado == EstadoViaje.pasado) pasados.add(doc);
+          }
+
+          List<QueryDocumentSnapshot> lista;
+
+          if (tipo == EstadoViaje.actual)
+            lista = actuales;
+          else if (tipo == EstadoViaje.futuro)
+            lista = futuros;
+          else
+            lista = pasados;
+
+          if (lista.isEmpty) {
+            return const Center(child: Text("No se encontraron viajes"));
+          }
+
+          return ListView.builder(
+            itemCount: lista.length,
+            itemBuilder: (context, index) {
+              final viaje = lista[index];
+              final data = viaje.data() as Map<String, dynamic>;
+
+              final destino = data["destino"] ?? "Sin destino";
+              final descripcion = data["descripcion"] ?? "";
+              final origen = data["origen"] ?? "Sin origen";
+
+              final fechaInicio = _parseFecha(data['fechaInicio'])!;
+              final fechaFin = _parseFecha(data['fechaFin'])!;
+
+              final lat = (data["lat"] as num?)?.toDouble() ?? 0.0;
+              final lng = (data["lng"] as num?)?.toDouble() ?? 0.0;
+
+              final realizado = data['realizado'];
+              final cancelado = data['cancelado'] ?? false;
+
+              // 🔥 AQUÍ ESTÁ LA CLAVE
+              final estadoBase = ViajeEstadoUtil.obtenerEstado(
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin,
+              );
+
+              final estadoFinal = cancelado ? EstadoViaje.pasado : estadoBase;
+
+              return Card(
+                margin: const EdgeInsets.all(12),
+                color: obtenerColor(cancelado, estadoFinal, realizado),
+                child: ListTile(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          destino,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      // 🔥 ETIQUETA DE ESTADO
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _colorEstadoLabel(estadoFinal),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _textoEstadoLabel(estadoFinal, cancelado),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      );
-                    },
-                    onLongPress: () {
-                      print(
-                        "UID actual: ${FirebaseAuth.instance.currentUser!.uid}",
-                      );
-                      print("UID del viaje: ${data["usuarioId"]}");
-                      mostrarDialogoEliminar(context, viaje.id);
-                    },
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                  subtitle: Text(
+                    "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year} - "
+                    "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}",
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DetalleViajePantalla(
+                          nombre: destino,
+                          fechaInicio: fechaInicio,
+                          fechaFin: fechaFin,
+                          descripcion: descripcion,
+                          idViaje: viaje.id,
+                          destino: destino,
+                          destinoLat: lat,
+                          destinoLng: lng,
+                          origen: origen,
+                        ),
+                      ),
+                    );
+                  },
+                  onLongPress: () {
+                    if (estadoFinal == EstadoViaje.pasado) {
+                      mostrarDialogoEliminarDefinitivo(context, viaje.id);
+                    } else {
+                      mostrarDialogoCancelar(context, viaje.id);
+                    }
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

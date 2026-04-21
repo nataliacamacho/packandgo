@@ -8,7 +8,7 @@ class RutaMixtaPantalla extends StatefulWidget {
   const RutaMixtaPantalla({
     super.key,
     required this.destinoLat,
-    required this.destinoLng,
+    required this.destinoLng, required String origen, required String destinoNombre,
   });
 
   @override

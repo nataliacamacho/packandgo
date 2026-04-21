@@ -1,0 +1,196 @@
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class SeedAutobus74 {
+  final FirebaseFirestore db = FirebaseFirestore.instance;
+
+  final List<Map<String, dynamic>> ciudades = [
+    {"id":"zapopan","nombre":"Zapopan","lat":20.7218,"lng":-103.3918},
+  {"id":"cdmx","nombre":"Ciudad de México","lat":19.4326,"lng":-99.1332},
+  {"id":"gdl","nombre":"Guadalajara","lat":20.6597,"lng":-103.3496},
+  {"id":"mty","nombre":"Monterrey","lat":25.6866,"lng":-100.3161},
+  {"id":"cancun","nombre":"Cancún","lat":21.1619,"lng":-86.8515},
+  {"id":"puebla","nombre":"Puebla","lat":19.0414,"lng":-98.2063},
+  {"id":"merida","nombre":"Mérida","lat":20.9674,"lng":-89.5926},
+  {"id":"tijuana","nombre":"Tijuana","lat":32.5149,"lng":-117.0382},
+  {"id":"leon","nombre":"León","lat":21.1220,"lng":-101.6823},
+  {"id":"queretaro","nombre":"Querétaro","lat":20.5888,"lng":-100.3899},
+  {"id":"toluca","nombre":"Toluca","lat":19.2826,"lng":-99.6557},
+
+  {"id":"acapulco","nombre":"Acapulco","lat":16.8531,"lng":-99.8237},
+  {"id":"puertovallarta","nombre":"Puerto Vallarta","lat":20.6534,"lng":-105.2253},
+  {"id":"loscabos","nombre":"Los Cabos","lat":22.8905,"lng":-109.9167},
+  {"id":"mazatlan","nombre":"Mazatlán","lat":23.2494,"lng":-106.4111},
+  {"id":"veracruz","nombre":"Veracruz","lat":19.1738,"lng":-96.1342},
+  {"id":"oaxaca","nombre":"Oaxaca","lat":17.0732,"lng":-96.7266},
+  {"id":"sanmiguel","nombre":"San Miguel de Allende","lat":20.9144,"lng":-100.7430},
+  {"id":"guanajuato","nombre":"Guanajuato","lat":21.0190,"lng":-101.2574},
+  {"id":"morelia","nombre":"Morelia","lat":19.7050,"lng":-101.1949},
+  {"id":"zacatecas","nombre":"Zacatecas","lat":22.7709,"lng":-102.5832},
+
+  {"id":"tuxtla","nombre":"Tuxtla Gutiérrez","lat":16.7528,"lng":-93.1167},
+  {"id":"sancristobal","nombre":"San Cristóbal de las Casas","lat":16.7370,"lng":-92.6376},
+  {"id":"villahermosa","nombre":"Villahermosa","lat":17.9895,"lng":-92.9475},
+  {"id":"campeche","nombre":"Campeche","lat":19.8301,"lng":-90.5349},
+  {"id":"chetumal","nombre":"Chetumal","lat":18.5043,"lng":-88.3053},
+  {"id":"playadelcarmen","nombre":"Playa del Carmen","lat":20.6296,"lng":-87.0739},
+  {"id":"tulum","nombre":"Tulum","lat":20.2114,"lng":-87.4654},
+  {"id":"cozumel","nombre":"Cozumel","lat":20.4229,"lng":-86.9223},
+
+  {"id":"aguascalientes","nombre":"Aguascalientes","lat":21.8853,"lng":-102.2916},
+  {"id":"saltillo","nombre":"Saltillo","lat":25.4383,"lng":-100.9737},
+  {"id":"torreon","nombre":"Torreón","lat":25.5428,"lng":-103.4068},
+  {"id":"chihuahua","nombre":"Chihuahua","lat":28.6329,"lng":-106.0691},
+  {"id":"juarez","nombre":"Ciudad Juárez","lat":31.6904,"lng":-106.4245},
+  {"id":"durango","nombre":"Durango","lat":24.0277,"lng":-104.6532},
+  {"id":"hermosillo","nombre":"Hermosillo","lat":29.0729,"lng":-110.9559},
+  {"id":"caborca","nombre":"Caborca","lat":30.7167,"lng":-112.1500},
+
+  {"id":"lapaz","nombre":"La Paz","lat":24.1426,"lng":-110.3128},
+  {"id":"ensenada","nombre":"Ensenada","lat":31.8667,"lng":-116.6000},
+  {"id":"colima","nombre":"Colima","lat":19.2433,"lng":-103.7241},
+  {"id":"manzanillo","nombre":"Manzanillo","lat":19.1138,"lng":-104.3385},
+  {"id":"tepic","nombre":"Tepic","lat":21.5085,"lng":-104.8956},
+  {"id":"nuevovallarta","nombre":"Nuevo Vallarta","lat":20.6829,"lng":-105.2850},
+
+  {"id":"cuernavaca","nombre":"Cuernavaca","lat":18.9242,"lng":-99.2216},
+  {"id":"taxco","nombre":"Taxco","lat":18.5563,"lng":-99.6057},
+  {"id":"tlaxcala","nombre":"Tlaxcala","lat":19.3139,"lng":-98.2404},
+  {"id":"pachuca","nombre":"Pachuca","lat":20.1011,"lng":-98.7591},
+  {"id":"tula","nombre":"Tula de Allende","lat":20.0544,"lng":-99.3429},
+
+  {"id":"xalapa","nombre":"Xalapa","lat":19.5438,"lng":-96.9102},
+  {"id":"coatepec","nombre":"Coatepec","lat":19.4524,"lng":-96.9613},
+  {"id":"orizaba","nombre":"Orizaba","lat":18.8506,"lng":-97.1036},
+
+  {"id":"metepec","nombre":"Metepec","lat":19.2530,"lng":-99.6010},
+  {"id":"vallebravo","nombre":"Valle de Bravo","lat":19.1925,"lng":-100.1327},
+
+  {"id":"izamal","nombre":"Izamal","lat":20.9300,"lng":-89.0200},
+  {"id":"valladolid","nombre":"Valladolid","lat":20.6896,"lng":-88.2017},
+
+  {"id":"bacalar","nombre":"Bacalar","lat":18.6783,"lng":-88.3891},
+  {"id":"holbox","nombre":"Isla Holbox","lat":21.5236,"lng":-87.3000},
+
+  {"id":"realcatorce","nombre":"Real de Catorce","lat":23.6900,"lng":-100.8900},
+  {"id":"slp","nombre":"San Luis Potosí","lat":22.1565,"lng":-100.9855},
+
+  {"id":"tequila","nombre":"Tequila","lat":20.8823,"lng":-103.8355},
+  {"id":"chapala","nombre":"Chapala","lat":20.2967,"lng":-103.1917},
+  {"id":"ajijic","nombre":"Ajijic","lat":20.2972,"lng":-103.2542},
+];
+
+  Future<void> generar() async {
+    int count = 0;
+
+    for (final origen in ciudades) {
+      final destinos = _obtenerDestinos(origen);
+
+      for (final destino in destinos) {
+        await db.collection("transportes_autobus").add({
+          "origen": origen["nombre"],
+          "destino": destino["nombre"],
+
+          "origen_key": _norm(origen["nombre"]),
+          "destino_key": _norm(destino["nombre"]),
+
+          "lat_origen": origen["lat"],
+          "lng_origen": origen["lng"],
+          "lat_destino": destino["lat"],
+          "lng_destino": destino["lng"],
+
+          "horarios": _horarios(),
+          "precio": _precio(origen, destino),
+          "duracion": _duracion(origen, destino),
+
+          "terminal_origen": "Terminal ${origen["nombre"]}",
+          "terminal_destino": "Terminal ${destino["nombre"]}",
+
+          "ultimaActualizacion": DateTime.now().toIso8601String(),
+        });
+
+        count++;
+      }
+    }
+
+    print("✅ SEED COMPLETO: $count rutas creadas");
+  }
+
+  // 🔥 RUTAS INTELIGENTES POR DISTANCIA
+  List<Map<String, dynamic>> _obtenerDestinos(
+      Map<String, dynamic> origen) {
+    List<Map<String, dynamic>> cercanos = [];
+
+    for (final destino in ciudades) {
+      if (destino["id"] == origen["id"]) continue;
+
+      final dist = _distancia(
+        origen["lat"],
+        origen["lng"],
+        destino["lat"],
+        destino["lng"],
+      );
+
+      // 🔥 SOLO RUTAS REALISTAS (ajustable)
+      if (dist <= 900) {
+        cercanos.add(destino);
+      }
+    }
+
+    return cercanos;
+  }
+
+  // 📏 DISTANCIA REAL (Haversine)
+  double _distancia(double lat1, double lng1, double lat2, double lng2) {
+    const R = 6371;
+
+    final dLat = _deg(lat2 - lat1);
+    final dLng = _deg(lng2 - lng1);
+
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(_deg(lat1)) *
+            cos(_deg(lat2)) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return R * c;
+  }
+
+  double _deg(double d) => d * pi / 180;
+
+  // 🔤 NORMALIZACIÓN (CLAVE PARA TU BUSCADOR)
+  String _norm(String t) => t
+      .toLowerCase()
+      .replaceAll("á", "a")
+      .replaceAll("é", "e")
+      .replaceAll("í", "i")
+      .replaceAll("ó", "o")
+      .replaceAll("ú", "u")
+      .replaceAll("ñ", "n")
+      .replaceAll(" ", "_");
+
+  // 🕒 HORARIOS REALISTAS
+  List<String> _horarios() => [
+        "06:00",
+        "09:00",
+        "12:00",
+        "15:00",
+        "18:00"
+      ];
+
+  // 💰 PRECIO BASADO EN DISTANCIA
+  int _precio(Map a, Map b) {
+    final dist = _distancia(a["lat"], a["lng"], b["lat"], b["lng"]);
+    return (150 + dist * 2).round();
+  }
+
+  // ⏱ DURACIÓN ESTIMADA
+  String _duracion(Map a, Map b) {
+    final dist = _distancia(a["lat"], a["lng"], b["lat"], b["lng"]);
+    final hours = (dist / 80).round();
+    return "${hours}h ${((dist % 80) / 1.33).round()}m";
+  }
+}
