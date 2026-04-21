@@ -10,7 +10,7 @@ class FoursquareServicio {
     final apiKey = dotenv.env['FOURSQUARE_API_KEY']?.trim();
 
     if (apiKey == null || apiKey.isEmpty) {
-      print("❌ API KEY de Foursquare no encontrada");
+      print(" API KEY de Foursquare no encontrada");
       return [];
     }
 
@@ -25,20 +25,20 @@ class FoursquareServicio {
       final respuesta = await http.get(
         url,
         headers: {
+          'Authorization': apiKey, 
           'Accept': 'application/json',
-          'Authorization': apiKey,
-          'Content-Type': 'application/json',
+          'X-Places-Api-Version': '2023-10-10', 
         },
       )
       .timeout(const Duration(seconds: 10));
 
-      print("📡 STATUS CODE: ${respuesta.statusCode}");
-      print("📦 BODY: ${respuesta.body}");
-      print("🔑 API KEY: $apiKey");
+      print(" STATUS CODE: ${respuesta.statusCode}");
+      print(" BODY: ${respuesta.body}");
+      print(" API KEY: $apiKey");
 
       if (respuesta.statusCode == 200) {
         final data = json.decode(respuesta.body);
-        return data['results']; // 👈 AQUÍ está lo importante
+        return data['results']; //lo importante
       } else {
         print("❌ Error en la API");
         return [];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPantalla extends StatefulWidget {
   const LoginPantalla({super.key});
@@ -19,6 +20,11 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
   String? errorCorreo;
   String? errorPassword;
+  
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -26,6 +32,35 @@ class _LoginPantallaState extends State<LoginPantalla> {
     passwordController.dispose();
     super.dispose();
   }
+  //ya no es necesario, pero lo dejo por si acaso 
+  void inyectarListaNegra() async {
+  List<String> listaMala = [
+    'pendejo', 'pendeja', 'pendejos', 'pendejas',
+    'cabron', 'cabrón', 'cabrona', 'cabrones',
+    'puto', 'puta', 'putos', 'putas',
+    'mierda', 'mierdas',
+    'pinche', 'pinches',
+    'idiota', 'idiotas',
+    'estupido', 'estúpido', 'estupida', 'estúpida',
+    'imbecil', 'imbécil', 'imbeciles',
+    'verga', 'v3rga', 'pito', 'culo', 'culero', 'culera',
+    'mamada', 'mamadas',
+    'chingar', 'chinga', 'chingas', 'chingada', 'chingado', 'chingaquedito'
+  ];
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('configuracion')
+        .doc('filtros_comunidad')
+        .set({
+          'palabras_prohibidas': listaMala
+        }, SetOptions(merge: true)); // merge evita que borres otros campos si ya los tenías
+        
+    print("✅ ¡Lista negra inyectada en Firebase de un solo golpe!");
+  } catch (e) {
+    print("❌ Error: $e");
+  }
+}
 
   Future<void> obtenerUbicacion() async {
 
