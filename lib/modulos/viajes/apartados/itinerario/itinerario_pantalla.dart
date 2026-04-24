@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/busqueda/busqueda_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/diario_personal/diario_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/itinerario_servicio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ItinerarioPantalla extends StatefulWidget {
   final DateTime fechaInicio;
@@ -28,6 +31,7 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
     super.initState();
     diasDelViaje = ItinerarioServicio.generarListaDias(
         widget.fechaInicio, widget.fechaFin);
+        cargarItinerario();
   }
 
   void agregarLugarADia(DateTime dia, Map<String, dynamic> lugar) {
@@ -54,6 +58,42 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
     }
   }
 
+Future<void> cargarItinerario() async {
+    try {
+      String uid = FirebaseAuth.instance.currentUser!.uid;
+      
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .collection('viajes')
+          .doc(widget.idViaje)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        
+        if (data['itinerario'] != null) {
+          // Extraemos el mapa gigante de Firebase
+          Map<String, dynamic> itinerarioFirebase = data['itinerario'];
+          Map<String, List<Map<String, dynamic>>> mapaRecuperado = {};
+
+          // Traducimos día por día explícitamente para que Flutter no se confunda
+          itinerarioFirebase.forEach((diaKey, lugares) {
+            List<dynamic> listaLugares = lugares as List<dynamic>;
+            mapaRecuperado[diaKey] = listaLugares.map((lugar) => Map<String, dynamic>.from(lugar)).toList();
+          });
+
+          // Actualizamos la pantalla
+          setState(() {
+            itinerarioPorDia = mapaRecuperado;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error al cargar itinerario: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,8 +113,8 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
               ...?itinerarioPorDia[fechaKey]?.map((lugar) {
                 return ListTile(
                   leading: const Icon(Icons.place, color: Colors.blue),
-                  title: Text(lugar['name'] ?? 'Lugar'),
-                  subtitle: Text(lugar['categoriaPrincipal'] ?? ''),
+                  title: Text(lugar['nombre'] ?? 'Lugar desconocido'), // 🔥 Cambiado a 'nombre'
+                  subtitle: Text(lugar['categoria'] ?? ''),            // 🔥 Cambiado a 'categoria'
                 );
               }),
 

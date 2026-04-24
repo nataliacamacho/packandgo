@@ -1,11 +1,17 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io'; 
 
 class DiarioPantalla extends StatefulWidget {
+  final String idViaje;
   final DateTime dia;
-  const DiarioPantalla({super.key, required this.dia});
+  final DateTime fechaInicio;
+  final DateTime fechaFin;
+  const DiarioPantalla({super.key, required this.dia, required this.idViaje, required this.fechaInicio, required this.fechaFin});
 
   @override
   State<DiarioPantalla> createState() => _DiarioPantallaState();
@@ -43,6 +49,95 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
     } catch (e) {
       print("❌ Error al obtener la foto: $e");
     }
+  }
+  
+  Future<void> guardarDiario() async {
+    try {
+      List<String> rutasDeFotos = fotosLocales.map((foto) => foto.path).toList();
+      
+      // 🔥 Obtenemos el ID de tu usuario que inició sesión
+      String uid = FirebaseAuth.instance.currentUser!.uid; 
+
+      await FirebaseFirestore.instance
+          .collection('usuarios') // 🔥 Entramos a usuarios
+          .doc(uid)               // 🔥 Buscamos a este usuario
+          .collection('viajes')   // 🔥 Entramos a sus viajes
+          .doc(widget.idViaje)
+          .collection('diario')
+          .doc(widget.dia.toIso8601String().split('T')[0]) 
+          .set({
+        'texto': diarioController.text,
+        'fecha': widget.dia,
+        'fotos_locales': rutasDeFotos,
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("¡Querido diario guardado con éxito! 📖✨"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error al guardar: $e")),
+        );
+      }
+    }
+  }
+
+Future<void> cargarDiario() async {
+    try {
+      String uid = FirebaseAuth.instance.currentUser!.uid;
+      String diaId = widget.dia.toIso8601String().split('T')[0];
+
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .collection('viajes')
+          .doc(widget.idViaje)
+          .collection('diario')
+          .doc(diaId)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        
+        List<File> fotosRecuperadas = [];
+        
+        // Verificamos si hay fotos guardadas
+        if (data['fotos_locales'] != null) {
+          List<dynamic> rutas = data['fotos_locales'];
+          
+          for (var ruta in rutas) {
+            File archivo = File(ruta.toString());
+            // Validamos que el archivo siga existiendo en la memoria de tu celular
+            if (await archivo.exists()) {
+              fotosRecuperadas.add(archivo);
+            } else {
+              debugPrint("La foto en la ruta $ruta ya no existe en el celular.");
+            }
+          }
+        }
+
+        // Actualizamos la pantalla con el texto y las fotos validadas
+        setState(() {
+          diarioController.text = data['texto'] ?? ''; 
+          fotosLocales = fotosRecuperadas; 
+        });
+      }
+    } catch (e) {
+      debugPrint("Error al cargar el diario: $e");
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔥 Esto hace que la app busque tus recuerdos apenas entres a la pantalla
+    cargarDiario(); 
   }
 
   @override
@@ -146,6 +241,14 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          guardarDiario();
+        },
+        icon: const Icon(Icons.save),
+        label: const Text("Guardar Diario"),
+        backgroundColor: const Color(0xFF0066D2),
       ),
     );
   }
