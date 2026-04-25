@@ -28,10 +28,6 @@ class PackandGo extends StatelessWidget {
         '/registro': (context) => const RegistroPantalla(),
         '/exploracion': (context) => ExploracionPantalla(),
         '/EditarPerfil': (context) => const EditarPerfil(),
-
-        // ⚠️ SOLO pantallas SIN parámetros
-        '/hospedaje': (context) =>
-            HospedajePantalla(destino: 'Destino seleccionado'),
       },
     );
   }

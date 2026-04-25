@@ -16,7 +16,7 @@ class CarroPantalla extends StatefulWidget {
     super.key,
     required this.destinoLat,
     required this.destinoLng,
-    required this.destinoNombre, 
+    required this.destinoNombre,
     required this.origen,
   });
 
@@ -114,19 +114,41 @@ class _CarroPantallaState extends State<CarroPantalla> {
     if (distanciaKm > 500) {
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RutaMixtaPantalla(
-            destinoLat: widget.destinoLat,
-            destinoLng: widget.destinoLng,
-            destinoNombre: widget.destinoNombre,
-            origen: widget.origen,
+      final decision = await showDialog<String>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Ruta larga detectada"),
+          content: const Text(
+            "El trayecto supera los 500 km. ¿Deseas continuar en carro o ver una ruta mixta más eficiente?",
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, "carro"),
+              child: const Text("Seguir en carro"),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, "mixta"),
+              child: const Text("Ver ruta mixta"),
+            ),
+          ],
         ),
       );
 
-      return;
+      // 🔥 DECISIÓN DEL USUARIO
+      if (decision == "mixta") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RutaMixtaPantalla(
+              destinoLat: widget.destinoLat,
+              destinoLng: widget.destinoLng,
+              destinoNombre: widget.destinoNombre,
+              origen: widget.origen,
+            ),
+          ),
+        );
+        return;
+      }
     }
 
     final nuevaRuta = (data['coordenadas'] as List)
@@ -194,7 +216,7 @@ class _CarroPantallaState extends State<CarroPantalla> {
     }
 
     return Scaffold(
-      // ================= APPBAR CORREGIDO =================
+      extendBodyBehindAppBar: false,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -211,12 +233,9 @@ class _CarroPantallaState extends State<CarroPantalla> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const SizedBox(height: 10),
-
-                  Center(
+                  const Center(
                     child: Text(
-                      "Ruta en carro",
-                      textAlign: TextAlign.center,
+                      "Ruta en Carro",
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
@@ -224,11 +243,9 @@ class _CarroPantallaState extends State<CarroPantalla> {
                       ),
                     ),
                   ),
-
-                  Center(
+                  const Center(
                     child: Text(
                       "Información estimada",
-                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -236,10 +253,7 @@ class _CarroPantallaState extends State<CarroPantalla> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // 🔥 DESTINO ABAJO IZQUIERDA
                   Text(
                     widget.destinoNombre,
                     style: TextStyle(
@@ -251,16 +265,14 @@ class _CarroPantallaState extends State<CarroPantalla> {
               ),
             ),
 
-            // 🔙 BACK BUTTON FIJO ARRIBA IZQUIERDA
             Positioned(
               top: 0,
               left: 0,
               child: SafeArea(
-                bottom: false,
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Padding(
-                    padding: EdgeInsets.all(10.0),
+                    padding: EdgeInsets.all(10),
                     child: Icon(Icons.arrow_back, color: Colors.white),
                   ),
                 ),

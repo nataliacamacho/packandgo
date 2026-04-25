@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/avion/avion_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/carro/carro_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/mixtas/rutamixta_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/autobus/autobus_pantalla.dart';
@@ -77,9 +78,14 @@ class SelectorTransporte extends StatelessWidget {
             icono: Icons.flight,
             color: Colors.orange,
             onTap: () {
-              ScaffoldMessenger.of(
+              Navigator.push(
                 context,
-              ).showSnackBar(const SnackBar(content: Text("Próximamente ✈️")));
+                MaterialPageRoute(
+                  builder: (_) => PantallaAvion(
+                    destino: destinoNombre,
+                  ),
+                )
+              );
             },
           ),
 

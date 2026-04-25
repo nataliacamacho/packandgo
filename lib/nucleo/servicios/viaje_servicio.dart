@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ViajeServicio {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<String> crearViaje({
     required String destino,

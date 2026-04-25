@@ -32,6 +32,24 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     super.dispose();
   }
 
+  static const Map<String, String> _aliases = {
+    'gdl': 'Guadalajara',
+    'mty': 'Monterrey',
+    'cdmx': 'Ciudad de México',
+    'mex': 'Ciudad de México',
+    'cun': 'Cancún',
+    'tij': 'Tijuana',
+    'pue': 'Puebla',
+    'qro': 'Querétaro',
+    'oax': 'Oaxaca',
+    'mid': 'Mérida',
+  };
+
+  String normalizarDestino(String destino) {
+    final lower = destino.toLowerCase().trim();
+    return _aliases[lower] ?? destino;
+  }
+
   Future<void> seleccionarFecha() async {
     DateTimeRange? seleccion = await showDateRangePicker(
       context: context,
@@ -62,8 +80,9 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     setState(() => cargando = true);
 
     try {
-      // 🔥 GEOCODING
-      final coords = await geocoding.obtenerCoordenadas(destinoSeleccionado!);
+      // DESPUÉS:
+      final destinoNormalizado = normalizarDestino(destinoSeleccionado!);
+      final coords = await geocoding.obtenerCoordenadas(destinoNormalizado);
 
       if (!mounted) return;
 
@@ -85,7 +104,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         fechaFin: fechaFin!,
         descripcion: descripcionController.text,
         lat: destinoLat,
-        lng: destinoLng, origen: '', 
+        lng: destinoLng,
+        origen: '',
         usuarioId: FirebaseAuth.instance.currentUser!.uid,
       );
 

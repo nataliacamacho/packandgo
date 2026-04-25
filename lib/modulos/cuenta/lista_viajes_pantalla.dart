@@ -30,21 +30,53 @@ class ListaViajesPantalla extends StatelessWidget {
         return Colors.grey.shade300;
     }
   }
+  
 
   void mostrarDialogoCancelar(BuildContext context, String idViaje) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text("Cancelar viaje"),
+        backgroundColor: Colors.white,
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+        // 🔥 HEADER
+        title: Row(
+          children: const [
+            Icon(Icons.cancel_outlined, color: Color(0xFFF6A230)),
+            SizedBox(width: 8),
+            Text(
+              "Cancelar viaje",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+
+        // 🔥 CONTENIDO
         content: const Text(
           "Este viaje se marcará como CANCELADO y pasará a viajes pasados.",
+          style: TextStyle(fontSize: 14),
         ),
+
+        actionsAlignment: MainAxisAlignment.center,
+
         actions: [
+          // 🔹 NO
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("No"),
+            child: const Text("No", style: TextStyle(color: Colors.grey)),
           ),
-          TextButton(
+
+          const SizedBox(width: 8),
+
+          // 🔹 SÍ CANCELAR
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFFF6A230), // 👈 naranja app
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             onPressed: () async {
               await FirebaseFirestore.instance
                   .collection("viajes")
@@ -53,13 +85,16 @@ class ListaViajesPantalla extends StatelessWidget {
 
               Navigator.pop(dialogContext);
 
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Viaje cancelado")));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Viaje cancelado"),
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
             child: const Text(
-              "Sí, cancelar",
-              style: TextStyle(color: Colors.orange),
+              "Cancelar",
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -73,17 +108,48 @@ class ListaViajesPantalla extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text("Eliminar viaje"),
+        backgroundColor: Colors.white,
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+        // 🔥 HEADER CON ICONO
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text(
+              "Eliminar viaje",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+
+        // 🔥 CONTENIDO
         content: const Text(
           "Este viaje se eliminará PERMANENTEMENTE.\n\n"
           "⚠️ No podrás recuperarlo después.",
+          style: TextStyle(fontSize: 14),
         ),
+
+        actionsAlignment: MainAxisAlignment.center,
+
         actions: [
+          // 🔹 CANCELAR
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Cancelar"),
+            child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
           ),
-          TextButton(
+
+          const SizedBox(width: 8),
+
+          // 🔹 ELIMINAR (PELIGRO)
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             onPressed: () async {
               await FirebaseFirestore.instance
                   .collection("viajes")
@@ -100,7 +166,10 @@ class ListaViajesPantalla extends StatelessWidget {
                 ),
               );
             },
-            child: const Text("Eliminar", style: TextStyle(color: Colors.red)),
+            child: const Text(
+              "Eliminar",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
