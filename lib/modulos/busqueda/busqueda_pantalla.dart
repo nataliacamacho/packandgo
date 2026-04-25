@@ -20,7 +20,11 @@ import 'package:proyecto/nucleo/utilidades/mapeo_categorias.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class BusquedaPantalla extends StatefulWidget {
-  const BusquedaPantalla({super.key});
+  final bool esSeleccion;
+  const BusquedaPantalla({
+    super.key,
+    this.esSeleccion = false,
+    });
 
   @override
   State<BusquedaPantalla> createState() => _BusquedaPantallaState();
@@ -69,18 +73,18 @@ Future<void> obtenerPreferenciaReal() async {
     }
   }
 
-  // 🧠 ALGORITMO FASE 3: ETIQUETADO AUTOMÁTICO (PESOS Y UMBRAL)
-  // Basado en: PuntajeEtiqueta = ∑(pesopalabrai) [cite: 315]
+  //  ALGORITMO FASE 3: ETIQUETADO AUTOMÁTICO (PESOS Y UMBRAL)
+  // Basado en: PuntajeEtiqueta = ∑(pesopalabrai) 
   List<Map<String, dynamic>> aplicarPesos(List<Map<String, dynamic>> lista) {
     return lista.map((lugar) {
-      double R = (lugar["rating"] ?? 5.0).toDouble(); // Calificación (0-10) [cite: 396]
-      double P = (lugar["popularity"] ?? 5.0).toDouble(); // Popularidad [cite: 397]
+      double R = (lugar["rating"] ?? 5.0).toDouble(); // Calificación (0-10) 
+      double P = (lugar["popularity"] ?? 5.0).toDouble(); // Popularidad 
       
-      // D = Distancia inversa (mientras más cerca, más alto el valor) [cite: 398]
+      // D = Distancia inversa (mientras más cerca, más alto el valor) 
       double D = 10 / ((lugar["distancia"] ?? 1.0) + 1); 
       if (D > 10) D = 10;
 
-      // C = Coincidencia con etiquetas (Vector de intereses) [cite: 399]
+      // C = Coincidencia con etiquetas (Vector de intereses) 
       double C = 0;
       String catLugar = lugar["categoriaPrincipal"].toString().toLowerCase();
       if (interesesUsuario.containsKey(catLugar)) {
@@ -89,14 +93,14 @@ Future<void> obtenerPreferenciaReal() async {
         C = puntosInteres >= 8 ? 10.0 : (puntosInteres * 1.25); 
       }
 
-      // 🔥 FÓRMULA EXACTA: (R * 0.4) + (P * 0.2) + (D * 0.2) + (C * 0.2) [cite: 395]
+      // FÓRMULA EXACTA: (R * 0.4) + (P * 0.2) + (D * 0.2) + (C * 0.2) 
       lugar["relevancia"] = (R * 0.4) + (P * 0.2) + (D * 0.2) + (C * 0.2);
       
       return lugar;
     }).toList();
   }
 
-  // 🧠 ALGORITMO FASE 3: QUICKSORT O(n log n) [cite: 400]
+  // ALGORITMO FASE 3: QUICKSORT O(n log n)  
   List<Map<String, dynamic>> ordenarPorQuickSort(List<Map<String, dynamic>> lista) {
     if (lista.length <= 1) return lista;
     var pivote = lista[lista.length ~/ 2];
@@ -111,7 +115,7 @@ Future<void> obtenerPreferenciaReal() async {
 
   
 // no tocar este método, es el que hace la selección final de los 5 lugares variados, no solo los más relevantes
-  // 🔥 TOP 5 VARIADOS
+  //  TOP 5 VARIADOS
   List<Map<String, dynamic>> seleccionarTop5Variados(
     List<Map<String, dynamic>> lista,
   ) {
@@ -137,7 +141,7 @@ Future<void> obtenerPreferenciaReal() async {
     return resultado.take(5).toList();
   }
 
-  // 🔥 VALIDACIÓN GEOGRÁFICA FUERTE
+  // VALIDACIÓN GEOGRÁFICA FUERTE
   bool esValidoGeograficamente(
     Map<String, dynamic> lugar,
     double latBase,
@@ -166,7 +170,7 @@ Future<void> obtenerPreferenciaReal() async {
       double lat;
       double lng;
 
-      // 🔥 1. COORDENADAS
+      //  1. COORDENADAS
       if (destinoSeleccionado != null && destinoSeleccionado!.isNotEmpty) {
         final doc = await FirebaseFirestore.instance
             .collection('ciudades')
@@ -194,14 +198,14 @@ Future<void> obtenerPreferenciaReal() async {
 
       print("📍 Coordenadas usadas: $lat, $lng");
 
-      // 🔥 2. APIs
+      //  2. APIs
       final resultadosFoursquare =
           await FoursquareServicio.buscarLugaresCercanos(lat, lng);
 
       final resultadosOpenTrip =
           await OpenTripMapServicio.buscarLugaresCulturales(lat, lng);
 
-      // 🔥 3. NORMALIZAR
+      //  3. NORMALIZAR
       final combinados = [
         ...resultadosFoursquare.map((lugar) {
           final geo = lugar["geocodes"]?["main"];
@@ -240,7 +244,7 @@ Future<void> obtenerPreferenciaReal() async {
         }),
       ];
 
-      // 🔥 4. DISTANCIA
+      //  4. DISTANCIA
       for (var lugar in combinados) {
         lugar["distancia"] = CalculosUtil.calcularDistancia(
           lat,
@@ -250,7 +254,7 @@ Future<void> obtenerPreferenciaReal() async {
         );
       }
 
-      // 🔥 5. FILTRO CALIDAD
+      //  5. FILTRO CALIDAD
       final filtradosCalidad = combinados.where((lugar) {
         final nombre = (lugar["name"] ?? "").toString().toLowerCase();
 
@@ -266,33 +270,33 @@ Future<void> obtenerPreferenciaReal() async {
         return true;
       }).toList();
 
-      // 🔥 6. FILTRO DISTANCIA (AHORA 5 KM)
+      //  6. FILTRO DISTANCIA (AHORA 5 KM)
       final filtradosDistancia = filtradosCalidad.where((lugar) {
         final distancia = lugar["distancia"];
 
         if (distancia == null) return false;
-        if (distancia > 5) return false; // 🔥 clave
+        if (distancia > 5) return false; //  clave
         if (distancia.isNaN || distancia.isInfinite) return false;
 
         return true;
       }).toList();
 
-      // 🔥 7. FILTRO FINAL (GEOGRÁFICO + BASURA)
+      //  7. FILTRO FINAL (GEOGRÁFICO + BASURA)
       final filtradosFinal = filtradosDistancia.where((lugar) {
         final nombre = lugar["name"].toString().toLowerCase();
 
-        // ❌ blacklist
+        //  blacklist
         if (nombre.contains("carajillo")) return false;
         if (nombre.contains("parián")) return false;
         if (nombre.contains("teatro experimental")) return false;
 
-        // 🔥 validación fuerte
+        //  validación fuerte
         if (!esValidoGeograficamente(lugar, lat, lng)) return false;
 
         return true;
       }).toList();
 
-      // 🔥 8. ORDENAR
+      //  8. ORDENAR
     //  filtradosFinal.sort((a, b) => a["distancia"].compareTo(b["distancia"]));
      
       final lugaresConPesos = aplicarPesos(filtradosFinal); // Aplica la fórmula (R*0.4 + P*0.2 + D*0.2 + C*0.2)
@@ -305,7 +309,7 @@ Future<void> obtenerPreferenciaReal() async {
       }
       print("---------------------------------------");
 
-      // 🔥 9. TOP 5 FINAL
+      //  9. TOP 5 FINAL
       final top5 = seleccionarTop5Variados(lugaresOrdenados);
 
       setState(() {
@@ -335,7 +339,7 @@ Future<void> obtenerPreferenciaReal() async {
       double lat;
       double lng;
 
-      // 🔥 MISMA LÓGICA DE UBICACIÓN
+      //  MISMA LÓGICA DE UBICACIÓN
       if (destinoSeleccionado != null && destinoSeleccionado!.isNotEmpty) {
         final doc = await FirebaseFirestore.instance
             .collection('ciudades')
@@ -352,7 +356,7 @@ Future<void> obtenerPreferenciaReal() async {
         lng = posicion?.longitude ?? -103.3496;
       }
 
-      // 🔥 BUSCAR EN FOURSQUARE POR TEXTO
+      //  BUSCAR EN FOURSQUARE POR TEXTO
       final url = Uri.parse(
         'https://places-api.foursquare.com/places/search'
         'query=${Uri.encodeComponent(texto)}'
@@ -369,6 +373,7 @@ Future<void> obtenerPreferenciaReal() async {
         headers: {
           'Authorization': 'Bearer $apiKey',
           'Accept': 'application/json',
+          'X-Places-Api-Version': '2023-10-10',
         },
       );
 
@@ -393,7 +398,7 @@ Future<void> obtenerPreferenciaReal() async {
         }).toList();
 
         setState(() {
-          lugares = resultados; // 🔥 YA NO TOP 5
+          lugares = resultados; //  YA NO TOP 5
           cargando = false;
         });
       } else {
@@ -411,10 +416,10 @@ Future<void> obtenerPreferenciaReal() async {
     }
   }
 
-  // 🔥 FILTROS UI
+  //  FILTROS UI
   List<Map<String, dynamic>> get lugaresFiltrados {
     if (query.length >= 3) {
-      return lugares; // 🔥 mostrar todo lo encontrado
+      return lugares; //  mostrar todo lo encontrado
     }
 
     return lugares.where((lugar) {
@@ -496,14 +501,14 @@ Future<void> obtenerPreferenciaReal() async {
                           lat: lugar["lat"],
                           lng: lugar["lng"],
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    LugarDetallePantalla(lugar: lugar),
-                              ),
-                            );
-                          },
+                            if (widget.esSeleccion) {
+                             // 🔥 Si es modo selección, regresamos el lugar a la pantalla anterior
+                              Navigator.pop(context, lugar);
+                            } else {
+                            // Si no, seguimos con el flujo normal de ver detalles
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => LugarDetallePantalla(lugar: lugar)));
+                          }
+                        },
                         );
                       }).toList(),
                     ),

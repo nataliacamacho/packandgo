@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/modulos/viajes/apartados/hospedaje/hospedaje_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/maleta/maleta_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/diario_personal/diario_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/diario_personal/lista_diario_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
+import 'package:proyecto/modulos/viajes/apartados/itinerario/itinerario_pantalla.dart';
+
+
 
 class DetalleViajePantalla extends StatelessWidget {
   final String idViaje;
@@ -247,7 +252,14 @@ class DetalleViajePantalla extends StatelessWidget {
               "Itinerario",
               "Planea tus actividades por día",
               onTap: () {
-                Navigator.pushNamed(context, '/itinerario');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ItinerarioPantalla(
+                      idViaje: idViaje, fechaInicio: fechaInicio, fechaFin: fechaFin, 
+                    ),
+                  ),
+                );
               },
             ),
 
@@ -257,7 +269,16 @@ class DetalleViajePantalla extends StatelessWidget {
               "Diario Personal",
               "Registra tus recuerdos",
               onTap: () {
-                Navigator.pushNamed(context, '/diario');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ListaDiarioPantalla(
+                      idViaje: idViaje,      
+                      fechaInicio: fechaInicio, 
+                      fechaFin: fechaFin,
+                    ),
+                  ),
+                );
               },
             ),
 

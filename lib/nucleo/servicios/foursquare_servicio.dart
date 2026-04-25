@@ -24,11 +24,11 @@ class FoursquareServicio {
     final apiKey = dotenv.env['FOURSQUARE_API_KEY']?.trim();
 
     if (apiKey == null || apiKey.isEmpty) {
-      print("❌ API KEY de Foursquare no encontrada");
+      print(" API KEY de Foursquare no encontrada");
       return [];
     }
 
-    if (apiKey == null || apiKey.isEmpty) {
+    if (apiKey.isEmpty) {
       print("❌ API KEY de Foursquare no encontrada");
       return [];
     }
@@ -53,27 +53,19 @@ class FoursquareServicio {
       final respuesta = await http.get(
         url,
         headers: {
+          'Authorization': apiKey, 
           'Accept': 'application/json',
-          'Authorization': apiKey,
-          // ✅ Quitamos Content-Type, no aplica en GET
+          'Content-Type': 'application/json',
         },
       ).timeout(const Duration(seconds: 10));
 
       print("📡 STATUS CODE: ${respuesta.statusCode}");
+      print("📦 BODY: ${respuesta.body}");
+      print("🔑 API KEY: $apiKey");
 
       if (respuesta.statusCode == 200) {
         final data = json.decode(respuesta.body);
-        // ✅ Null safety: si no hay results, regresa lista vacía
-        return data['results'] ?? [];
-
-      } else if (respuesta.statusCode == 401) {
-        print("❌ API KEY inválida o expirada");
-        return [];
-
-      } else if (respuesta.statusCode == 429) {
-        print("⚠️ Límite de requests alcanzado, intenta más tarde");
-        return [];
-
+        return data['results']; // 👈 AQUÍ está lo importante
       } else {
         print("❌ Error ${respuesta.statusCode}: ${respuesta.body}");
         return [];
