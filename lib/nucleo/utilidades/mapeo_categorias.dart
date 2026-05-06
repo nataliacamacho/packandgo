@@ -1,8 +1,31 @@
 class MapeoCategorias {
-  static String obtenerCategoriaPrincipal(dynamic input) {
-    if (input == null) return "otro";
+  static String obtenerCategoriaPrincipal(dynamic categoriasApi) {
+    final texto = categoriasApi.toString().toLowerCase();
+    if (categoriasApi == null) return "General";
 
-    final texto = input.toString().toLowerCase();
+    String textoCategorias = categoriasApi.toString().toLowerCase();
+    if (textoCategorias.contains("food") || textoCategorias.contains("restaurant") || textoCategorias.contains("fast_food")) {
+      return "Restaurante"; 
+    }
+    if (textoCategorias.contains("beach") || textoCategorias.contains("natural")) {
+      return "Playa";
+    }
+    if (textoCategorias.contains("cafe") || textoCategorias.contains("coffee")) {
+      return "Cafetería"; 
+    }
+    if (textoCategorias.contains("museum") || textoCategorias.contains("cultural")) {
+      return "Museo";
+    }
+    if (textoCategorias.contains("religion") || textoCategorias.contains("church") || textoCategorias.contains("temple")) {
+      return "Monumento"; // O Iglesia, si la tienes en tus 11 categorías
+    }
+    if (textoCategorias.contains("architecture") || textoCategorias.contains("historic")) {
+      return "Zona arqueológica";
+    }
+    if (textoCategorias.contains("amusement") || textoCategorias.contains("park") || textoCategorias.contains("leisure")) {
+      return "Parque";
+    }
+
 
     // 🍽️ COMIDA
     if (texto.contains("restaurant") ||

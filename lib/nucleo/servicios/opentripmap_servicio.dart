@@ -51,27 +51,33 @@ class OpenTripMapServicio {
         return [];
       }
 
-      final data = jsonDecode(res.body);
+    // Pedimos lugares turísticos (interesting_places) en un radio de 5km
+    // Ojo: OpenTripMap usa 'lon' en lugar de 'lng'
+    final url = Uri.parse(
+      'https://api.opentripmap.com/0.1/en/places/radius'
+      '?radius=20000' // 20 km para alcanzar zonas hoteleras
+      '&lon=$lng'
+      '&lat=$lat'
+      '&kinds=foods,cultural,religion,natural,architecture,amusement_parks' // 🔥 LA MAGIA AQUÍ
+      '&rate=1' // Para que traiga lugares moderadamente populares
+      '&limit=100'
+      '&apikey=$apiKey'
+    );
 
-      if (data is! List) {
-        return [];
+    try {
+      final respuesta = await http.get(url);
+
+      if (respuesta.statusCode == 200) {
+        final datos = json.decode(respuesta.body);
+        print("✅ ¡POR FIN! Conexión exitosa a OpenTripMap 🌍");
+
+        // OpenTripMap agrupa sus resultados dentro de 'features'
+        if (datos['features'] != null && datos['features'].isNotEmpty) {
+          return datos['features'];
+        }
+      } else {
+        print("❌ Error en OpenTripMap. Código: ${respuesta.statusCode}");
       }
-
-      List<Map<String, dynamic>> lugares = data
-          .whereType<Map>()
-          .map((e) => _normalizarOTM(Map<String, dynamic>.from(e)))
-          .toList();
-
-      // 🔥 búsqueda local por texto
-      if (query.isNotEmpty) {
-        lugares = lugares.where((l) {
-          return (l['name'] ?? '').toString().toLowerCase().contains(
-            query.toLowerCase(),
-          );
-        }).toList();
-      }
-
-      return lugares;
     } catch (e) {
       print("❌ OPENTRIP ERROR: $e");
       return [];
