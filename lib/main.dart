@@ -18,6 +18,8 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  
+
   MapboxOptions.setAccessToken('');
   if (!kIsWeb) {
     MapboxOptions.setAccessToken(dotenv.env['MAPBOX_ACCESS_TOKEN']?.trim() ?? '');

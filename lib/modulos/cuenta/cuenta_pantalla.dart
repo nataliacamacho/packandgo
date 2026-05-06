@@ -6,6 +6,7 @@ import 'package:proyecto/modulos/cuenta/lista_viajes_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/usuario_servicio.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto/nucleo/utilidades/viaje_estado.dart';
+import 'package:proyecto/modulos/cuenta/misresenas_pantalla.dart';
 
 class CuentaPantalla extends StatelessWidget {
   const CuentaPantalla({super.key});
@@ -161,6 +162,10 @@ class CuentaPantalla extends StatelessWidget {
 
                             return Column(
                               children: [
+                                _botonResenas(context),
+
+                                const SizedBox(height: 15),
+                                
                                 _botonSeccion(
                                   context,
                                   "Viajes futuros",
@@ -228,6 +233,33 @@ class CuentaPantalla extends StatelessWidget {
           ],
         ),
         child: Text(titulo, style: const TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+
+  Widget _botonResenas(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MisResenasPantalla()),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 255, 255, 255),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 5,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Text("Reseñas realizadas", style: TextStyle(fontSize: 16)),
       ),
     );
   }

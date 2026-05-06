@@ -1,51 +1,115 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ResenaServicio {
-  // Palabras clave requeridas para asegurar que el comentario aporta valor
+  static Future<void> guardarResena({
+    required String idLugar,
+    required String nombreLugar,
+    required String texto,
+    required int estrellas,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    await FirebaseFirestore.instance.collection('resenas').add({
+      "id_usuario": uid,
+      "id_lugar": idLugar,
+      "nombre_lugar": nombreLugar,
+      "fecha": FieldValue.serverTimestamp(),
+
+      "estrellas": estrellas,
+      "texto": texto,
+
+      "likes": 0,
+      "me_encanta": 0,
+      "usuarios_like": [],
+      "usuarios_love": [],
+      "ranking": estrellas * 10,
+
+      "es_favorita": false,
+    });
+  }
+
   static const List<String> palabrasClave = [
-    'servicio', 'precio', 'lugar', 'comida', 'experiencia', 
-    'atención', 'limpieza', 'ambiente', 'recomendable'
+    'gusta',
+    'encanta',
+    'caro',
+    'barato',
+    'lleno',
+    'servicio',
+    'precio',
+    'lugar',
+    'comida',
+    'experiencia',
+    'atencion',
+    'limpieza',
+    'ambiente',
+    'recomendable',
   ];
 
-  // Retorna un String con el error, o 'null' si la reseña es perfecta
+  static String _normalizar(String texto) {
+    return texto
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàäâ]'), 'a')
+        .replaceAll(RegExp(r'[éèëê]'), 'e')
+        .replaceAll(RegExp(r'[íìïî]'), 'i')
+        .replaceAll(RegExp(r'[óòöô]'), 'o')
+        .replaceAll(RegExp(r'[úùüû]'), 'u')
+        .replaceAll(RegExp(r'[^\w\s]'), '');
+  }
+
+  static Future<void> eliminarResena(String id) async {
+    await FirebaseFirestore.instance.collection('resenas').doc(id).delete();
+  }
+
+  static Future<void> editarResena({
+    required String id,
+    required String texto,
+    required int estrellas,
+  }) async {
+    await FirebaseFirestore.instance.collection('resenas').doc(id).update({
+      'texto': texto,
+      'estrellas': estrellas,
+    });
+  }
+
   static Future<String?> validarTextoResena(String texto) async {
-    String textoLimpio = texto.trim().toLowerCase();
-    
-    // 1. Regla de Longitud (Mínimo 5 palabras)
-    // Usamos una expresión regular para separar por espacios y contar
-    List<String> palabras = textoLimpio.split(RegExp(r'\s+'));
-    if (textoLimpio.isEmpty || palabras.length < 5) {
-      return "Tu reseña parece ser poco informativa. Por favor, escribe al menos 5 palabras.";
+    final limpio = _normalizar(texto.trim());
+
+    final palabras = limpio.split(RegExp(r'\s+'));
+
+    if (limpio.isEmpty || palabras.length < 5) {
+      return "Escribe al menos 5 palabras para una reseña útil.";
     }
 
-    // 2. Regla de Contenido (Debe incluir al menos un tema relevante)
-    bool tienePalabraClave = palabrasClave.any((clave) => textoLimpio.contains(clave));
-    if (!tienePalabraClave) {
-      return "Tu reseña parece ser poco informativa. Intenta mencionar algo sobre el servicio, precio o tu experiencia.";
+    final tieneClave = palabras.any((p) => palabrasClave.contains(p));
+
+    if (!tieneClave) {
+      return "Incluye detalles como servicio, precio o experiencia.";
     }
 
-    // 3. Regla de Lenguaje (Consulta de la Lista Negra en Firebase)
     try {
-      // Lee el documento de configuración general de la app
-      DocumentSnapshot config = await FirebaseFirestore.instance
+      final config = await FirebaseFirestore.instance
           .collection('configuracion')
           .doc('filtros_comunidad')
           .get();
 
       if (config.exists && config.data() != null) {
-        List<dynamic> listaNegra = config.get('palabras_prohibidas') ?? [];
-        
-        for (String palabraProhibida in listaNegra) {
-          if (textoLimpio.contains(palabraProhibida.toLowerCase())) {
-            return "Tu reseña contiene lenguaje que no cumple con nuestras normas de respeto.";
+        final listaNegra = List<String>.from(
+          config.get('palabras_prohibidas') ?? [],
+        );
+
+        for (String prohibida in listaNegra) {
+          final palabra = _normalizar(prohibida);
+
+          if (palabras.contains(palabra)) {
+            return "Evita lenguaje ofensivo en tu reseña.";
           }
         }
       }
     } catch (e) {
-      print("⚠️ Advertencia: No se pudo verificar la lista negra en la nube: $e");
+      print("⚠️ Error leyendo filtros: $e");
     }
 
-    // ¡Pasó todos los filtros!
-    return null; 
+    return null;
   }
 }

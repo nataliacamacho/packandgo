@@ -30,7 +30,8 @@ class ItinerarioServicio {
       builder: (context) => AlertDialog(
         title: const Text("Lugar no disponible"),
         content: const Text(
-            "Este lugar no estará disponible el día seleccionado. ¿Deseas elegir otro día o lugar?"),
+          "Este lugar no estará disponible el día seleccionado. ¿Deseas elegir otro día o lugar?",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -43,23 +44,28 @@ class ItinerarioServicio {
 
   //  FASE 4: Guardar el itinerario en Firebase
   static Future<void> guardarItinerarioEnFirebase(
-      String idViaje, Map<String, List<Map<String, dynamic>>> itinerario) async {
-    
+    String idViaje,
+    Map<String, List<Map<String, dynamic>>> itinerario,
+  ) async {
     String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (uid.isEmpty) return;
 
     try {
       // Convertimos el mapa complejo a algo que Firebase entienda fácilmente
       Map<String, dynamic> datosParaFirebase = {};
-      
+
       itinerario.forEach((fecha, lugares) {
         // Extraemos solo la info básica del lugar para no saturar la base de datos
-        datosParaFirebase[fecha] = lugares.map((lugar) => {
-          "nombre": lugar["name"],
-          "lat": lugar["lat"],
-          "lng": lugar["lng"],
-          "categoria": lugar["categoriaPrincipal"],
-        }).toList();
+        datosParaFirebase[fecha] = lugares
+            .map(
+              (lugar) => {
+                "nombre": lugar["nombre"], // 🔥 CORRECTO
+                "lat": lugar["lat"],
+                "lng": lugar["lng"],
+                "categoria": lugar["categoria"], // 🔥 CORRECTO
+              },
+            )
+            .toList();
       });
 
       // Guardamos en la sub-colección del viaje específico
@@ -69,7 +75,7 @@ class ItinerarioServicio {
           .collection('viajes')
           .doc(idViaje)
           .set({"itinerario": datosParaFirebase}, SetOptions(merge: true));
-          
+
       print("✅ Itinerario guardado con éxito");
     } catch (e) {
       print("❌ Error al guardar el itinerario: $e");

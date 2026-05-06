@@ -1,21 +1,32 @@
 class MapeoCategorias {
-  static String obtenerCategoriaPrincipal(dynamic categoriasApi) {
-    final texto = categoriasApi.toString().toLowerCase();
+  static String obtenerCategoriaPrincipal(dynamic input) {
+    if (input == null) return "otro";
 
-    if (texto.contains("restaurant")) return "Restaurante";
-    if (texto.contains("coffee")) return "Cafetería";
-    if (texto.contains("bar") || texto.contains("night")) return "Bar";
-    if (texto.contains("park") || texto.contains("nature")) return "Parque";
-    if (texto.contains("museum")) return "Museo";
-    if (texto.contains("beach")) return "Playa";
-    if (texto.contains("monument")) return "Monumento";
-    if (texto.contains("archaeological")) return "Zona arqueológica";
-    if (texto.contains("viewpoint")) return "Mirador";
-    if (texto.contains("mall") || texto.contains("shopping"))
-      return "Centro comercial";
-    if (texto.contains("adventure") || texto.contains("extreme"))
-      return "Actividades extremas";
+    final texto = input.toString().toLowerCase();
 
-    return "Turístico";
+    // 🏖️ PRIORIDAD ALTA
+    if (texto.contains("beach")) return "playa";
+
+    // 🍽️
+    if (texto.contains("restaurant")) return "restaurante";
+    if (texto.contains("cafe")) return "cafeteria";
+    if (texto.contains("bar")) return "bar";
+
+    // 🌿
+    if (texto.contains("park")) return "parque";
+    if (texto.contains("nature")) return "naturaleza";
+
+    // 🏛️
+    if (texto.contains("museum")) return "museo";
+    if (texto.contains("historic")) return "monumento";
+    if (texto.contains("archaeological")) return "zona_arqueologica";
+
+    // 🛍️
+    if (texto.contains("shopping")) return "centro_comercial";
+
+    // 📍
+    if (texto.contains("view_point")) return "mirador";
+
+    return "otro";
   }
 }

@@ -4,14 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:io'; 
 
 class DiarioPantalla extends StatefulWidget {
   final String idViaje;
   final DateTime dia;
   final DateTime fechaInicio;
   final DateTime fechaFin;
-  const DiarioPantalla({super.key, required this.dia, required this.idViaje, required this.fechaInicio, required this.fechaFin});
+  const DiarioPantalla({
+    super.key,
+    required this.dia,
+    required this.idViaje,
+    required this.fechaInicio,
+    required this.fechaFin,
+  });
 
   @override
   State<DiarioPantalla> createState() => _DiarioPantallaState();
@@ -28,13 +33,13 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
       // 1. Abrimos cámara/galería con calidad 70 (Optimización requerida en tu DER)
       final XFile? foto = await _picker.pickImage(
         source: fuente,
-        imageQuality: 70, 
+        imageQuality: 70,
       );
 
       if (foto != null) {
         // 2. Obtenemos la ruta de documentos seguros del celular
         final directorio = await getApplicationDocumentsDirectory();
-        
+
         // 3. Creamos un nuevo nombre para la foto usando la fecha exacta
         final nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.jpg';
         final rutaDestino = '${directorio.path}/$nombreArchivo';
@@ -50,26 +55,28 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
       print("❌ Error al obtener la foto: $e");
     }
   }
-  
+
   Future<void> guardarDiario() async {
     try {
-      List<String> rutasDeFotos = fotosLocales.map((foto) => foto.path).toList();
-      
+      List<String> rutasDeFotos = fotosLocales
+          .map((foto) => foto.path)
+          .toList();
+
       // 🔥 Obtenemos el ID de tu usuario que inició sesión
-      String uid = FirebaseAuth.instance.currentUser!.uid; 
+      String uid = FirebaseAuth.instance.currentUser!.uid;
 
       await FirebaseFirestore.instance
           .collection('usuarios') // 🔥 Entramos a usuarios
-          .doc(uid)               // 🔥 Buscamos a este usuario
-          .collection('viajes')   // 🔥 Entramos a sus viajes
+          .doc(uid) // 🔥 Buscamos a este usuario
+          .collection('viajes') // 🔥 Entramos a sus viajes
           .doc(widget.idViaje)
           .collection('diario')
-          .doc(widget.dia.toIso8601String().split('T')[0]) 
+          .doc(widget.dia.toIso8601String().split('T')[0])
           .set({
-        'texto': diarioController.text,
-        'fecha': widget.dia,
-        'fotos_locales': rutasDeFotos,
-      }, SetOptions(merge: true));
+            'texto': diarioController.text,
+            'fecha': widget.dia,
+            'fotos_locales': rutasDeFotos,
+          }, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,14 +88,14 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error al guardar: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error al guardar: $e")));
       }
     }
   }
 
-Future<void> cargarDiario() async {
+  Future<void> cargarDiario() async {
     try {
       String uid = FirebaseAuth.instance.currentUser!.uid;
       String diaId = widget.dia.toIso8601String().split('T')[0];
@@ -104,28 +111,30 @@ Future<void> cargarDiario() async {
 
       if (doc.exists && doc.data() != null) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        
+
         List<File> fotosRecuperadas = [];
-        
+
         // Verificamos si hay fotos guardadas
         if (data['fotos_locales'] != null) {
           List<dynamic> rutas = data['fotos_locales'];
-          
+
           for (var ruta in rutas) {
             File archivo = File(ruta.toString());
             // Validamos que el archivo siga existiendo en la memoria de tu celular
             if (await archivo.exists()) {
               fotosRecuperadas.add(archivo);
             } else {
-              debugPrint("La foto en la ruta $ruta ya no existe en el celular.");
+              debugPrint(
+                "La foto en la ruta $ruta ya no existe en el celular.",
+              );
             }
           }
         }
 
         // Actualizamos la pantalla con el texto y las fotos validadas
         setState(() {
-          diarioController.text = data['texto'] ?? ''; 
-          fotosLocales = fotosRecuperadas; 
+          diarioController.text = data['texto'] ?? '';
+          fotosLocales = fotosRecuperadas;
         });
       }
     } catch (e) {
@@ -137,118 +146,190 @@ Future<void> cargarDiario() async {
   void initState() {
     super.initState();
     // 🔥 Esto hace que la app busque tus recuerdos apenas entres a la pantalla
-    cargarDiario(); 
+    cargarDiario();
   }
 
   @override
   Widget build(BuildContext context) {
-    String fechaStr = "${widget.dia.day}/${widget.dia.month}/${widget.dia.year}";
+    String fechaStr =
+        "${widget.dia.day}/${widget.dia.month}/${widget.dia.year}";
+    int numeroDia = widget.dia.difference(widget.fechaInicio).inDays + 1;
 
     return Scaffold(
-      appBar: AppBar(title: Text("Diario - $fechaStr")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      extendBodyBehindAppBar: false,
+
+      /// 🔶 HEADER IGUAL QUE ITINERARIO
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(180),
+        child: Stack(
           children: [
-            const Text(
-              "Momentos del día", 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-            ),
-            const SizedBox(height: 10),
-
-            // Botones de Cámara y Galería
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _obtenerFoto(ImageSource.camera),
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text("Cámara"),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _obtenerFoto(ImageSource.gallery),
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text("Galería"),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-
-            // 🔥 LÍNEA DEL TIEMPO HORIZONTAL
-            SizedBox(
-              height: 160,
-              child: fotosLocales.isEmpty 
-                ? const Center(child: Text("Aún no hay fotos. ¡Captura un momento!"))
-                : ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: fotosLocales.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12.0),
-                        child: Column(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                fotosLocales[index],
-                                height: 100,
-                                width: 100,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            // Pie de foto opcional
-                            const SizedBox(
-                              width: 100,
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  hintText: "Pie de foto...",
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: TextStyle(fontSize: 12),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
+            Container(
+              decoration: const BoxDecoration(color: Color(0xFFF6A230)),
+              child: SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Día $numeroDia",
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        fechaStr,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+              ),
             ),
 
-            const SizedBox(height: 20),
-
-            // Texto descriptivo detallado
-            const Text(
-              "Querido diario...", 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: TextField(
-                controller: diarioController,
-                maxLines: null, // Permite que crezca hacia abajo
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: InputDecoration(
-                  hintText: "¿Qué tal estuvo tu día? Escribe aquí todos los detalles...",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
             ),
           ],
         ),
       ),
+
+      /// 🔥 CONTENIDO TIPO ITINERARIO (CARDS)
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          /// 📸 FOTOS
+          Card(
+            color: const Color.fromARGB(255, 255, 255, 255),
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Momentos del día",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _obtenerFoto(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt, color: Color.fromARGB(255, 255, 255, 255)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0066D2),
+                        ),
+                        label: const Text("Cámara", style: TextStyle(color: Color.fromARGB(255, 255, 255, 255))),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _obtenerFoto(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library, color: Color.fromARGB(255, 255, 255, 255)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0066D2),
+                        ),
+                        label: const Text("Galería", style: TextStyle(color: Color.fromARGB(255, 255, 255, 255))),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    height: 120,
+                    child: fotosLocales.isEmpty
+                        ? const Center(child: Text("Aún no hay fotos"))
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: fotosLocales.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.file(
+                                    fotosLocales[index],
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          /// 📝 TEXTO DIARIO
+          Card(
+            color: const Color.fromARGB(255, 255, 255, 255),
+            elevation: 4,
+            margin: const EdgeInsets.only(top: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Querido diario...",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    height: 180,
+                    child: TextField(
+                      controller: diarioController,
+                      maxLines: null,
+                      expands: true,
+                      textAlignVertical: TextAlignVertical.top,
+                      decoration: InputDecoration(
+                        hintText: "Hoy visité...",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      /// 💾 BOTÓN GUARDAR IGUAL ESTILO
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          guardarDiario();
-        },
-        icon: const Icon(Icons.save),
-        label: const Text("Guardar Diario"),
+        onPressed: guardarDiario,
         backgroundColor: const Color(0xFF0066D2),
+        icon: const Icon(Icons.save, color: Color.fromARGB(255, 255, 255, 255)),
+        label: const Text("Guardar", style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),),
       ),
     );
   }

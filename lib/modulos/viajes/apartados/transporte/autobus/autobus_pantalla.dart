@@ -1,24 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:proyecto/modulos/viajes/apartados/transporte/autobus/modelo_ruta_autobus.dart';
 import 'package:proyecto/nucleo/servicios/servicio_autobus.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
-import 'package:proyecto/nucleo/utilidades/seed_autobus.dart';
-import 'modelo_ruta_autobus.dart';
 
 class PantallaAutobus extends StatefulWidget {
   final String destino;
+  final double destinoLat;
+  final double destinoLng;
+  final String origen;
 
-  const PantallaAutobus({super.key, required this.destino, required double destinoLat, required double destinoLng, required String origen});
+  const PantallaAutobus({
+    super.key,
+    required this.destino,
+    required this.destinoLat,
+    required this.destinoLng,
+    required this.origen,
+  });
 
   @override
   State<PantallaAutobus> createState() => _PantallaAutobusState();
 }
 
 class _PantallaAutobusState extends State<PantallaAutobus> {
-  final ServicioAutobus servicio = ServicioAutobus();
+  final servicio = ServicioAutobus();
 
   List<RutaAutobus> rutas = [];
   bool loading = true;
-  bool loadingSeed = false;
+  String? error;
 
   @override
   void initState() {
@@ -29,73 +37,68 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
   Future<void> cargar() async {
     setState(() {
       loading = true;
-    });
-
-    final ubicacionServicio = UbicacionServicio();
-
-    final ciudadOrigenRaw = await ubicacionServicio.obtenerCiudadActual();
-
-    print("🏙️ ORIGEN RAW: $ciudadOrigenRaw");
-
-    if (ciudadOrigenRaw == null || ciudadOrigenRaw.trim().isEmpty) {
-      setState(() {
-        rutas = [];
-        loading = false;
-      });
-      return;
-    }
-
-    final ciudadOrigen = servicio.normalizarTexto(ciudadOrigenRaw);
-
-    print("🏙️ ORIGEN NORMALIZADO: $ciudadOrigen");
-
-    final destinoNormalizado = servicio.normalizarTexto(widget.destino);
-
-    final data = await servicio.obtenerRutaExacta(
-      origen: ciudadOrigen,
-      destino: destinoNormalizado,
-    );
-
-    final result = data.isNotEmpty
-        ? data
-        : await servicio.obtenerFallback(
-            origen: ciudadOrigen,
-            destino: destinoNormalizado,
-          );
-
-    setState(() {
-      rutas = result;
-      loading = false;
-    });
-  }
-
-  // 🔥 SEED
-  Future<void> ejecutarSeed() async {
-    setState(() {
-      loadingSeed = true;
+      error = null;
     });
 
     try {
-      final seed = SeedAutobus74();
-      await seed.generar();
+      final ubicacionServicio = UbicacionServicio();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Rutas generadas en Firebase")),
+      // 🔥 PRIORIDAD:
+      // 1. Si viene origen desde navegación → usarlo
+      // 2. Si no → usar ubicación actual
+      String? ciudadOrigen = widget.origen;
+
+      if (ciudadOrigen.isEmpty) {
+        ciudadOrigen = await ubicacionServicio.obtenerCiudadActual();
+      }
+
+      if (ciudadOrigen == null || ciudadOrigen.isEmpty) {
+        setState(() {
+          rutas = [];
+          error = "No se pudo obtener la ubicación.";
+          loading = false;
+        });
+        return;
+      }
+
+      // 🔥 DEBUG útil
+      print("📍 ORIGEN FINAL: $ciudadOrigen");
+      print("📍 DESTINO FINAL: ${widget.destino}");
+      print("📍 DESTINO LAT/LNG: ${widget.destinoLat}, ${widget.destinoLng}");
+
+      final rutasCalculadas = await servicio.obtenerRutas(
+        origen: ciudadOrigen,
+        destino: widget.destino,
       );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("❌ Error: $e")));
-    }
 
-    setState(() {
-      loadingSeed = false;
-    });
+      if (rutasCalculadas.isEmpty) {
+        setState(() {
+          rutas = [];
+          error = "No se encontraron rutas disponibles.";
+          loading = false;
+        });
+        return;
+      }
+
+      setState(() {
+        rutas = rutasCalculadas;
+        loading = false;
+      });
+    } catch (e) {
+      print("❌ ERROR PANTALLA: $e");
+
+      setState(() {
+        error = "Ocurrió un error al obtener las rutas.";
+        loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      extendBodyBehindAppBar: false,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -114,7 +117,7 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
                 children: [
                   const Center(
                     child: Text(
-                      "Rutas disponibles",
+                      "Ruta en Autobús",
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
@@ -161,98 +164,113 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
         ),
       ),
 
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : rutas.isEmpty
-                    ? const Center(child: Text("No hay rutas disponibles"))
-                    : ListView.builder(
-                        itemCount: rutas.length,
-                        itemBuilder: (context, index) {
-                          final r = rutas[index];
-
-                          return Card(
-                            color: const Color.fromARGB(255, 255, 255, 255),
-                            elevation: 4,
-                            margin: const EdgeInsets.all(10),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "${r.origen} → ${r.destino}",
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text("⏱ Duración: ${r.duracion}"),
-                                  Text("💰 Precio: \$${r.precio}"),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    "Horarios:",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  ...r.horarios.map((h) => Text("• $h")),
-                                  const SizedBox(height: 10),
-                                  const Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Icon(
-                                      Icons.directions_bus,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-/*
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: GestureDetector(
-              onTap: loadingSeed ? null : ejecutarSeed,
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: loadingSeed ? Colors.grey : Colors.red,
-                  borderRadius: BorderRadius.circular(50),
-                  boxShadow: const [
-                    BoxShadow(blurRadius: 6, color: Colors.black26),
-                  ],
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null
+          ? Center(child: Text(error!))
+          : Column(
+              children: [
+                // 🔥 AVISO DE ESTIMACIÓN
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  color: Colors.orange.shade100,
+                  child: const Text(
+                    "⚠️ Los precios y horarios son estimados y pueden variar.",
+                    style: TextStyle(fontSize: 13),
+                  ),
                 ),
-                child: loadingSeed
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color.fromARGB(255, 255, 255, 255),
+
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: rutas.length,
+                    itemBuilder: (_, index) {
+                      final r = rutas[index];
+
+                      return Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.18),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "${r.origen} → ${r.destino}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                Row(
+                                  children: [
+                                    const Icon(Icons.access_time, size: 16),
+                                    const SizedBox(width: 5),
+                                    Text(r.duracion),
+                                  ],
+                                ),
+
+                                Row(
+                                  children: [
+                                    const SizedBox(width: 5),
+                                    Text("\$${r.precio}"),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                const Text(
+                                  "Horarios disponibles:",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+
+                                const SizedBox(height: 5),
+
+                                ...r.horarios.map((h) => Text("• $h")),
+
+                                const SizedBox(height: 10),
+
+                                const Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Icon(
+                                    Icons.directions_bus,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 5),
+
+                                const Text(
+                                  "Estimación basada en distancia",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      )
-                    : const Icon(
-                        Icons.bolt,
-                        color: Color.fromARGB(255, 255, 255, 255),
-                      ),
-              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ),
-          */
-        ],
-      ),
     );
   }
 }

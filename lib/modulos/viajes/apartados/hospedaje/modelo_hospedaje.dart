@@ -5,6 +5,8 @@ class Hospedaje {
   String ubicacion;
   bool disponible;
   String link;
+  double lat;
+  double lng;
 
   Hospedaje({
     required this.nombre,
@@ -13,5 +15,7 @@ class Hospedaje {
     required this.ubicacion,
     required this.disponible,
     required this.link,
+    required this.lat,
+    required this.lng,
   });
 }

@@ -1,23 +1,23 @@
 class Categorias {
   static const List<String> tiposLugar = [
-    "Restaurante",
-    "Cafetería",
-    "Bar",
-    "Parque",
-    "Museo",
-    "Playa",
-    "Monumento",
-    "Zona arqueológica",
-    "Mirador",
-    "Centro comercial",
-    "Actividades extremas",
+    "restaurante",
+    "cafeteria",
+    "bar",
+    "parque",
+    "museo",
+    "playa",
+    "monumento",
+    "zona_arqueologica",
+    "mirador",
+    "centro_comercial",
+    "actividades_extremas",
   ];
 
   static const List<String> tiposViaje = [
-    "Familiar",
-    "Amigos",
-    "Solo",
-    "En pareja",
+    "familiar",
+    "amigos",
+    "solo",
+    "pareja",
   ];
 
   static const List<String> precios = [

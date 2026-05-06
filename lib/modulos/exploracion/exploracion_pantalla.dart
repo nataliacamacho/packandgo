@@ -101,7 +101,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
           await OpenTripMapServicio.buscarLugaresCulturales(
         latUsuario,
         lngUsuario,
-        radius: 500,
+        radio: 500, query: '',
       );
 
       List<dynamic> lugaresAdaptados = [];
@@ -117,7 +117,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         'recreation_ground',
       ];
 
-      for (var item in lugaresCulturales) {
+      for (var item in lugaresCulturales!) {
         final propiedades = item['properties'];
         final coordinates = item['geometry']?['coordinates'];
 

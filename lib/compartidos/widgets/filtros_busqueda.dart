@@ -48,7 +48,22 @@ class FiltrosBusqueda extends StatelessWidget {
           if (mostrarTipo) ...[
             _buildDropdown(
               titulo: tipoSeleccionado ?? "Tipo",
-              opciones: Categorias.tiposLugar,
+              opciones: const [
+                {"label": "Restaurante", "value": "restaurante"},
+                {"label": "Cafetería", "value": "cafeteria"},
+                {"label": "Bar", "value": "bar"},
+                {"label": "Parque", "value": "parque"},
+                {"label": "Museo", "value": "museo"},
+                {"label": "Playa", "value": "playa"},
+                {"label": "Monumento", "value": "monumento"},
+                {"label": "Zona arqueológica", "value": "zona_arqueologica"},
+                {"label": "Mirador", "value": "mirador"},
+                {"label": "Centro comercial", "value": "centro_comercial"},
+                {
+                  "label": "Actividades extremas",
+                  "value": "actividades_extremas",
+                },
+              ],
               seleccionado: tipoSeleccionado,
               onChanged: onTipoChanged,
             ),
@@ -59,10 +74,10 @@ class FiltrosBusqueda extends StatelessWidget {
             _buildDropdown(
               titulo: estiloSeleccionado ?? "Experiencia",
               opciones: const [
-                "Familiar",
-                "Amigos",
-                "Solo",
-                "En pareja",
+                {"label": "Familiar", "value": "familiar"},
+                {"label": "Amigos", "value": "amigos"},
+                {"label": "Solo", "value": "solo"},
+                {"label": "En pareja", "value": "pareja"},
               ],
               seleccionado: estiloSeleccionado,
               onChanged: onEstiloChanged,
@@ -73,7 +88,11 @@ class FiltrosBusqueda extends StatelessWidget {
           if (mostrarPrecio) ...[
             _buildDropdown(
               titulo: precioSeleccionado ?? "Precio",
-              opciones: const ["\$", "\$\$", "\$\$\$"],
+              opciones: const [
+                {"label": "\$", "value": "\$"},
+                {"label": "\$\$", "value": "\$\$"},
+                {"label": "\$\$\$", "value": "\$\$\$"},
+              ],
               seleccionado: precioSeleccionado,
               onChanged: onPrecioChanged,
             ),
@@ -143,7 +162,7 @@ class FiltrosBusqueda extends StatelessWidget {
 
   Widget _buildDropdown({
     required String titulo,
-    required List<String> opciones,
+    required List<Map<String, String>> opciones,
     required String? seleccionado,
     required ValueChanged<String?> onChanged,
   }) {
@@ -157,19 +176,27 @@ class FiltrosBusqueda extends StatelessWidget {
       },
       itemBuilder: (context) {
         return opciones.map((opcion) {
+          final label = opcion["label"]!;
+          final value = opcion["value"]!;
+
           return PopupMenuItem<String>(
-            value: opcion,
+            value: value,
             child: Row(
               children: [
-                Expanded(child: Text(opcion)),
-                if (opcion == seleccionado)
-                  const Icon(Icons.check, size: 14),
+                Expanded(child: Text(label)),
+                if (value == seleccionado) const Icon(Icons.check, size: 14),
               ],
             ),
           );
         }).toList();
       },
-      child: _container(titulo, seleccionado != null),
+      child: _container(
+        opciones.firstWhere(
+          (e) => e["value"] == seleccionado,
+          orElse: () => {"label": titulo},
+        )["label"]!,
+        seleccionado != null,
+      ),
     );
   }
 

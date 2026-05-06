@@ -21,6 +21,24 @@ class RutaMixtaPantalla extends StatefulWidget {
   State<RutaMixtaPantalla> createState() => _RutaMixtaPantallaState();
 }
 
+class Arista {
+  final CiudadNodo origen;
+  final CiudadNodo destino;
+  final String tipo;
+  final double distancia;
+  final double tiempo;
+  final double costo;
+
+  Arista({
+    required this.origen,
+    required this.destino,
+    required this.tipo,
+    required this.distancia,
+    required this.tiempo,
+    required this.costo,
+  });
+}
+
 class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
   final ubicacionServicio = UbicacionServicio();
 
@@ -50,13 +68,43 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
     }).toList();
   }
 
+  final List<String> aeropuertos = [
+    "Guadalajara",
+    "CDMX",
+    "Monterrey",
+    "Tijuana",
+    "Cancún",
+    "Mérida",
+  ];
+
   @override
   void initState() {
     super.initState();
     calcularRuta();
   }
 
-  // ================= NODOS =================
+  CiudadNodo obtenerAeropuertoMasCercano(double lat, double lng) {
+    CiudadNodo mejor = ciudadesNodoBase.first;
+    double menor = double.infinity;
+
+    for (var nodo in ciudadesNodoBase) {
+      if (!aeropuertos.contains(nodo.nombre)) continue;
+
+      final d = ubicacionServicio.calcularDistanciaEnKm(
+        origenLat: lat,
+        origenLng: lng,
+        destinoLat: nodo.lat,
+        destinoLng: nodo.lng,
+      );
+
+      if (d < menor) {
+        menor = d;
+        mejor = nodo;
+      }
+    }
+
+    return mejor;
+  }
 
   CiudadNodo obtenerNodoMasCercano(double lat, double lng) {
     CiudadNodo mejor = ciudadesNodo.first;
@@ -75,7 +123,6 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
         mejor = nodo;
       }
     }
-
     return mejor;
   }
 
@@ -102,7 +149,6 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
         mejor = nodo;
       }
     }
-
     return mejor;
   }
 
@@ -135,25 +181,100 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
       return;
     }
 
-    final distanciaTotal = ubicacionServicio.calcularDistanciaEnKm(
+    final nodoOrigen = obtenerNodoMasCercano(origen['lat']!, origen['lng']!);
+    final nodoDestino = obtenerNodoMasCercano(
+      widget.destinoLat,
+      widget.destinoLng,
+    );
+
+    final aeropuertoOrigen = obtenerAeropuertoMasCercano(
+      origen['lat']!,
+      origen['lng']!,
+    );
+
+    final aeropuertoDestino = obtenerAeropuertoMasCercano(
+      widget.destinoLat,
+      widget.destinoLng,
+    );
+
+    // ================= CARRO INICIAL =================
+    final distCarro1 = ubicacionServicio.calcularDistanciaEnKm(
       origenLat: origen['lat']!,
       origenLng: origen['lng']!,
+      destinoLat: nodoOrigen.lat,
+      destinoLng: nodoOrigen.lng,
+    );
+
+    // ================= AVIÓN =================
+    final distVuelo = ubicacionServicio.calcularDistanciaEnKm(
+      origenLat: aeropuertoOrigen.lat,
+      origenLng: aeropuertoOrigen.lng,
+      destinoLat: aeropuertoDestino.lat,
+      destinoLng: aeropuertoDestino.lng,
+    );
+
+    // ================= CARRO FINAL =================
+    final distCarro2 = ubicacionServicio.calcularDistanciaEnKm(
+      origenLat: aeropuertoDestino.lat,
+      origenLng: aeropuertoDestino.lng,
       destinoLat: widget.destinoLat,
       destinoLng: widget.destinoLng,
     );
 
-    final nodoInicio = obtenerNodoMasCercano(origen['lat']!, origen['lng']!);
-    final nodoDestino = obtenerNodoCercanoAlDestino(
-      widget.destinoLat,
-      widget.destinoLng,
-      nodoInicio,
-    );
+    // ================= DECISIÓN REAL =================
+    final bool usarAvion = aeropuertos.contains(aeropuertoDestino.nombre);
 
-    final tiempoCarro = distanciaTotal / 80;
-    final costoCarro = distanciaTotal * 2;
+    // ================= ARMADO DE RUTA =================
+    if (usarAvion && distVuelo > 200) {
+      segmentos.addAll([
+        SegmentoRuta(
+          tipo: "carro",
+          origen: nombreOrigen ?? "Tu ubicación",
+          destino: nodoOrigen.nombre,
+          origenLat: origen['lat']!,
+          origenLng: origen['lng']!,
+          destinoLat: nodoOrigen.lat,
+          destinoLng: nodoOrigen.lng,
+          distancia: distCarro1,
+          tiempo: distCarro1 / 80,
+          costo: distCarro1 * 2,
+        ),
 
-    // ================= CASO SIMPLE =================
-    if (distanciaTotal <= 500) {
+        SegmentoRuta(
+          tipo: "avion",
+          origen: aeropuertoOrigen.nombre,
+          destino: aeropuertoDestino.nombre,
+          origenLat: aeropuertoOrigen.lat,
+          origenLng: aeropuertoOrigen.lng,
+          destinoLat: aeropuertoDestino.lat,
+          destinoLng: aeropuertoDestino.lng,
+          distancia: distVuelo,
+          tiempo: (distVuelo / 800) + 2,
+          costo: (distVuelo * 2.5).clamp(900, 10000),
+        ),
+
+        SegmentoRuta(
+          tipo: "carro",
+          origen: aeropuertoDestino.nombre,
+          destino: widget.destinoNombre,
+          origenLat: aeropuertoDestino.lat,
+          origenLng: aeropuertoDestino.lng,
+          destinoLat: widget.destinoLat,
+          destinoLng: widget.destinoLng,
+          distancia: distCarro2,
+          tiempo: distCarro2 / 60,
+          costo: distCarro2 * 2,
+        ),
+      ]);
+    } else {
+      // fallback: todo en carretera inteligente
+      final distTotal = ubicacionServicio.calcularDistanciaEnKm(
+        origenLat: origen['lat']!,
+        origenLng: origen['lng']!,
+        destinoLat: widget.destinoLat,
+        destinoLng: widget.destinoLng,
+      );
+
       segmentos.add(
         SegmentoRuta(
           tipo: "carro",
@@ -163,85 +284,12 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
           origenLng: origen['lng']!,
           destinoLat: widget.destinoLat,
           destinoLng: widget.destinoLng,
-          distancia: distanciaTotal,
-          tiempo: tiempoCarro,
-          costo: costoCarro,
+          distancia: distTotal,
+          tiempo: distTotal / 80,
+          costo: distTotal * 2,
         ),
       );
     }
-    // ================= CASO MEDIO =================
-    else if (distanciaTotal <= 1200) {
-      segmentos.addAll([
-        SegmentoRuta(
-          tipo: "autobus",
-          origen: nodoDestino.nombre,
-          destino: widget.destinoNombre,
-          origenLat: origen['lat']!,
-          origenLng: origen['lng']!,
-          destinoLat: nodoDestino.lat,
-          destinoLng: nodoDestino.lng,
-          distancia: distanciaTotal * 0.7,
-          tiempo: (distanciaTotal * 0.7) / 70,
-          costo: (distanciaTotal * 0.7) * 1.5,
-        ),
-        SegmentoRuta(
-          tipo: "carro",
-          origen: nodoDestino.nombre,
-          destino: widget.destinoNombre,
-          origenLat: nodoDestino.lat,
-          origenLng: nodoDestino.lng,
-          destinoLat: widget.destinoLat,
-          destinoLng: widget.destinoLng,
-          distancia: distanciaTotal * 0.3,
-          tiempo: (distanciaTotal * 0.3) / 60,
-          costo: (distanciaTotal * 0.3) * 2,
-        ),
-      ]);
-    }
-    // ================= CASO LARGO =================
-    else {
-      segmentos.addAll([
-        SegmentoRuta(
-          tipo: "carro",
-          origen: nombreOrigen ?? "Tu ubicación",
-          destino: nodoInicio.nombre,
-          origenLat: origen['lat']!,
-          origenLng: origen['lng']!,
-          destinoLat: nodoInicio.lat,
-          destinoLng: nodoInicio.lng,
-          distancia: 100,
-          tiempo: 2,
-          costo: 200,
-        ),
-        SegmentoRuta(
-          tipo: "avion",
-          origen: nodoInicio.nombre,
-          destino: nodoDestino.nombre,
-          origenLat: nodoInicio.lat,
-          origenLng: nodoInicio.lng,
-          destinoLat: nodoDestino.lat,
-          destinoLng: nodoDestino.lng,
-          distancia: 800,
-          tiempo: 1.5,
-          costo: 1500,
-        ),
-        SegmentoRuta(
-          tipo: "carro",
-          origen: nodoDestino.nombre,
-          destino: widget.destinoNombre,
-          origenLat: nodoDestino.lat,
-          origenLng: nodoDestino.lng,
-          destinoLat: widget.destinoLat,
-          destinoLng: widget.destinoLng,
-          distancia: 150,
-          tiempo: 3,
-          costo: 300,
-        ),
-      ]);
-    }
-
-    // 🔥 FILTRO FINAL REAL
-    segmentos.removeWhere((s) => normalizar(s.origen) == normalizar(s.destino));
 
     for (var s in segmentos) {
       costoTotal += s.costo;
@@ -249,7 +297,6 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
     }
 
     setState(() {
-      mensaje = "Distancia: ${distanciaTotal.toStringAsFixed(1)} km";
       cargando = false;
     });
   }
@@ -407,7 +454,6 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
 
                     const SizedBox(width: 16),
 
-                    const Icon(Icons.attach_money, size: 16),
                     const SizedBox(width: 4),
                     Text("\$${s.costo.toStringAsFixed(0)}"),
                   ],

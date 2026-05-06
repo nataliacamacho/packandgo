@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -8,32 +7,45 @@ class Hospedaje {
   final String nombre;
   final String direccion;
   final String imagen;
-  final String precio;
-  final String xid;
-  final String linkReserva;
+  final double rating;
+  final String linkMaps;
+  final double lat;
+  final double lng;
 
   Hospedaje({
     required this.nombre,
     required this.direccion,
     required this.imagen,
-    required this.precio,
-    required this.xid,
-    required this.linkReserva,
+    required this.rating,
+    required this.linkMaps,
+    required this.lat,
+    required this.lng,
   });
 
-  factory Hospedaje.fromOpenTripMap(Map<String, dynamic> json) {
-    final nombre = (json['name'] ?? '').toString().trim();
+  factory Hospedaje.fromGoogle(Map<String, dynamic> json) {
+    final lat = json['geometry']['location']['lat'] ?? 0.0;
+    final lng = json['geometry']['location']['lng'] ?? 0.0;
+
+    final photos = json['photos'] as List?;
+    String imageUrl = '';
+
+    if (photos != null && photos.isNotEmpty) {
+      final photoRef = photos[0]['photo_reference'];
+      imageUrl =
+          "https://maps.googleapis.com/maps/api/place/photo"
+          "?maxwidth=400"
+          "&photo_reference=$photoRef"
+          "&key=${dotenv.env['GOOGLE_PLACES_API_KEY']}";
+    }
 
     return Hospedaje(
-      nombre: nombre.isNotEmpty ? nombre : 'Hospedaje sin nombre',
-      direccion: 'Ver ubicación en mapa',
-      imagen: 'https://via.placeholder.com/150',
-      precio: 'Consultar precio',
-      xid: json['xid'] ?? '',
-      // 🔗 Link a Booking buscando el nombre del lugar
-      linkReserva: nombre.isNotEmpty
-          ? 'https://www.booking.com/search.html?ss=${Uri.encodeComponent(nombre)}'
-          : 'https://www.booking.com',
+      nombre: json['name'] ?? 'Sin nombre',
+      direccion: json['vicinity'] ?? 'Sin dirección',
+      imagen: imageUrl,
+      rating: (json['rating'] ?? 0).toDouble(),
+      lat: lat,
+      lng: lng,
+      linkMaps: "https://www.google.com/maps/search/?api=1&query=$lat,$lng",
     );
   }
 }
@@ -42,71 +54,51 @@ class HospedajeServicio {
   Future<List<Hospedaje>> obtenerHospedajes({
     required double lat,
     required double lng,
-    int radio = 5000,
-    int limite =
-        15, // pedimos 15 para filtrar los sin nombre y quedarnos con 5+
+    int radius = 5000,
   }) async {
-    final apiKey = dotenv.env['OPENTRIPMAP_API_KEY']?.trim();
+    final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
 
-    if (apiKey == null || apiKey.isEmpty) {
-      print('❌ OPENTRIPMAP_API_KEY no encontrada en .env');
+    if (apiKey == null) {
+      print("❌ API KEY no encontrada");
       return [];
     }
 
     final url = Uri.parse(
-      'https://api.opentripmap.com/0.1/en/places/radius'
-      '?radius=$radio'
-      '&lon=$lng'
-      '&lat=$lat'
-      '&kinds=accomodations'
-      '&rate=2'
-      '&limit=$limite'
-      '&format=json'
-      '&apikey=$apiKey',
+      "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+      "?location=$lat,$lng"
+      "&radius=$radius"
+      "&type=lodging"
+      "&key=$apiKey",
     );
 
-    print('🌐 URL: $url');
-    print('📍 Buscando hospedajes en lat=$lat, lng=$lng, radio=$radio');
-
     try {
-      final respuesta = await http
-          .get(url)
-          .timeout(const Duration(seconds: 20));
+      final response = await http.get(url);
 
-      print('📡 STATUS: ${respuesta.statusCode}');
-
-      if (respuesta.statusCode == 200) {
-        final data = json.decode(respuesta.body);
-        final lista = data is List ? data : (data['features'] as List? ?? []);
-
-        // ✅ Filtramos los que no tienen nombre
-        final conNombre = lista
-            .map(
-              (j) => Hospedaje.fromOpenTripMap(
-                j is Map && j.containsKey('properties') ? j['properties'] : j,
-              ),
-            )
-            .where((h) => h.nombre != 'Hospedaje sin nombre')
-            .take(10)
-            .toList();
-
-        print('✅ Hospedajes con nombre: ${conNombre.length}');
-        return conNombre;
-      } else if (respuesta.statusCode == 429) {
-        print('⚠️ Límite de requests alcanzado');
-        return [];
-      } else {
-        print('❌ Error ${respuesta.statusCode}: ${respuesta.body}');
+      if (response.statusCode != 200) {
+        print("❌ Error API Google Places");
         return [];
       }
-    } on TimeoutException {
-      print('⏱ Timeout');
-      return [];
-    } on SocketException catch (e) {
-      print('🔌 Sin conexión: $e');
-      return [];
+
+      final data = json.decode(response.body);
+
+      final results = data['results'] as List;
+
+      List<Hospedaje> hospedajes = results
+          .map((e) => Hospedaje.fromGoogle(e))
+          .where((h) {
+            // filtro básico de validez
+            return h.nombre.isNotEmpty &&
+                h.lat != 0.0 &&
+                h.lng != 0.0;
+          })
+          .toList();
+
+      // ordenar por rating
+      hospedajes.sort((a, b) => b.rating.compareTo(a.rating));
+
+      return hospedajes.take(10).toList();
     } catch (e) {
-      print('❌ Error inesperado: $e');
+      print("❌ Error: $e");
       return [];
     }
   }

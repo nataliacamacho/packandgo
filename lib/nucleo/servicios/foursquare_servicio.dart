@@ -19,7 +19,7 @@ class FoursquareServicio {
     double lng, {
     String? categoria,   // 👈 parámetro opcional
     int radio = 3000,
-    int limite = 10,
+    int limite = 10, required String query,
   }) async {
     final apiKey = dotenv.env['FOURSQUARE_API_KEY']?.trim();
 

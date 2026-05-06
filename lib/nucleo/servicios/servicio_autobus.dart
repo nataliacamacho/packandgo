@@ -1,97 +1,107 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/autobus/modelo_ruta_autobus.dart';
+import 'google_servicio.dart';
+import 'dart:math';
 
 class ServicioAutobus {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final google = GoogleServicio();
 
-  // ==============================
-  // 🔧 NORMALIZACIÓN
-  // ==============================
   String normalizarTexto(String texto) {
-    return texto
-        .toLowerCase()
-        .trim()
-        .replaceAll("á", "a")
-        .replaceAll("é", "e")
-        .replaceAll("í", "i")
-        .replaceAll("ó", "o")
-        .replaceAll("ú", "u")
-        .replaceAll("ñ", "n")
-        .replaceAll(" ", "_");
+    return texto.toLowerCase().trim();
   }
 
-  // ==============================
-  // 🔎 BÚSQUEDA EXACTA (ORIGEN → DESTINO)
-  // ==============================
-  Future<List<RutaAutobus>> obtenerRutaExacta({
+  List<String> generarHorarios() {
+    return ["06:00 AM", "09:00 AM", "01:00 PM", "05:00 PM", "10:00 PM"];
+  }
+
+  double extraerHoras(String duracionTexto) {
+    double horas = 0;
+
+    final regexDias = RegExp(r'(\d+)\s*(día|day)');
+    final matchDias = regexDias.firstMatch(duracionTexto);
+    if (matchDias != null) {
+      horas += double.parse(matchDias.group(1)!) * 24;
+    }
+
+    final regexHoras = RegExp(r'(\d+)\s*(h|hour)');
+    final matchHoras = regexHoras.firstMatch(duracionTexto);
+    if (matchHoras != null) {
+      horas += double.parse(matchHoras.group(1)!);
+    }
+
+    final regexMin = RegExp(r'(\d+)\s*(min)');
+    final matchMin = regexMin.firstMatch(duracionTexto);
+    if (matchMin != null) {
+      horas += double.parse(matchMin.group(1)!) / 60;
+    }
+
+    return horas;
+  }
+
+  String calcularPrecio({
+    required String distanciaTexto,
+    required String duracionTexto,
+  }) {
+    final km =
+        double.tryParse(distanciaTexto.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+
+    final horas = extraerHoras(duracionTexto);
+
+    double precio;
+
+    if (horas <= 3) {
+      precio = km * 0.9 + 80;
+    } else if (horas <= 8) {
+      precio = km * 1.0 + 150;
+    } else if (horas <= 15) {
+      precio = km * 1.2 + 300;
+    } else {
+      precio = km * 1.5 + (horas * 50) + 500;
+    }
+
+    if (horas > 20 && precio < 900) precio = 900;
+
+    return precio.toStringAsFixed(0);
+  }
+
+  Future<List<RutaAutobus>> obtenerRutas({
     required String origen,
     required String destino,
   }) async {
-    final origenKey = normalizarTexto(origen);
-    final destinoKey = normalizarTexto(destino);
+    // 🔥 1. Buscar terminales reales
+    final terminalOrigen = await google.buscarTerminalAutobus(origen);
+    final terminalDestino = await google.buscarTerminalAutobus(destino);
 
-    final snapshot = await _db
-        .collection("transportes_autobus")
-        .where("origen_key", isEqualTo: origenKey)
-        .where("destino_key", isEqualTo: destinoKey)
-        .get();
+    // fallback si Google falla
+    final origenTexto = terminalOrigen?["nombre"] ?? origen;
+    final destinoTexto = terminalDestino?["nombre"] ?? destino;
 
-    return snapshot.docs
-        .map((doc) => RutaAutobus.fromMap(doc.data(), doc.id))
-        .toList();
-  }
+    // 🔥 2. Usar coordenadas si existen
+    final origenCoords = terminalOrigen != null
+        ? "${terminalOrigen["lat"]},${terminalOrigen["lng"]}"
+        : origen;
 
-  // ==============================
-  // 🔄 FALLBACK INTELIGENTE
-  // ==============================
-  Future<List<RutaAutobus>> obtenerFallback({
-    required String origen,
-    required String destino,
-  }) async {
-    final origenKey = normalizarTexto(origen);
-    final destinoKey = normalizarTexto(destino);
+    final destinoCoords = terminalDestino != null
+        ? "${terminalDestino["lat"]},${terminalDestino["lng"]}"
+        : destino;
 
-    // 🔥 primero intenta por destino + origen parcial
-    final snapshot = await _db
-        .collection("transportes_autobus")
-        .where("origen_key", isEqualTo: origenKey)
-        .where("destino_key", isEqualTo: destinoKey)
-        .get();
+    final data = await google.obtenerRuta(
+      origen: origenCoords,
+      destino: destinoCoords,
+    );
 
-    final rutas = snapshot.docs
-        .map((doc) => RutaAutobus.fromMap(doc.data(), doc.id))
-        .toList();
+    if (data == null) return [];
 
-    // 🔥 filtrado extra en memoria (más flexible)
-    return rutas.where((ruta) {
-      final o = normalizarTexto(ruta.origen);
-      final d = normalizarTexto(ruta.destino);
-
-      return o.contains(origenKey) || d.contains(destinoKey);
-    }).toList();
-  }
-
-  // ==============================
-  // 🔎 FILTRO INTELIGENTE LOCAL
-  // ==============================
-  List<RutaAutobus> filtrar(List<RutaAutobus> rutas, String query) {
-    final q = normalizarTexto(query);
-
-    return rutas.where((ruta) {
-      final o = normalizarTexto(ruta.origen);
-      final d = normalizarTexto(ruta.destino);
-
-      return o.contains(q) || d.contains(q);
-    }).toList();
-  }
-
-  // ==============================
-  // 🧠 MATCH FLEXIBLE
-  // ==============================
-  bool coincideRuta(String texto, String query) {
-    final t = normalizarTexto(texto);
-    final q = normalizarTexto(query);
-
-    return t.contains(q) || q.contains(t);
+    return [
+      RutaAutobus(
+        origen: origenTexto,
+        destino: destinoTexto,
+        duracion: data["duracion"],
+        precio: calcularPrecio(
+          distanciaTexto: data["distancia"],
+          duracionTexto: data["duracion"],
+        ),
+        horarios: generarHorarios(),
+      ),
+    ];
   }
 }

@@ -31,7 +31,9 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   @override
   void initState() {
     super.initState();
-    print('🏨 lat=${widget.lat}, lng=${widget.lng}, destino=${widget.destino}');
+    print(
+      '🏨 lat=${widget.lat}, lng=${widget.lng}, destino=${normalizarDestino(widget.destino)}',
+    );
     cargar();
   }
 
@@ -94,8 +96,25 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
     return '${fecha.day} ${meses[fecha.month]} ${fecha.year}';
   }
 
-  Future<void> _abrirLink(String url) async {
-    final uri = Uri.parse(url);
+  Future<void> _abrirLink(String urlBase) async {
+    final destino = normalizarDestino(widget.destino);
+
+    final checkin =
+        "${widget.fechaInicio.year}-${widget.fechaInicio.month.toString().padLeft(2, '0')}-${widget.fechaInicio.day.toString().padLeft(2, '0')}";
+
+    final checkout =
+        "${widget.fechaFin.year}-${widget.fechaFin.month.toString().padLeft(2, '0')}-${widget.fechaFin.day.toString().padLeft(2, '0')}";
+
+    final urlFinal =
+        "$urlBase&ss=${Uri.encodeComponent(destino)}"
+        "&checkin=$checkin"
+        "&checkout=$checkout"
+        "&group_adults=2"
+        "&no_rooms=1"
+        "&group_children=0";
+
+    final uri = Uri.parse(urlFinal);
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -104,55 +123,75 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: false,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(180),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.only(
+                top: 50,
+                left: 16,
+                right: 16,
+                bottom: 16,
+              ),
+              decoration: const BoxDecoration(color: Color(0xFFF6A230)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const Center(
+                    child: Text(
+                      "Hospedaje",
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const Center(
+                    child: Text(
+                      "Opciones para tu estadía",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.destino,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
-          _buildHeader(),
           _buildFechas(),
           Expanded(child: _buildContenido()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.only(top: 50, left: 16, right: 16, bottom: 16),
-      decoration: const BoxDecoration(color: Color(0xFFF6A230)),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back, color: Colors.white),
-            ),
-          ),
-          Column(
-            children: [
-              const Text(
-                'Hospedaje',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const Text(
-                'Opciones para tu estadía',
-                style: TextStyle(fontSize: 14, color: Colors.white),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                widget.destino,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withOpacity(0.85),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -265,12 +304,8 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
                 errorBuilder: (_, __, ___) => Container(
                   width: 80,
                   height: 80,
-                  color: const Color(0xFFFFE0B2),
-                  child: const Icon(
-                    Icons.hotel,
-                    color: Color(0xFFF6A230),
-                    size: 36,
-                  ),
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.hotel),
                 ),
               ),
             ),
@@ -295,13 +330,19 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
                   // Disponibilidad
                   _buildInfoRow(
                     Icons.check_circle_outline,
-                    'Verificar disponibilidad, precio y ubicación en Booking',
+                    'Buscar este hospedaje en Booking (puede variar ligeramente)',
                     color: Colors.orange,
                   ),
                   const SizedBox(height: 6),
 
                   GestureDetector(
-                    onTap: () => _abrirLink(h.linkReserva),
+                    onTap: () async {
+                      final uri = Uri.parse(h.linkMaps);
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
                     child: Row(
                       children: const [
                         Icon(Icons.open_in_new, size: 13, color: Colors.blue),
