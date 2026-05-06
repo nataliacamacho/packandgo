@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -149,6 +151,7 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
 // ---------------------------------------------------------------------------
 class BusquedaPantalla extends StatefulWidget {
   final bool esSeleccion;
+
   const BusquedaPantalla({super.key, this.esSeleccion = false});
 
   @override
@@ -156,24 +159,34 @@ class BusquedaPantalla extends StatefulWidget {
 }
 
 class _BusquedaPantallaState extends State<BusquedaPantalla> {
-  // ── Estado de filtros ──────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
+  // FILTROS
+  // -------------------------------------------------------------------------
   String query = '';
-  String? destinoSeleccionado; // ID de ciudad (ej: "gdl")
-  String? tipoSeleccionado; // ej: "restaurante"
-  String? estiloSeleccionado; // ej: "familiar"
-  String? precioSeleccionado; // ej: "$"
+  String? destinoSeleccionado;
+  String? tipoSeleccionado;
+  String? estiloSeleccionado;
+  String? precioSeleccionado;
 
-  // ── Estado de datos ────────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
+  // ESTADO
+  // -------------------------------------------------------------------------
   bool cargando = false;
   String? error;
+
   List<Map<String, dynamic>> lugares = [];
 
-  // ── Usuario / intereses ────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
+  // USUARIO
+  // -------------------------------------------------------------------------
   final String _idUsuario = FirebaseAuth.instance.currentUser?.uid ?? '';
+
   Map<String, dynamic> _intereses = {};
 
-  // ── Coordenadas actuales de búsqueda ──────────────────────────────────────
-  double _latActual = 20.6597; // Guadalajara por defecto
+  // -------------------------------------------------------------------------
+  // UBICACIÓN
+  // -------------------------------------------------------------------------
+  double _latActual = 20.6597;
   double _lngActual = -103.3496;
 
   @override
@@ -182,9 +195,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     _inicializar();
   }
 
-  // ---------------------------------------------------------------------------
-  // INICIALIZACIÓN
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // INIT
+  // -------------------------------------------------------------------------
   Future<void> _inicializar() async {
     await _cargarIntereses();
     await _resolverCoordenadas();
@@ -193,30 +206,28 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
   Future<void> _cargarIntereses() async {
     if (_idUsuario.isEmpty) return;
+
     try {
       final doc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(_idUsuario)
           .get();
+
       if (doc.exists) {
-        setState(() {
-          _intereses =
-              (doc.data()?['vector_intereses'] ?? {}) as Map<String, dynamic>;
-        });
+        _intereses =
+            (doc.data()?['vector_intereses'] ?? {}) as Map<String, dynamic>;
       }
     } catch (_) {}
   }
 
-  /// Determina lat/lng según:
-  ///   1. Ciudad seleccionada en filtro
-  ///   2. Ubicación GPS del usuario
-  ///   3. Guadalajara como fallback
   Future<void> _resolverCoordenadas() async {
+    // DESTINO
     if (destinoSeleccionado != null) {
       final ciudad = _ciudadesMexico.firstWhere(
         (c) => c['id'] == destinoSeleccionado,
         orElse: () => {},
       );
+
       if (ciudad.isNotEmpty) {
         _latActual = (ciudad['lat'] as num).toDouble();
         _lngActual = (ciudad['lng'] as num).toDouble();
@@ -224,8 +235,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       }
     }
 
+    // GPS
     try {
       final pos = await UbicacionServicio().obtenerUbicacionActual();
+
       if (pos != null) {
         _latActual = pos.latitude;
         _lngActual = pos.longitude;
@@ -233,43 +246,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     } catch (_) {}
   }
 
-  Map<String, dynamic> normalizarLugar(Map<dynamic, dynamic> lugar) {
-    // 🔵 GOOGLE PLACES
-    if (lugar["geometry"] != null) {
-      final loc = lugar["geometry"]["location"];
-
-      return {
-        "name": lugar["name"] ?? "Sin nombre",
-        "lat": _toDouble(loc["lat"]),
-        "lng": _toDouble(loc["lng"]),
-        "direccion":
-            lugar["vicinity"] ?? lugar["formatted_address"] ?? "Sin dirección",
-        "categoriaPrincipal": (lugar["types"] ?? ["otro"]).first,
-        "rating": _toDouble(lugar["rating"], fb: 4.5),
-        "popularity": _toDouble(lugar["user_ratings_total"], fb: 10),
-      };
-    }
-
-    // 🟢 OPENTRIPMAP
-    return {
-      "name": lugar["name"] ?? lugar["properties"]?["name"] ?? "Sin nombre",
-
-      "lat": _toDouble(lugar["lat"] ?? lugar["point"]?["lat"]),
-
-      "lng": _toDouble(lugar["lng"] ?? lugar["point"]?["lon"]),
-
-      "direccion": lugar["address"] ?? lugar["kinds"] ?? "Sin dirección",
-
-      "categoriaPrincipal": lugar["kinds"] ?? "otro",
-
-      "rating": _toDouble(lugar["rate"], fb: 4.0),
-      "popularity": _toDouble(lugar["rate"], fb: 4.0),
-    };
-  }
-
-  // ---------------------------------------------------------------------------
-  // BÚSQUEDA PRINCIPAL
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // BÚSQUEDA
+  // -------------------------------------------------------------------------
   Future<void> _buscar({String texto = ''}) async {
     if (!mounted) return;
 
@@ -281,180 +260,477 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     try {
       await _resolverCoordenadas();
 
-      final results = await Future.wait([
-        GooglePlacesServicio.buscarLugares(
-          _latActual,
-          _lngActual,
-          query: texto,
-          tipo: tipoSeleccionado,
-        ),
-        OpenTripMapServicio.buscarLugaresCulturales(
-          _latActual,
-          _lngActual,
-          query: texto,
-          tipo: null,
-        ).then((r) => r ?? <Map<String, dynamic>>[]),
-      ]);
+      final google = await GooglePlacesServicio.buscarLugares(
+        _latActual,
+        _lngActual,
+        query: texto,
+        tipo: tipoSeleccionado,
+      );
 
-      final google = (results[0] as List).cast<Map<String, dynamic>>();
+      final open = await OpenTripMapServicio.buscarLugaresCulturales(
+        _latActual,
+        _lngActual,
+        query: texto,
+        tipo: tipoSeleccionado,
+      );
 
-      final open = (results[1] as List).map((e) => normalizarLugar(e)).toList();
+      print("🟦 Google: ${google.length}");
+      print("🟩 OpenTrip: ${open?.length ?? 0}");
 
-      // ❌ ELIMINA duplicado total
-      final combinados = [...google, ...open]
-          .where(
-            (e) => e['lat'] != null && e['lng'] != null && e['name'] != null,
-          )
-          .toList();
+      List<Map<String, dynamic>> combinados = [...google, ...(open ?? [])];
 
+      // -------------------------------------------------------------------
+      // NORMALIZAR
+      // -------------------------------------------------------------------
+      combinados = combinados.map((l) {
+        final categoria = _normalizarCategoria(l['categoriaPrincipal']);
+
+        return {
+          ...l,
+
+          // NORMALIZAR NOMBRE
+          'name': l['name'] ?? 'Sin nombre',
+
+          // NORMALIZAR DIRECCIÓN
+          'direccion': _obtenerDireccion(l),
+
+          // NORMALIZAR CATEGORÍA
+          'categoriaPrincipal': categoria,
+
+          // NORMALIZAR RATING
+          'rating': _toDouble(l['rating'], fb: 5),
+
+          // NORMALIZAR POPULARIDAD
+          'popularity': _toDouble(l['popularity'], fb: 5),
+
+          // NORMALIZAR PRECIO
+          'precio': l['precio'],
+
+          // DISTANCIA
+          'distancia': calcularDistancia(
+            _latActual,
+            _lngActual,
+            _toDouble(l['lat']),
+            _toDouble(l['lng']),
+          ),
+        };
+      }).toList();
+
+      for (final l in combinados) {
+        print("TIPO RAW: ${l['categoriaPrincipal']}");
+      }
+
+      // -------------------------------------------------------------------
+      // FILTRAR SIN COORDENADAS
+      // -------------------------------------------------------------------
+      combinados = combinados.where((l) {
+        return l['lat'] != null && l['lng'] != null && l['name'] != null;
+      }).toList();
+
+      // -------------------------------------------------------------------
+      // ELIMINAR DUPLICADOS
+      // -------------------------------------------------------------------
+      final Map<String, Map<String, dynamic>> unicos = {};
+
+      for (final lugar in combinados) {
+        final key =
+            "${lugar['name']}"
+            "${lugar['lat']}"
+            "${lugar['lng']}";
+
+        unicos[key] = lugar;
+      }
+
+      combinados = unicos.values.toList();
+
+      // -------------------------------------------------------------------
+      // PESOS
+      // -------------------------------------------------------------------
       final conPesos = _aplicarPesos(combinados);
+
+      // -------------------------------------------------------------------
+      // ORDENAR
+      // -------------------------------------------------------------------
       final ordenados = _quickSort(conPesos);
 
-      final final_ = (texto.isEmpty && destinoSeleccionado == null)
+      // -------------------------------------------------------------------
+      // TOP
+      // -------------------------------------------------------------------
+      final finales =
+          (texto.isEmpty &&
+              destinoSeleccionado == null &&
+              tipoSeleccionado == null)
           ? _top5(ordenados)
           : ordenados;
 
       setState(() {
-        lugares = final_;
+        lugares = finales;
         cargando = false;
       });
     } catch (e) {
+      print("❌ ERROR BUSQUEDA: $e");
+
       setState(() {
-        error = "Error al buscar lugares";
+        error = 'Error al buscar lugares';
         cargando = false;
       });
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // PESOS / RELEVANCIA
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // DIRECCIÓN
+  // -------------------------------------------------------------------------
+  String _obtenerDireccion(Map<String, dynamic> l) {
+    final direccion = l['direccion']?.toString().trim() ?? '';
+
+    if (direccion.isNotEmpty && direccion.toLowerCase() != 'sin dirección') {
+      return direccion;
+    }
+
+    final categoria = _normalizarCategoria(l['categoriaPrincipal']);
+
+    switch (categoria) {
+      case 'restaurante':
+        return 'Restaurante';
+      case 'cafeteria':
+        return 'Cafetería';
+      case 'bar':
+        return 'Bar';
+      case 'museo':
+        return 'Museo';
+      case 'parque':
+        return 'Parque';
+      case 'playa':
+        return 'Playa';
+      case 'mirador':
+        return 'Mirador';
+      case 'centro_comercial':
+        return 'Centro comercial';
+      case 'zona_arqueologica':
+        return 'Zona arqueológica';
+      case 'monumento':
+        return 'Monumento';
+      default:
+        return 'Lugar turístico';
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // NORMALIZAR CATEGORÍAS
+  // -------------------------------------------------------------------------
+  String _normalizarCategoria(dynamic input) {
+    if (input == null) return 'otro';
+
+    final texto = input.toString().toLowerCase();
+
+    // ----------------------------------------------------------------
+    // YA NORMALIZADAS
+    // ----------------------------------------------------------------
+    if (texto == 'restaurante') return 'restaurante';
+    if (texto == 'cafeteria') return 'cafeteria';
+    if (texto == 'bar') return 'bar';
+    if (texto == 'parque') return 'parque';
+    if (texto == 'playa') return 'playa';
+    if (texto == 'museo') return 'museo';
+    if (texto == 'monumento') return 'monumento';
+    if (texto == 'zona_arqueologica') return 'zona_arqueologica';
+    if (texto == 'mirador') return 'mirador';
+    if (texto == 'centro_comercial') return 'centro_comercial';
+    if (texto == 'actividades_extremas') {
+      return 'actividades_extremas';
+    }
+
+    // ----------------------------------------------------------------
+    // RESTAURANTES
+    // ----------------------------------------------------------------
+    if (texto.contains('restaurant')) return 'restaurante';
+    if (texto.contains('meal_takeaway')) return 'restaurante';
+    if (texto.contains('meal_delivery')) return 'restaurante';
+    if (texto.contains('food')) return 'restaurante';
+
+    // ----------------------------------------------------------------
+    // CAFETERÍAS
+    // ----------------------------------------------------------------
+    if (texto.contains('cafe')) return 'cafeteria';
+    if (texto.contains('coffee')) return 'cafeteria';
+    if (texto.contains('coffee_shop')) return 'cafeteria';
+    if (texto.contains('bakery')) return 'cafeteria';
+
+    // ----------------------------------------------------------------
+    // BARES
+    // ----------------------------------------------------------------
+    if (texto.contains('bar')) return 'bar';
+    if (texto.contains('night_club')) return 'bar';
+    if (texto.contains('pub')) return 'bar';
+
+    // ----------------------------------------------------------------
+    // PARQUES
+    // ----------------------------------------------------------------
+    if (texto.contains('park')) return 'parque';
+    if (texto.contains('natural')) return 'parque';
+    if (texto.contains('garden')) return 'parque';
+
+    // ----------------------------------------------------------------
+    // PLAYAS
+    // ----------------------------------------------------------------
+    if (texto.contains('beach')) return 'playa';
+
+    // ----------------------------------------------------------------
+    // MUSEOS
+    // ----------------------------------------------------------------
+    if (texto.contains('museum')) return 'museo';
+    if (texto.contains('art_gallery')) return 'museo';
+
+    // ----------------------------------------------------------------
+    // MONUMENTOS
+    // ----------------------------------------------------------------
+    if (texto.contains('historic')) return 'monumento';
+    if (texto.contains('monument')) return 'monumento';
+
+    // ----------------------------------------------------------------
+    // ZONAS ARQUEOLÓGICAS
+    // ----------------------------------------------------------------
+    if (texto.contains('archaeology')) {
+      return 'zona_arqueologica';
+    }
+
+    // ----------------------------------------------------------------
+    // MIRADORES
+    // ----------------------------------------------------------------
+    if (texto.contains('view')) return 'mirador';
+
+    // ----------------------------------------------------------------
+    // CENTROS COMERCIALES
+    // ----------------------------------------------------------------
+    if (texto.contains('shopping')) {
+      return 'centro_comercial';
+    }
+
+    if (texto.contains('shopping_mall')) {
+      return 'centro_comercial';
+    }
+
+    if (texto.contains('department_store')) {
+      return 'centro_comercial';
+    }
+
+    if (texto.contains('mall')) {
+      return 'centro_comercial';
+    }
+
+    // ----------------------------------------------------------------
+    // ACTIVIDADES
+    // ----------------------------------------------------------------
+    if (texto.contains('sport')) {
+      return 'actividades_extremas';
+    }
+
+    if (texto.contains('amusement_park')) {
+      return 'actividades_extremas';
+    }
+
+    return 'otro';
+  }
+
+  // -------------------------------------------------------------------------
+  // DISTANCIA
+  // -------------------------------------------------------------------------
+  double calcularDistancia(double lat1, double lng1, double lat2, double lng2) {
+    const R = 6371;
+
+    final dLat = (lat2 - lat1) * (pi / 180);
+    final dLng = (lng2 - lng1) * (pi / 180);
+
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * (pi / 180)) *
+            cos(lat2 * (pi / 180)) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return R * c;
+  }
+
+  // -------------------------------------------------------------------------
+  // PESOS
+  // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
     return lista.map((lugar) {
-      final R = _toDouble(lugar['rating'], fb: 5.0);
-      final P = _toDouble(lugar['popularity'], fb: 5.0);
+      final rating = _toDouble(lugar['rating'], fb: 5);
 
-      double D = 10 / (_toDouble(lugar['distancia'], fb: 1.0) + 1);
-      if (D > 10) D = 10;
+      final popularity = _toDouble(lugar['popularity'], fb: 5);
 
-      double C = 0;
+      final distancia = _toDouble(lugar['distancia'], fb: 1);
 
-      final cat = _toStr(lugar['categoriaPrincipal']).toLowerCase();
+      final categoria = lugar['categoriaPrincipal'].toString().toLowerCase();
 
-      if (_intereses.isNotEmpty && _intereses.containsKey(cat)) {
-        final puntos = (_intereses[cat] ?? 0);
+      double distanciaPeso = 10 / (distancia + 1);
+
+      if (distanciaPeso > 10) {
+        distanciaPeso = 10;
+      }
+
+      double interes = 0;
+
+      if (_intereses.containsKey(categoria)) {
+        final puntos = _intereses[categoria];
+
         if (puntos is int) {
-          C = puntos >= 8 ? 10.0 : puntos * 1.25;
+          interes = puntos >= 8 ? 10 : puntos * 1.25;
         }
       }
 
-      lugar['relevancia'] = (R * 0.4) + (P * 0.2) + (D * 0.2) + (C * 0.2);
+      lugar['relevancia'] =
+          (rating * 0.4) +
+          (popularity * 0.2) +
+          (distanciaPeso * 0.2) +
+          (interes * 0.2);
 
       return lugar;
     }).toList();
   }
 
+  // -------------------------------------------------------------------------
+  // QUICKSORT
+  // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _quickSort(List<Map<String, dynamic>> lista) {
     if (lista.length <= 1) return lista;
+
     final pivote = _toDouble(lista[lista.length ~/ 2]['relevancia']);
-    final mayores = lista
-        .where((e) => _toDouble(e['relevancia']) > pivote)
-        .toList();
-    final iguales = lista
-        .where((e) => _toDouble(e['relevancia']) == pivote)
-        .toList();
-    final menores = lista
-        .where((e) => _toDouble(e['relevancia']) < pivote)
-        .toList();
+
+    final mayores = lista.where((e) {
+      return _toDouble(e['relevancia']) > pivote;
+    }).toList();
+
+    final iguales = lista.where((e) {
+      return _toDouble(e['relevancia']) == pivote;
+    }).toList();
+
+    final menores = lista.where((e) {
+      return _toDouble(e['relevancia']) < pivote;
+    }).toList();
+
     return [..._quickSort(mayores), ...iguales, ..._quickSort(menores)];
   }
 
+  // -------------------------------------------------------------------------
+  // TOP 5
+  // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _top5(List<Map<String, dynamic>> lista) {
-    final Map<String, Map<String, dynamic>> porCategoria = {};
+    final Map<String, Map<String, dynamic>> categorias = {};
+
     final List<Map<String, dynamic>> res = [];
 
     for (final l in lista) {
-      final c = _toStr(l['categoriaPrincipal'], fb: 'otro');
-      if (!porCategoria.containsKey(c)) porCategoria[c] = l;
+      final categoria = l['categoriaPrincipal']?.toString() ?? 'otro';
+
+      if (!categorias.containsKey(categoria)) {
+        categorias[categoria] = l;
+      }
     }
-    res.addAll(porCategoria.values);
+
+    res.addAll(categorias.values);
 
     for (final l in lista) {
       if (res.length >= 5) break;
-      if (!res.contains(l)) res.add(l);
+
+      if (!res.contains(l)) {
+        res.add(l);
+      }
     }
+
     return res.take(5).toList();
   }
 
-  // ---------------------------------------------------------------------------
-  // FILTRO LOCAL (precio + estilo, ya que tipo va a la API)
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // FILTROS
+  // -------------------------------------------------------------------------
   List<Map<String, dynamic>> get _lugaresFiltrados {
-    List<Map<String, dynamic>> f = List.from(lugares);
+    List<Map<String, dynamic>> filtrados = List.from(lugares);
 
-    if (query.isNotEmpty && query.length >= 2) {
-      f = f.where((l) {
-        final n = _toStr(l["name"]).toLowerCase();
-        return n.contains(query.toLowerCase());
+    // TEXTO
+    if (query.isNotEmpty) {
+      filtrados = filtrados.where((l) {
+        final nombre = l['name'].toString().toLowerCase();
+
+        return nombre.contains(query.toLowerCase());
       }).toList();
     }
 
-    if (tipoSeleccionado != null && tipoSeleccionado!.isNotEmpty) {
-      f = f.where((l) {
-        final cat = _toStr(l["categoriaPrincipal"]).toLowerCase();
-        return cat.contains(tipoSeleccionado!.toLowerCase());
+    // CATEGORÍA
+    if (tipoSeleccionado != null) {
+      filtrados = filtrados.where((l) {
+        final categoria = l['categoriaPrincipal'].toString().toLowerCase();
+
+        return categoria == tipoSeleccionado;
       }).toList();
     }
 
-    if (estiloSeleccionado != null && estiloSeleccionado!.isNotEmpty) {
-      f = f.where((l) {
-        final cat = _toStr(l["categoriaPrincipal"]).toLowerCase();
-        return cat.contains(estiloSeleccionado!.toLowerCase());
+    // PRECIO
+    if (precioSeleccionado != null) {
+      filtrados = filtrados.where((l) {
+        return l['precio'] == precioSeleccionado;
       }).toList();
     }
 
-    return f;
+    return filtrados;
   }
 
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // HELPERS
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   double _toDouble(dynamic v, {double fb = 0}) {
     if (v == null) return fb;
+
     if (v is double) return v;
+
     if (v is int) return v.toDouble();
-    if (v is String) return double.tryParse(v) ?? fb;
+
+    if (v is String) {
+      return double.tryParse(v) ?? fb;
+    }
+
     return fb;
   }
 
-  String _toStr(dynamic v, {String fb = ''}) => v?.toString() ?? fb;
-
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // UI
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         title: Text('Pack&Go', style: GoogleFonts.poppins(fontSize: 36)),
       ),
+
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
+
         child: Column(
           children: [
             const SizedBox(height: 16),
 
-            // ── Barra de búsqueda ──────────────────────────────────────────
+            // -------------------------------------------------------------
+            // BARRA
+            // -------------------------------------------------------------
             BarraBusqueda(
               onChanged: (v) {
-                setState(() => query = v);
+                setState(() {
+                  query = v;
+                });
+
                 if (v.length >= 3) {
                   _buscar(texto: v);
-                } else if (v.isEmpty) {
+                }
+
+                if (v.isEmpty) {
                   _buscar();
                 }
               },
@@ -462,27 +738,52 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
             const SizedBox(height: 12),
 
-            // ── Filtros ────────────────────────────────────────────────────
+            // -------------------------------------------------------------
+            // FILTROS
+            // -------------------------------------------------------------
             FiltrosBusqueda(
               destinoSeleccionado: destinoSeleccionado,
+
               tipoSeleccionado: tipoSeleccionado,
+
               estiloSeleccionado: estiloSeleccionado,
+
               precioSeleccionado: precioSeleccionado,
+
               onDestinoChanged: (v) {
-                setState(() => destinoSeleccionado = v);
+                setState(() {
+                  destinoSeleccionado = v;
+                });
+
                 _buscar(texto: query);
               },
+
               onTipoChanged: (v) {
-                setState(() => tipoSeleccionado = v);
-                _buscar(texto: query); // 🔥 re-busca con nuevo tipo en API
+                setState(() {
+                  tipoSeleccionado = v;
+                });
+
+                _buscar(texto: query);
               },
-              onEstiloChanged: (v) => setState(() => estiloSeleccionado = v),
-              onPrecioChanged: (v) => setState(() => precioSeleccionado = v),
+
+              onEstiloChanged: (v) {
+                setState(() {
+                  estiloSeleccionado = v;
+                });
+              },
+
+              onPrecioChanged: (v) {
+                setState(() {
+                  precioSeleccionado = v;
+                });
+              },
             ),
 
             const SizedBox(height: 16),
 
-            // ── Lista de resultados ────────────────────────────────────────
+            // -------------------------------------------------------------
+            // LISTA
+            // -------------------------------------------------------------
             Expanded(child: _buildLista()),
           ],
         ),
@@ -490,6 +791,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     );
   }
 
+  // -------------------------------------------------------------------------
+  // LISTA
+  // -------------------------------------------------------------------------
   Widget _buildLista() {
     if (cargando) {
       return const Center(child: CircularProgressIndicator());
@@ -501,11 +805,17 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey),
+
             const SizedBox(height: 8),
+
             Text(error!, style: const TextStyle(color: Colors.grey)),
+
             const SizedBox(height: 12),
+
             TextButton(
-              onPressed: () => _buscar(texto: query),
+              onPressed: () {
+                _buscar(texto: query);
+              },
               child: const Text('Reintentar'),
             ),
           ],
@@ -516,34 +826,47 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     final filtrados = _lugaresFiltrados;
 
     if (filtrados.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.search_off_rounded, size: 48, color: Colors.grey),
-            const SizedBox(height: 8),
-            Text(
-              destinoSeleccionado != null
-                  ? 'No se encontraron lugares en ese destino'
-                  : 'No hay lugares con esos filtros',
-              style: const TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
+      return const Center(child: Text('No se encontraron lugares'));
     }
 
     return ListView.builder(
       itemCount: filtrados.length,
+
       itemBuilder: (context, index) {
         final l = filtrados[index];
+
         return TarjetaLugar(
-          nombre: _toStr(l['name'], fb: 'Sin nombre'),
-          ubicacion: _toStr(l['direccion'], fb: 'Sin dirección'),
+          nombre: l['name']?.toString() ?? 'Sin nombre',
+
+          ubicacion: l['direccion']?.toString() ?? 'Sin dirección',
+
           lat: _toDouble(l['lat']),
           lng: _toDouble(l['lng']),
+
+          categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
+
           onTap: () {
+            // ---------------------------------------------------
+            // SI VIENE DESDE ITINERARIO
+            // ---------------------------------------------------
+            if (widget.esSeleccion) {
+              Navigator.pop(context, {
+                "nombre": l['name'],
+                "categoria": l['categoriaPrincipal'],
+                "lat": l['lat'],
+                "lng": l['lng'],
+                "hours": l['hours'],
+                "foto": l['photo'],
+                "direccion": l['direccion'],
+                "rating": l['rating'],
+              });
+
+              return;
+            }
+
+            // ---------------------------------------------------
+            // MODO NORMAL
+            // ---------------------------------------------------
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => LugarDetallePantalla(lugar: l)),

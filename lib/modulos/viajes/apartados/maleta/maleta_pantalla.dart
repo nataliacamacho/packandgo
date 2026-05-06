@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:proyecto/modelos/maleta.dart';
-import 'package:proyecto/nucleo/servicios/maleta_firebase_servicio.dart';
-import 'package:proyecto/nucleo/servicios/generador_maleta_servicio.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:proyecto/modelos/maleta.dart';
+import 'package:proyecto/nucleo/servicios/generador_maleta_servicio.dart';
+import 'package:proyecto/nucleo/servicios/maleta_firebase_servicio.dart';
 
 class MaletaPantalla extends StatefulWidget {
   final String idViaje;
@@ -22,90 +22,96 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
   final servicio = MaletaFirebaseServicio();
   final generador = GeneradorMaletaServicio();
 
+  DateTime? inicio;
+  DateTime? fin;
+
   @override
   void initState() {
     super.initState();
-    generarMaletaInicial();
+    cargarViajeYGenerar();
   }
 
-  // 🔥 GENERAR SOLO UNA VEZ
+  Future<void> cargarViajeYGenerar() async {
+    final doc = await FirebaseFirestore.instance
+        .collection("viajes")
+        .doc(widget.idViaje)
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+
+    final inicioRaw = data["fechaInicio"];
+    final finRaw = data["fechaFin"];
+
+    if (inicioRaw == null || finRaw == null) return;
+
+    inicio = (inicioRaw as Timestamp).toDate();
+    fin = (finRaw as Timestamp).toDate();
+
+    await generarMaletaInicial();
+  }
+
   Future<void> generarMaletaInicial() async {
+    if (inicio == null || fin == null) return;
+
     final ref = FirebaseFirestore.instance
-        .collection("usuarios")
-        .doc(servicio.uid)
         .collection("viajes")
         .doc(widget.idViaje)
         .collection("maleta");
 
     final snapshot = await ref.limit(1).get();
 
-    if (snapshot.docs.isNotEmpty) {
-      print("🛑 Maleta ya existe, no se regenera");
-      return;
-    }
+    if (snapshot.docs.isNotEmpty) return;
 
-    print("✅ Generando maleta por primera vez...");
+    final dias = fin!.difference(inicio!).inDays;
 
     final lista = await generador.generarMaleta(
       destino: widget.destino,
-      inicio: DateTime(2026, 7, 1), // ⚠️ luego cámbialo por datos reales
-      fin: DateTime(2026, 7, 5),
+      inicio: inicio!,
+      fin: fin!,
       actividades: ["senderismo"],
+      dias: dias,
     );
 
     await servicio.guardarMaleta(widget.idViaje, lista);
   }
 
-  // -------------------------
   void mostrarDialogo() {
     String texto = "";
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        actionsAlignment: MainAxisAlignment.center,
-        backgroundColor: Colors.white, // 👈 fondo limpio
-
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16), // 👈 bordes modernos
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "Agregar artículo",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-
-        title: Row(
-          children: const [
-            SizedBox(width: 8),
-            Text(
-              "Agregar artículo",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-
         content: TextField(
           onChanged: (value) => texto = value,
           decoration: InputDecoration(
             hintText: "Ej: Bloqueador solar",
-
             filled: true,
-            fillColor: Color(0xFFF5F5F5), // 👈 gris suave
-
+            fillColor: const Color.fromARGB(255, 235, 235, 235),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
           ),
         ),
-
         actions: [
-          // 🔹 CANCELAR
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              "Cancelar",
+              style: TextStyle(color: Color(0xFF0066D2)),
+            ),
           ),
-
-          // 🔹 AGREGAR
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066D2), // 👈 azul app
+              backgroundColor: const Color(0xFF0066D2),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -126,11 +132,12 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
     );
   }
 
-  // -------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 🔥 HEADER
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+
+      extendBodyBehindAppBar: false,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -159,8 +166,7 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
                   ),
                   const Center(
                     child: Text(
-                      "Una lista de artículos\n recomendados para tu viaje",
-                      textAlign: TextAlign.center,
+                      "Lista de artículos para tu viaje",
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -180,7 +186,6 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
               ),
             ),
 
-            // 🔙 BACK
             Positioned(
               top: 0,
               left: 0,
@@ -198,20 +203,17 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
         ),
       ),
 
-      // 🔥 BODY CORREGIDO
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔹 TÍTULO FIJO
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Text(
               "Lista de artículos",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
 
-          // 🔹 LISTA DINÁMICA
           Expanded(
             child: StreamBuilder<List<ItemMaleta>>(
               stream: servicio.obtenerMaleta(widget.idViaje),
@@ -222,32 +224,49 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
 
                 final lista = snapshot.data!;
 
-                if (lista.isEmpty) {
-                  return const Center(child: Text("No hay artículos"));
-                }
-
                 return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   itemCount: lista.length,
                   itemBuilder: (_, i) {
                     final item = lista[i];
 
-                    return ListTile(
-                      leading: Checkbox(
-                        value: item.completado,
-                        onChanged: (v) {
-                          servicio.actualizarEstado(
-                            widget.idViaje,
-                            item.id!,
-                            v!,
-                          );
-                        },
+                    return Card(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(item.nombre),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.grey),
-                        onPressed: () {
-                          servicio.eliminarItem(widget.idViaje, item.id!);
-                        },
+                      child: ListTile(
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Checkbox(
+                              activeColor: const Color(0xFF0066D2),
+                              value: item.completado,
+                              onChanged: (v) {
+                                servicio.actualizarEstado(
+                                  widget.idViaje,
+                                  item.id!,
+                                  v!,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        title: Text(
+                          item.nombre,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            servicio.eliminarItem(widget.idViaje, item.id!);
+                          },
+                        ),
                       ),
                     );
                   },
@@ -255,24 +274,9 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
               },
             ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.only(bottom: 15, left: 15),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  
-                  "Lista generada según clima y duración",
-                  style: TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
 
-      // 🔥 FAB
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF0066D2),
         onPressed: mostrarDialogo,

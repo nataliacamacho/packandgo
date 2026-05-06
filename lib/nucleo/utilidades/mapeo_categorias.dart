@@ -4,28 +4,63 @@ class MapeoCategorias {
 
     final texto = input.toString().toLowerCase();
 
-    // 🏖️ PRIORIDAD ALTA
-    if (texto.contains("beach")) return "playa";
+    // 🍽️ COMIDA
+    if (texto.contains("restaurant") ||
+        texto.contains("foods") ||
+        texto.contains("food")) {
+      return "restaurante";
+    }
 
-    // 🍽️
-    if (texto.contains("restaurant")) return "restaurante";
-    if (texto.contains("cafe")) return "cafeteria";
-    if (texto.contains("bar")) return "bar";
+    if (texto.contains("cafe")) {
+      return "cafeteria";
+    }
 
-    // 🌿
-    if (texto.contains("park")) return "parque";
-    if (texto.contains("nature")) return "naturaleza";
+    if (texto.contains("bar") ||
+        texto.contains("pub") ||
+        texto.contains("nightclub")) {
+      return "bar";
+    }
 
-    // 🏛️
-    if (texto.contains("museum")) return "museo";
-    if (texto.contains("historic")) return "monumento";
-    if (texto.contains("archaeological")) return "zona_arqueologica";
+    // 🌿 NATURALEZA
+    if (texto.contains("park") ||
+        texto.contains("natural")) {
+      return "parque";
+    }
+
+    if (texto.contains("beach")) {
+      return "playa";
+    }
+
+    // 🏛️ CULTURA
+    if (texto.contains("museum") ||
+        texto.contains("museums")) {
+      return "museo";
+    }
+
+    if (texto.contains("historic") ||
+        texto.contains("monument")) {
+      return "monumento";
+    }
+
+    if (texto.contains("archaeology")) {
+      return "zona_arqueologica";
+    }
 
     // 🛍️
-    if (texto.contains("shopping")) return "centro_comercial";
+    if (texto.contains("shop") ||
+        texto.contains("shopping")) {
+      return "centro_comercial";
+    }
 
     // 📍
-    if (texto.contains("view_point")) return "mirador";
+    if (texto.contains("view")) {
+      return "mirador";
+    }
+
+    // ⚡
+    if (texto.contains("sport")) {
+      return "actividades_extremas";
+    }
 
     return "otro";
   }

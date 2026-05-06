@@ -1,191 +1,127 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto/modelos/maleta.dart';
 
 class GeneradorMaletaServicio {
+
   Future<List<ItemMaleta>> generarMaleta({
     required String destino,
     required DateTime inicio,
     required DateTime fin,
     required List<String> actividades,
+    required int dias, // ✔ viene desde MaletaPantalla
   }) async {
-    print("\n============================");
-    print("🚀 GENERANDO MALETA...");
-    print("📍 Destino: $destino");
-    print("📅 Inicio: $inicio");
-    print("📅 Fin: $fin");
 
-    final dias = fin.difference(inicio).inDays;
+    final List<ItemMaleta> items = [];
 
-    print("🧮 Duración calculada: $dias días");
+    // 🌡️ CLIMA (simulado por ahora)
+    final clima = _obtenerClima(destino);
 
-    final datosDestino = await _obtenerDatosDestino(destino);
+    // 📦 ROPA BASE SEGÚN CLIMA + DIAS
+    items.addAll(_generarRopa(clima, dias));
 
-    print("🌦️ Clima detectado: ${datosDestino["clima"]}");
-    print("🏝️ Tipo de destino: ${datosDestino["tipo"]}");
-
-    List<ItemMaleta> lista = [];
-
-    // -------------------------
-    final basicos = _itemsBasicos();
-    print("🧼 Items básicos: ${basicos.length}");
-    lista.addAll(basicos);
-
-    final climaItems = _itemsPorClima(datosDestino["clima"]);
-    print("🌦️ Items por clima: ${climaItems.length}");
-    lista.addAll(climaItems);
-
-    final tipoItems = _itemsPorTipo(datosDestino["tipo"]);
-    print("🏝️ Items por tipo: ${tipoItems.length}");
-    lista.addAll(tipoItems);
-
-    final ropaItems = _calcularRopa(dias);
-    print("👕 Items de ropa: ${ropaItems.length}");
-    lista.addAll(ropaItems);
-
-    for (var act in actividades) {
-      lista.addAll(
-        _itemsPorActividad(act, datosDestino["tipo"], datosDestino["clima"]),
-      );
+    // 🎯 ACTIVIDADES
+    for (final act in actividades) {
+      items.addAll(_itemsActividad(act));
     }
 
-    final listaFinal = _eliminarDuplicados(lista);
+    // 🧠 AGREGAR BÁSICOS SIEMPRE
+    items.addAll(_itemsBasicos());
 
-    print("\n🧳 LISTA FINAL (${listaFinal.length} items):");
-    for (var item in listaFinal) {
-      print(" - ${item.nombre} [${item.categoria}]");
+    // ♻️ ELIMINAR DUPLICADOS
+    final Map<String, ItemMaleta> unico = {};
+
+    for (final item in items) {
+      unico[item.nombre] = item;
     }
 
-    print("============================\n");
-
-    return listaFinal;
+    return unico.values.toList();
   }
 
   // -------------------------
-  Future<Map<String, dynamic>> _obtenerDatosDestino(String nombre) async {
-    print("🔎 Buscando destino en Firebase...");
+  String _obtenerClima(String destino) {
+    final d = destino.toLowerCase();
 
-    final query = await FirebaseFirestore.instance
-        .collection("ciudades")
-        .where("nombre", isEqualTo: nombre)
-        .get();
-
-    if (query.docs.isNotEmpty) {
-      print("✅ Destino encontrado en BD");
-      return query.docs.first.data();
+    if (d.contains("vallarta") || d.contains("cancun") || d.contains("mazatlan")) {
+      return "calor";
     }
 
-    print("⚠️ Destino NO encontrado → usando fallback");
+    if (d.contains("cdmx") || d.contains("puebla") || d.contains("queretaro")) {
+      return "templado";
+    }
 
-    return {"tipo": "ciudad", "clima": "templado"};
+    return "frio";
   }
 
   // -------------------------
-  List<ItemMaleta> _itemsBasicos() {
-    return [
-      ItemMaleta(nombre: "Cepillo de dientes"),
-      ItemMaleta(nombre: "Ropa interior"),
-    ];
-  }
-
-  // -------------------------
-  List<ItemMaleta> _itemsPorClima(String clima) {
-    print("🌦️ Generando por clima: $clima");
-
+  List<ItemMaleta> _generarRopa(String clima, int dias) {
     switch (clima) {
-      case "tropical":
+
+      case "calor":
         return [
-          ItemMaleta(nombre: "Bloqueador solar", categoria: "clima"),
-          ItemMaleta(nombre: "Ropa ligera", categoria: "ropa"),
+          ItemMaleta(nombre: "$dias camisetas ligeras"),
+          ItemMaleta(nombre: "$dias shorts"),
+          ItemMaleta(nombre: "1 traje de baño"),
+          ItemMaleta(nombre: "protector solar"),
+          ItemMaleta(nombre: "sandalias"),
         ];
+
+      case "templado":
+        return [
+          ItemMaleta(nombre: "$dias camisetas"),
+          ItemMaleta(nombre: "${(dias / 2).ceil()} pantalones"),
+          ItemMaleta(nombre: "suéter ligero"),
+        ];
+
       case "frio":
         return [
-          ItemMaleta(nombre: "Abrigo", categoria: "ropa"),
-          ItemMaleta(nombre: "Guantes", categoria: "ropa"),
+          ItemMaleta(nombre: "$dias camisetas térmicas"),
+          ItemMaleta(nombre: "${(dias / 2).ceil()} pantalones"),
+          ItemMaleta(nombre: "abrigo"),
+          ItemMaleta(nombre: "bufanda"),
         ];
+
+      default:
+        return [
+          ItemMaleta(nombre: "$dias camisetas"),
+        ];
+    }
+  }
+
+  // -------------------------
+  List<ItemMaleta> _itemsActividad(String act) {
+    switch (act) {
+
+      case "senderismo":
+        return [
+          ItemMaleta(nombre: "botas de senderismo"),
+          ItemMaleta(nombre: "mochila"),
+          ItemMaleta(nombre: "linterna"),
+          ItemMaleta(nombre: "botella de agua"),
+        ];
+
+      case "playa":
+        return [
+          ItemMaleta(nombre: "toalla"),
+          ItemMaleta(nombre: "lentes de sol"),
+          ItemMaleta(nombre: "ropa de baño extra"),
+        ];
+
+      case "trabajo":
+        return [
+          ItemMaleta(nombre: "ropa formal"),
+          ItemMaleta(nombre: "laptop"),
+        ];
+
       default:
         return [];
     }
   }
 
   // -------------------------
-  List<ItemMaleta> _itemsPorTipo(String tipo) {
-    print("🏝️ Generando por tipo: $tipo");
-
-    if (tipo == "playa") {
-      return [
-        ItemMaleta(nombre: "Traje de baño", categoria: "playa"),
-        ItemMaleta(nombre: "Sandalias", categoria: "playa"),
-      ];
-    }
-    return [];
-  }
-
-  // 🔥 ALGORITMO ROPA
-  List<ItemMaleta> _calcularRopa(int dias) {
-    print("👕 Calculando ropa para $dias días");
-
-    int camisetas;
-    int pantalones;
-
-    if (dias <= 7) {
-      camisetas = dias;
-      pantalones = (dias / 2).ceil();
-      print("🟢 Viaje corto");
-    } else {
-      camisetas = 10;
-      pantalones = 5;
-      print("🔵 Viaje largo → optimización aplicada");
-    }
-
-    print("👕 Camisetas: $camisetas");
-    print("👖 Pantalones: $pantalones");
-
+  List<ItemMaleta> _itemsBasicos() {
     return [
-      ItemMaleta(nombre: "$camisetas camisetas", categoria: "ropa"),
-      ItemMaleta(nombre: "$pantalones pantalones", categoria: "ropa"),
+      ItemMaleta(nombre: "cepillo de dientes"),
+      ItemMaleta(nombre: "cargador"),
+      ItemMaleta(nombre: "ropa interior"),
     ];
-  }
-
-  // -------------------------
-  List<ItemMaleta> _itemsPorActividad(
-    String actividad,
-    String tipoDestino,
-    String clima,
-  ) {
-    print("🎯 Actividad: $actividad | Tipo: $tipoDestino | Clima: $clima");
-
-    if (actividad == "senderismo") {
-      // ❌ Evitar senderismo en playa
-      if (tipoDestino == "playa") {
-        print("⚠️ Senderismo ignorado en playa");
-        return [ItemMaleta(nombre: "Mochila ligera", categoria: "actividad")];
-      }
-
-      // ✅ Caso correcto
-      return [
-        ItemMaleta(nombre: "Botas", categoria: "actividad"),
-        ItemMaleta(nombre: "Mochila", categoria: "actividad"),
-        ItemMaleta(nombre: "Botella de agua", categoria: "actividad"),
-      ];
-    }
-
-    return [];
-  }
-
-  // -------------------------
-  List<ItemMaleta> _eliminarDuplicados(List<ItemMaleta> lista) {
-    print("♻️ Eliminando duplicados...");
-
-    final nombres = <String>{};
-
-    final resultado = lista.where((item) {
-      if (nombres.contains(item.nombre)) return false;
-      nombres.add(item.nombre);
-      return true;
-    }).toList();
-
-    print("📊 Antes: ${lista.length} | Después: ${resultado.length}");
-
-    return resultado;
   }
 }

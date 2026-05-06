@@ -6,6 +6,7 @@ class TarjetaLugar extends StatelessWidget {
   final double lat;
   final double lng;
   final VoidCallback? onTap;
+  final String categoria;
 
   const TarjetaLugar({
     super.key,
@@ -14,6 +15,7 @@ class TarjetaLugar extends StatelessWidget {
     required this.lat,
     required this.lng,
     this.onTap,
+    required this.categoria,
   });
 
   @override
@@ -37,10 +39,7 @@ class TarjetaLugar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Center(
-                  child: Text(
-                    "Img",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: Text("Img", style: TextStyle(color: Colors.white)),
                 ),
               ),
 
@@ -52,15 +51,16 @@ class TarjetaLugar extends StatelessWidget {
                   children: [
                     Text(
                       nombre,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
+                    Text(ubicacion, style: const TextStyle(color: Colors.grey)),
                     Text(
-                      ubicacion,
+                      categoria,
                       style: const TextStyle(
-                        color: Colors.grey,
+                        fontSize: 12,
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

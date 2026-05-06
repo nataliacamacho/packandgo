@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:proyecto/nucleo/utilidades/mapeo_categorias.dart';
 
 class OpenTripMapServicio {
   static String get _apiKey => dotenv.env['OPENTRIPMAP_API_KEY'] ?? '';
 
-  // Mapeo de tipos de filtro → kinds de OpenTripMap
   static const Map<String, String> _tipoAKinds = {
     'restaurante': 'foods',
     'cafeteria': 'foods',
@@ -20,8 +20,7 @@ class OpenTripMapServicio {
     'actividades_extremas': 'sport',
   };
 
-  /// Busca lugares culturales/turísticos cerca de [lat],[lng].
-  static Future<List<Map<String, dynamic>>?> buscarLugaresCulturales(
+  static Future<List<Map<String, dynamic>>> buscarLugaresCulturales(
     double lat,
     double lng, {
     String query = '',
@@ -29,131 +28,163 @@ class OpenTripMapServicio {
     int radio = 15000,
   }) async {
     try {
-      final kinds = tipo != null && _tipoAKinds.containsKey(tipo)
-          ? _tipoAKinds[tipo]!
-          : 'interesting_places';
 
-      // Si hay texto, usar automplete primero para conseguir xid
-      if (query.isNotEmpty) {
-        return await _buscarPorTexto(query, lat, lng, kinds);
+      final url =
+          'https://api.opentripmap.com/0.1/en/places/radius'
+          '?radius=$radio'
+          '&lon=$lng'
+          '&lat=$lat'
+          '&rate=1'
+          '&limit=60'
+          '&format=json'
+          '&apikey=$_apiKey';
+
+      print("🌍 OTM URL:");
+      print(url);
+
+      final res = await http.get(Uri.parse(url));
+
+      print("🟩 OTM STATUS: ${res.statusCode}");
+      print("🟩 OTM BODY: ${res.body}");
+
+      if (res.statusCode != 200) {
+        return [];
       }
 
-      return await _buscarPorRadio(lat, lng, kinds, radio);
-    } catch (_) {
+      final data = jsonDecode(res.body);
+
+      if (data is! List) {
+        return [];
+      }
+
+      List<Map<String, dynamic>> lugares = data
+          .whereType<Map>()
+          .map((e) => _normalizarOTM(Map<String, dynamic>.from(e)))
+          .toList();
+
+      // 🔥 búsqueda local por texto
+      if (query.isNotEmpty) {
+        lugares = lugares.where((l) {
+          return (l['name'] ?? '').toString().toLowerCase().contains(
+            query.toLowerCase(),
+          );
+        }).toList();
+      }
+
+      return lugares;
+    } catch (e) {
+      print("❌ OPENTRIP ERROR: $e");
       return [];
     }
   }
 
-  static Future<List<Map<String, dynamic>>> _buscarPorRadio(
-    double lat,
-    double lng,
-    String kinds,
-    int radio,
-  ) async {
-    final url =
-        'https://api.opentripmap.com/0.1/es/places/radius'
-        '?radius=$radio'
-        '&lon=$lng'
-        '&lat=$lat'
-        '&kinds=$kinds'
-        '&rate=2'
-        '&limit=20'
-        '&format=json'
-        '&apikey=$_apiKey';
-
-    final res = await http.get(Uri.parse(url));
-    if (res.statusCode != 200) return [];
-
-    final data = jsonDecode(res.body);
-    if (data is! List) return [];
-
-    return data
-        .whereType<Map>()
-        .map((e) => _normalizarOTM(Map<String, dynamic>.from(e)))
-        .toList();
-  }
-
-  static Future<List<Map<String, dynamic>>> _buscarPorTexto(
-    String query,
-    double lat,
-    double lng,
-    String kinds,
-  ) async {
-    final url =
-        'https://api.opentripmap.com/0.1/es/places/autosuggest'
-        '?name=${Uri.encodeComponent(query)}'
-        '&lon=$lng'
-        '&lat=$lat'
-        '&radius=50000'
-        '&kinds=$kinds'
-        '&limit=15'
-        '&format=json'
-        '&apikey=$_apiKey';
-
-    final res = await http.get(Uri.parse(url));
-    if (res.statusCode != 200) return [];
-
-    final data = jsonDecode(res.body);
-    if (data is! List) return [];
-
-    return data
-        .whereType<Map>()
-        .map((e) => _normalizarOTM(Map<String, dynamic>.from(e)))
-        .toList();
-  }
-
   static Map<String, dynamic> _normalizarOTM(Map<String, dynamic> raw) {
-    final props = raw['properties'] ?? raw;
-    final geo = raw['geometry'];
-    final coords = geo?['coordinates'];
+    double lat = 0;
+    double lng = 0;
 
-    double lat = 0, lng = 0;
-    if (coords is List && coords.length >= 2) {
-      lng = (coords[0] as num).toDouble();
-      lat = (coords[1] as num).toDouble();
+    if (raw['point'] != null) {
+      lat = (raw['point']['lat'] ?? 0).toDouble();
+      lng = (raw['point']['lon'] ?? 0).toDouble();
     } else {
-      lat = (props['lat'] ?? raw['lat'] ?? 0.0).toDouble();
-      lng = (props['lon'] ?? raw['lon'] ?? raw['lng'] ?? 0.0).toDouble();
+      lat = (raw['lat'] ?? 0).toDouble();
+      lng = (raw['lon'] ?? 0).toDouble();
     }
 
-    final kinds = (props['kinds'] ?? raw['kinds'] ?? '').toString();
-    final rate = (props['rate'] ?? raw['rate'] ?? 0);
+    final kinds = (raw['kinds'] ?? '').toString();
 
     return {
-      'name': (props['name'] ?? raw['name'] ?? 'Sin nombre').toString(),
+      'name': raw['name'] ?? 'Sin nombre',
       'lat': lat,
       'lng': lng,
-      'direccion': kinds.isNotEmpty ? kinds.split(',').first : 'Sin dirección',
-      'categoriaPrincipal': _mapearKinds(kinds),
-      'rating': _rateToDouble(rate),
-      'popularity': _rateToDouble(rate),
+      'direccion': _direccionCategoria(kinds),
+      'categoriaPrincipal': MapeoCategorias.obtenerCategoriaPrincipal(kinds),
+      'rating': _rateToDouble(raw['rate']),
+      'popularity': _rateToDouble(raw['rate']),
       'precio': null,
       'foto': null,
       'fuente': 'opentripmap',
     };
   }
 
-  static String _mapearKinds(String kinds) {
-    if (kinds.contains('museum')) return 'museo';
-    if (kinds.contains('historic') || kinds.contains('archaeology'))
-      return 'monumento';
-    if (kinds.contains('beach')) return 'playa';
-    if (kinds.contains('natural')) return 'parque';
-    if (kinds.contains('food') || kinds.contains('restaurant'))
-      return 'restaurante';
-    if (kinds.contains('shop')) return 'centro_comercial';
-    if (kinds.contains('sport')) return 'actividades_extremas';
-    if (kinds.contains('view')) return 'mirador';
-    return 'otro';
+  static String _direccionCategoria(String kinds) {
+    final c = MapeoCategorias.obtenerCategoriaPrincipal(kinds);
+
+    switch (c) {
+      case 'restaurante':
+        return 'Restaurante';
+
+      case 'cafeteria':
+        return 'Cafetería';
+
+      case 'bar':
+        return 'Bar';
+
+      case 'parque':
+        return 'Parque';
+
+      case 'museo':
+        return 'Museo';
+
+      case 'playa':
+        return 'Playa';
+
+      case 'monumento':
+        return 'Sitio histórico';
+
+      case 'zona_arqueologica':
+        return 'Zona arqueológica';
+
+      case 'centro_comercial':
+        return 'Centro comercial';
+
+      case 'mirador':
+        return 'Mirador';
+
+      case 'actividades_extremas':
+        return 'Actividad extrema';
+
+      default:
+        return 'Lugar turístico';
+    }
+  }
+
+  static String _direccionAmigable(String kinds) {
+    if (kinds.contains('museum')) {
+      return 'Museo';
+    }
+
+    if (kinds.contains('historic')) {
+      return 'Sitio histórico';
+    }
+
+    if (kinds.contains('architecture')) {
+      return 'Lugar arquitectónico';
+    }
+
+    if (kinds.contains('natural')) {
+      return 'Zona natural';
+    }
+
+    if (kinds.contains('beach')) {
+      return 'Playa';
+    }
+
+    if (kinds.contains('foods')) {
+      return 'Restaurante';
+    }
+
+    return 'Lugar turístico';
   }
 
   static double _rateToDouble(dynamic rate) {
-    if (rate is int) return (rate * 1.5).clamp(0.0, 10.0);
-    if (rate is double) return rate.clamp(0.0, 10.0);
-    if (rate is String) {
-      final n = int.tryParse(rate);
-      if (n != null) return (n * 1.5).clamp(0.0, 10.0);
+    if (rate is int) {
+      return ((rate * 2).clamp(0.0, 10.0)).toDouble();
     }
+
+    if (rate is double) {
+      return rate.clamp(0.0, 10.0).toDouble();
+    }
+
     return 5.0;
   }
 }

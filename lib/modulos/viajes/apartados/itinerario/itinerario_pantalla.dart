@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/busqueda/busqueda_pantalla.dart';
+import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/itinerario_servicio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,6 +46,9 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
       "lat": lugar["lat"],
       "lng": lugar["lng"],
       "hours": lugar["hours"],
+      "foto": lugar["foto"],
+      "direccion": lugar["direccion"],
+      "rating": lugar["rating"],
     };
 
     // Máximo 5 lugares
@@ -204,24 +208,81 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
                   const SizedBox(height: 8),
 
                   /// Lugares agregados
+                  /// Lugares agregados
                   if (itinerarioPorDia[fechaKey] != null)
-                    ...itinerarioPorDia[fechaKey]!.map((lugar) {
+                    ...itinerarioPorDia[fechaKey]!.asMap().entries.map((entry) {
+                      int i = entry.key;
+                      Map<String, dynamic> lugar = entry.value;
+
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
+                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
-                          leading: const Icon(Icons.place, color: Colors.blue),
+                          contentPadding: const EdgeInsets.all(10),
+
+                          /// FOTO
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: lugar['foto'] != null
+                                ? Image.network(
+                                    lugar['foto'],
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    width: 60,
+                                    height: 60,
+                                    color: Colors.grey.shade300,
+                                    child: const Icon(Icons.image),
+                                  ),
+                          ),
+
+                          /// NOMBRE
                           title: Text(
                             lugar['nombre'] ?? 'Lugar',
-                            style: const TextStyle(fontWeight: FontWeight.w500),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text(
-                            lugar['categoria'] ?? '',
-                            style: const TextStyle(fontSize: 12),
+
+                          /// CATEGORÍA
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(lugar['categoria'] ?? ''),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Orden #${i + 1}",
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
                           ),
+
+                          /// BOTÓN ELIMINAR
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () {
+                              setState(() {
+                                itinerarioPorDia[fechaKey]!.removeAt(i);
+                              });
+                            },
+                          ),
+
+                          /// ABRIR DETALLES DEL LUGAR
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    LugarDetallePantalla(lugar: lugar),
+                              ),
+                            );
+                          },
                         ),
                       );
                     }),
@@ -281,12 +342,17 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("¡Itinerario guardado en la nube!")),
+              const SnackBar(content: Text("¡Itinerario guardado!"),
+              backgroundColor: Color.fromARGB(255, 150, 150, 150)),     
             );
           }
         },
-        icon: const Icon(Icons.cloud_upload),
-        label: const Text("Guardar"),
+        icon: const Icon(Icons.cloud_upload, color: Color.fromARGB(255, 255, 255, 255)),
+        label: const Text(
+          "Guardar",
+          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+        ),
+        backgroundColor: Color(0xFF0066D2),
       ),
     );
   }
