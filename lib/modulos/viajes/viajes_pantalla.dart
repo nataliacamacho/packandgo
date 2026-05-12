@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/modulos/viajes/detalle_viaje_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
 import 'crear_viaje_pantalla.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -118,7 +119,7 @@ class ViajesPantalla extends StatelessWidget {
               final viaje = viajes[index];
               final data = viaje.data() as Map<String, dynamic>;
 
-              final destino = data["destino"] ?? "Sin destino";
+              final destinoFormateado = FormateadorDestino.formatear(data["destino"] ?? "Sin destino");
               final fechaInicio = (data["fechaInicio"] as Timestamp).toDate();
               final fechaFin = (data["fechaFin"] as Timestamp).toDate();
 
@@ -132,7 +133,7 @@ class ViajesPantalla extends StatelessWidget {
                 child: ListTile(
                   title: Row(
                     children: [
-                      Expanded(child: Text(destino)),
+                      Expanded(child: Text(destinoFormateado)),
 
                       // 🔥 ETIQUETA CANCELADO
                       if (cancelado)
@@ -170,12 +171,12 @@ class ViajesPantalla extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => DetalleViajePantalla(
-                          nombre: destino,
+                          nombre: destinoFormateado,
                           fechaInicio: fechaInicio,
                           fechaFin: fechaFin,
                           descripcion: data["descripcion"] ?? "",
                           idViaje: viaje.id,
-                          destino: destino,
+                          destino: destinoFormateado,
                           destinoLat: destinoLat,
                           destinoLng: destinoLng,
                           origen: (data["origen"] as String?) ?? "Sin origen",

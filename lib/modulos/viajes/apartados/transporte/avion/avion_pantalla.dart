@@ -5,8 +5,9 @@ import 'modelo_ruta_avion.dart';
 
 class PantallaAvion extends StatefulWidget {
   final String destino;
+  final String origen;
 
-  const PantallaAvion({super.key, required this.destino});
+  const PantallaAvion({super.key, required this.destino, required this.origen});
 
   @override
   State<PantallaAvion> createState() => _PantallaAvionState();
@@ -31,10 +32,14 @@ class _PantallaAvionState extends State<PantallaAvion> {
       error = null;
     });
 
-    final ubicacion = UbicacionServicio();
-    final origen = await ubicacion.obtenerCiudadActual();
+    String origen = widget.origen;
 
-    if (origen == null || origen.isEmpty) {
+    if (origen.isEmpty) {
+      final ubicacion = UbicacionServicio();
+      origen = await ubicacion.obtenerCiudadActual() ?? '';
+    }
+
+    if (origen.isEmpty) {
       setState(() {
         error = "No se pudo obtener ubicación";
         loading = false;
@@ -193,7 +198,7 @@ class _PantallaAvionState extends State<PantallaAvion> {
                                     Text(r.duracion),
                                   ],
                                 ),
-                                
+
                                 Text("\$${r.precio}"),
 
                                 const SizedBox(height: 8),

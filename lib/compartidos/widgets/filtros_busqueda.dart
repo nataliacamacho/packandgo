@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:proyecto/nucleo/constanstes/categorias.dart';
 
 class FiltrosBusqueda extends StatelessWidget {
   final String? destinoSeleccionado;
@@ -117,6 +116,7 @@ class FiltrosBusqueda extends StatelessWidget {
         final docs = snapshot.data!.docs;
 
         return PopupMenuButton<String>(
+          color: const Color.fromARGB(255, 255, 255, 255),
           onSelected: (valor) {
             if (valor == destinoSeleccionado) {
               onDestinoChanged(null);
@@ -167,6 +167,7 @@ class FiltrosBusqueda extends StatelessWidget {
     required ValueChanged<String?> onChanged,
   }) {
     return PopupMenuButton<String>(
+      color: const Color.fromARGB(255, 255, 255, 255),
       onSelected: (valor) {
         if (valor == seleccionado) {
           onChanged(null);

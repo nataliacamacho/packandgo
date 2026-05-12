@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:proyecto/modulos/viajes/apartados/hospedaje/modelo_hospedaje.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:proyecto/nucleo/servicios/hospedaje_servicio.dart';
 
@@ -32,7 +34,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   void initState() {
     super.initState();
     print(
-      '🏨 lat=${widget.lat}, lng=${widget.lng}, destino=${normalizarDestino(widget.destino)}',
+      '🏨 lat=${widget.lat}, lng=${widget.lng}, destino=${normalizarDestino(FormateadorDestino.formatear(widget.destino))}',
     );
     cargar();
   }
@@ -97,7 +99,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   }
 
   Future<void> _abrirLink(String urlBase) async {
-    final destino = normalizarDestino(widget.destino);
+    final destino = normalizarDestino(FormateadorDestino.formatear(widget.destino));
 
     final checkin =
         "${widget.fechaInicio.year}-${widget.fechaInicio.month.toString().padLeft(2, '0')}-${widget.fechaInicio.day.toString().padLeft(2, '0')}";
@@ -323,8 +325,6 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   // Disponibilidad
@@ -337,7 +337,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
 
                   GestureDetector(
                     onTap: () async {
-                      final uri = Uri.parse(h.linkMaps);
+                      final uri = Uri.parse(h.link);
                       await launchUrl(
                         uri,
                         mode: LaunchMode.externalApplication,
@@ -365,15 +365,20 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
 
   Widget _buildInfoRow(IconData icon, String texto, {Color? color}) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 13, color: color ?? Colors.grey),
-        const SizedBox(width: 3),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 13, color: color ?? Colors.grey),
+        ),
+
+        const SizedBox(width: 5),
+
         Expanded(
           child: Text(
             texto,
-            style: TextStyle(fontSize: 12, color: color ?? Colors.grey),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.5, color: color ?? Colors.grey),
+            softWrap: true,
           ),
         ),
       ],

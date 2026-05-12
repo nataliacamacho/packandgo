@@ -1,54 +1,7 @@
-import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-class Hospedaje {
-  final String nombre;
-  final String direccion;
-  final String imagen;
-  final double rating;
-  final String linkMaps;
-  final double lat;
-  final double lng;
-
-  Hospedaje({
-    required this.nombre,
-    required this.direccion,
-    required this.imagen,
-    required this.rating,
-    required this.linkMaps,
-    required this.lat,
-    required this.lng,
-  });
-
-  factory Hospedaje.fromGoogle(Map<String, dynamic> json) {
-    final lat = json['geometry']['location']['lat'] ?? 0.0;
-    final lng = json['geometry']['location']['lng'] ?? 0.0;
-
-    final photos = json['photos'] as List?;
-    String imageUrl = '';
-
-    if (photos != null && photos.isNotEmpty) {
-      final photoRef = photos[0]['photo_reference'];
-      imageUrl =
-          "https://maps.googleapis.com/maps/api/place/photo"
-          "?maxwidth=400"
-          "&photo_reference=$photoRef"
-          "&key=${dotenv.env['GOOGLE_PLACES_API_KEY']}";
-    }
-
-    return Hospedaje(
-      nombre: json['name'] ?? 'Sin nombre',
-      direccion: json['vicinity'] ?? 'Sin dirección',
-      imagen: imageUrl,
-      rating: (json['rating'] ?? 0).toDouble(),
-      lat: lat,
-      lng: lng,
-      linkMaps: "https://www.google.com/maps/search/?api=1&query=$lat,$lng",
-    );
-  }
-}
+import 'package:http/http.dart' as http;
+import 'package:proyecto/modulos/viajes/apartados/hospedaje/modelo_hospedaje.dart';
 
 class HospedajeServicio {
   Future<List<Hospedaje>> obtenerHospedajes({
@@ -56,9 +9,9 @@ class HospedajeServicio {
     required double lng,
     int radius = 5000,
   }) async {
-    final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+    final apiKey = dotenv.env['GOOGLE_API_KEY'];
 
-    if (apiKey == null) {
+    if (apiKey == null || apiKey.isEmpty) {
       print("❌ API KEY no encontrada");
       return [];
     }
@@ -68,6 +21,7 @@ class HospedajeServicio {
       "?location=$lat,$lng"
       "&radius=$radius"
       "&type=lodging"
+      "&language=es"
       "&key=$apiKey",
     );
 
@@ -81,24 +35,29 @@ class HospedajeServicio {
 
       final data = json.decode(response.body);
 
+      print("🏨 RESPUESTA GOOGLE:");
+      print(data);
+
+      if (data['results'] == null) {
+        return [];
+      }
+
       final results = data['results'] as List;
 
       List<Hospedaje> hospedajes = results
-          .map((e) => Hospedaje.fromGoogle(e))
+          .map((e) => Hospedaje.fromGoogle(e, apiKey))
           .where((h) {
-            // filtro básico de validez
             return h.nombre.isNotEmpty &&
                 h.lat != 0.0 &&
                 h.lng != 0.0;
           })
           .toList();
 
-      // ordenar por rating
       hospedajes.sort((a, b) => b.rating.compareTo(a.rating));
 
       return hospedajes.take(10).toList();
     } catch (e) {
-      print("❌ Error: $e");
+      print("❌ Error obtenerHospedajes: $e");
       return [];
     }
   }

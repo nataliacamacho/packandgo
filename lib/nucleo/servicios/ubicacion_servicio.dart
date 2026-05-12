@@ -2,12 +2,20 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
 class UbicacionServicio {
+  static Position? _cachedPosition;
+  static String? _cachedCiudad;
+
   /// ===============================
   /// 📍 OBTENER UBICACIÓN ACTUAL
   /// ===============================
   Future<Position?> obtenerUbicacionActual() async {
+    // 🔥 USAR CACHE
+    if (_cachedPosition != null) {
+      print("⚡ Usando ubicación cacheada");
+      return _cachedPosition;
+    }
+
     bool servicioActivo = await Geolocator.isLocationServiceEnabled();
-    print("🛰️ Servicio activo: $servicioActivo");
 
     if (!servicioActivo) {
       print("❌ GPS desactivado");
@@ -15,14 +23,12 @@ class UbicacionServicio {
     }
 
     LocationPermission permiso = await Geolocator.checkPermission();
-    print("🔐 Permiso inicial: $permiso");
 
     if (permiso == LocationPermission.denied) {
       permiso = await Geolocator.requestPermission();
-      print("📩 Permiso solicitado: $permiso");
 
       if (permiso == LocationPermission.denied) {
-        print("❌ Permiso de ubicación denegado");
+        print("❌ Permiso denegado");
         return null;
       }
     }
@@ -34,21 +40,25 @@ class UbicacionServicio {
 
     try {
       final posicion = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.medium,
       );
 
-      print("📍 Ubicación obtenida:");
-      print("Lat: ${posicion.latitude}, Lng: ${posicion.longitude}");
+      // 🔥 GUARDAR CACHE
+      _cachedPosition = posicion;
+
+      print("📍 Nueva ubicación obtenida");
+      print("Lat: ${posicion.latitude}");
+      print("Lng: ${posicion.longitude}");
 
       return posicion;
     } catch (e) {
-      print("❌ Error al obtener la ubicación: $e");
+      print("❌ Error ubicación: $e");
       return null;
     }
   }
 
   /// ===============================
-  /// 📦 COORDENADAS SIMPLES
+  /// 📦 COORDENADAS
   /// ===============================
   Future<Map<String, double>?> obtenerCoordenadas() async {
     final posicion = await obtenerUbicacionActual();
@@ -59,9 +69,15 @@ class UbicacionServicio {
   }
 
   /// ===============================
-  /// 🏙️ OBTENER CIUDAD ACTUAL
+  /// 🏙️ CIUDAD ACTUAL
   /// ===============================
   Future<String?> obtenerCiudadActual() async {
+    // 🔥 CACHE CIUDAD
+    if (_cachedCiudad != null) {
+      print("⚡ Usando ciudad cacheada");
+      return _cachedCiudad;
+    }
+
     final posicion = await obtenerUbicacionActual();
 
     if (posicion == null) return null;
@@ -74,17 +90,19 @@ class UbicacionServicio {
 
       final ciudad = placemarks.first.locality;
 
+      _cachedCiudad = ciudad;
+
       print("🏙️ Ciudad detectada: $ciudad");
 
       return ciudad;
     } catch (e) {
-      print("❌ Error obteniendo ciudad: $e");
+      print("❌ Error ciudad: $e");
       return null;
     }
   }
 
   /// ===============================
-  /// 📏 DISTANCIA EN KM
+  /// 📏 DISTANCIA
   /// ===============================
   double calcularDistanciaEnKm({
     required double origenLat,
@@ -99,21 +117,21 @@ class UbicacionServicio {
       destinoLng,
     );
 
-    final distanciaKm = distanciaMetros / 1000;
-
-    print("📏 Distancia calculada: ${distanciaKm.toStringAsFixed(2)} km");
-
-    return distanciaKm;
+    return distanciaMetros / 1000;
   }
 
   /// ===============================
-  /// 🚗 VALIDAR RUTA EN CARRO
+  /// 🚗 VALIDAR CARRO
   /// ===============================
   bool esRutaValidaEnCarro(double distanciaKm) {
-    final esValida = distanciaKm <= 500;
+    return distanciaKm <= 500;
+  }
 
-    print("🚗 ¿Ruta válida en carro?: $esValida");
-
-    return esValida;
+  /// ===============================
+  /// 🧹 LIMPIAR CACHE
+  /// ===============================
+  static void limpiarCache() {
+    _cachedPosition = null;
+    _cachedCiudad = null;
   }
 }

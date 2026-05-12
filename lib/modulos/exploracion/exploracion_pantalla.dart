@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart';
-import '../../nucleo/servicios/opentripmap_servicio.dart';
+import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import '../../nucleo/servicios/ubicacion_servicio.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -62,17 +62,20 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   Future<void> _cargarCiudadesPopulares() async {
     setState(() => estaCargando = true);
 
-    List<dynamic> adaptadas = ciudadesPopulares.map((c) {
-      return {
-        'name': c['name'],
-        'lat': c['lat'],
-        'lng': c['lng'],
-        'categories': [
-          {'name': 'popular_city'}
-        ],
-        'location': {'formatted_address': 'México'},
-      };
-    }).toList();
+    List<dynamic> adaptadas = [];
+
+    for (var c in ciudadesPopulares) {
+      final lugares = await GooglePlacesServicio.buscarLugares(
+        c['lat'],
+        c['lng'],
+        query: c['name'],
+        radio: 5000,
+      );
+
+      if (lugares.isNotEmpty) {
+        adaptadas.add(lugares.first);
+      }
+    }
 
     setState(() {
       lugaresRecomendados = adaptadas;
@@ -97,71 +100,25 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       final latUsuario = posicion.latitude;
       final lngUsuario = posicion.longitude;
 
-      final lugaresCulturales =
-          await OpenTripMapServicio.buscarLugaresCulturales(
+      final lugares = await GooglePlacesServicio.buscarLugares(
         latUsuario,
         lngUsuario,
-        radio: 500, query: '',
+        radio: 15000,
       );
-
-      List<dynamic> lugaresAdaptados = [];
-
-      final categoriasDeseadas = [
-        'museum',
-        'monument',
-        'historic',
-        'park',
-        'natural',
-        'architecture',
-        'cultural',
-        'recreation_ground',
-      ];
-
-      for (var item in lugaresCulturales!) {
-        final propiedades = item['properties'];
-        final coordinates = item['geometry']?['coordinates'];
-
-        final lng = coordinates != null ? coordinates[0] as double? : null;
-        final lat = coordinates != null ? coordinates[1] as double? : null;
-
-        if (propiedades != null &&
-            propiedades['name'] != '' &&
-            lat != null &&
-            lng != null) {
-          final kinds = propiedades['kinds'] as String?;
-
-          final listaCategorias = kinds != null
-              ? kinds.split(',').map((e) => {'name': e.trim()}).toList()
-              : [{'name': 'Desconocida'}];
-
-          if (listaCategorias.any(
-            (c) => categoriasDeseadas.contains(c['name']),
-          )) {
-            lugaresAdaptados.add({
-              'name': propiedades['name'],
-              'categories': listaCategorias,
-              'location': {
-                'formatted_address':
-                    propiedades['address'] ??
-                    '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
-              },
-              'lat': lat,
-              'lng': lng,
-            });
-          }
-        }
-      }
 
       if (mounted) {
         setState(() {
-          lugaresRecomendados = lugaresAdaptados;
+          lugaresRecomendados = lugares;
           estaCargando = false;
           indiceActual = 0;
         });
       }
     } catch (e) {
       debugPrint('Error: $e');
-      if (mounted) setState(() => estaCargando = false);
+
+      if (mounted) {
+        setState(() => estaCargando = false);
+      }
     }
   }
 
@@ -187,6 +144,12 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     if (lugaresRecomendados.isNotEmpty) {
       final lugar = lugaresRecomendados[indiceActual];
       nombre = lugar['name'] ?? 'Lugar sin nombre';
+    }
+
+    Map<String, dynamic>? lugar;
+
+    if (lugaresRecomendados.isNotEmpty) {
+      lugar = lugaresRecomendados[indiceActual];
     }
 
     return Scaffold(
@@ -239,108 +202,122 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                 child: estaCargando
                     ? const Center(child: CircularProgressIndicator())
                     : lugaresRecomendados.isEmpty
-                        ? const Center(child: Text("No hay recomendaciones"))
-                        : Row(
-                            children: [
-                              GestureDetector(
-                                onTap: indiceActual > 0 ? _anteriorLugar : null,
-                                child: Container(
-                                  width: 40,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: indiceActual > 0
-                                        ? const Color(0xFF0066D2)
-                                        : Colors.grey,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.arrow_back_ios_new,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                    ? const Center(child: Text("No hay recomendaciones"))
+                    : Row(
+                        children: [
+                          GestureDetector(
+                            onTap: indiceActual > 0 ? _anteriorLugar : null,
+                            child: Container(
+                              width: 40,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: indiceActual > 0
+                                    ? const Color(0xFF0066D2)
+                                    : Colors.grey,
+                                borderRadius: BorderRadius.circular(10),
                               ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
 
-                              const SizedBox(width: 15),
+                          const SizedBox(width: 15),
 
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    final lugar =
-                                        lugaresRecomendados[indiceActual];
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                final lugar = lugaresRecomendados[indiceActual];
 
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => LugarDetallePantalla(
-                                          lugar: lugar,
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        LugarDetallePantalla(lugar: lugar),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0066D2),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              top: Radius.circular(15),
+                                            ),
+                                        child: lugar?['foto'] != null
+                                            ? Image.network(
+                                                lugar?['foto'],
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) {
+                                                  return Container(
+                                                    color: Colors.blueAccent,
+                                                    child: const Icon(
+                                                      Icons.landscape,
+                                                      color: Colors.white,
+                                                      size: 70,
+                                                    ),
+                                                  );
+                                                },
+                                              )
+                                            : Container(
+                                                color: Colors.blueAccent,
+                                                child: const Icon(
+                                                  Icons.landscape,
+                                                  color: Colors.white,
+                                                  size: 70,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(15),
+                                      child: Text(
+                                        nombre,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    );
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0066D2),
-                                      borderRadius: BorderRadius.circular(15),
                                     ),
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                          child: Container(
-                                            decoration: const BoxDecoration(
-                                              color: Colors.blueAccent,
-                                              borderRadius:
-                                                  BorderRadius.vertical(
-                                                top: Radius.circular(15),
-                                              ),
-                                            ),
-                                            child: const Icon(
-                                              Icons.landscape,
-                                              color: Colors.white,
-                                              size: 70,
-                                            ),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(15),
-                                          child: Text(
-                                            nombre,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                  ],
                                 ),
                               ),
-
-                              const SizedBox(width: 15),
-
-                              GestureDetector(
-                                onTap: indiceActual <
-                                        lugaresRecomendados.length - 1
-                                    ? _siguienteLugar
-                                    : null,
-                                child: Container(
-                                  width: 40,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: indiceActual <
-                                            lugaresRecomendados.length - 1
-                                        ? const Color(0xFF0066D2)
-                                        : Colors.grey,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.arrow_forward_ios,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
+
+                          const SizedBox(width: 15),
+
+                          GestureDetector(
+                            onTap: indiceActual < lugaresRecomendados.length - 1
+                                ? _siguienteLugar
+                                : null,
+                            child: Container(
+                              width: 40,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color:
+                                    indiceActual <
+                                        lugaresRecomendados.length - 1
+                                    ? const Color(0xFF0066D2)
+                                    : Colors.grey,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_forward_ios,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
 
               const SizedBox(height: 40),

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto/modelos/maleta.dart';
 import 'package:proyecto/nucleo/servicios/generador_maleta_servicio.dart';
 import 'package:proyecto/nucleo/servicios/maleta_firebase_servicio.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
 
 class MaletaPantalla extends StatefulWidget {
   final String idViaje;
@@ -32,10 +33,11 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
   }
 
   Future<void> cargarViajeYGenerar() async {
-    final doc = await FirebaseFirestore.instance
+    final viajeRef = FirebaseFirestore.instance
         .collection("viajes")
-        .doc(widget.idViaje)
-        .get();
+        .doc(widget.idViaje);
+
+    final doc = await viajeRef.get();
 
     if (!doc.exists) return;
 
@@ -49,20 +51,10 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
     inicio = (inicioRaw as Timestamp).toDate();
     fin = (finRaw as Timestamp).toDate();
 
-    await generarMaletaInicial();
-  }
+    // 🔥 VALIDAR SI YA SE GENERÓ
+    final maletaGenerada = data["maletaGenerada"] ?? false;
 
-  Future<void> generarMaletaInicial() async {
-    if (inicio == null || fin == null) return;
-
-    final ref = FirebaseFirestore.instance
-        .collection("viajes")
-        .doc(widget.idViaje)
-        .collection("maleta");
-
-    final snapshot = await ref.limit(1).get();
-
-    if (snapshot.docs.isNotEmpty) return;
+    if (maletaGenerada) return;
 
     final dias = fin!.difference(inicio!).inDays;
 
@@ -75,6 +67,9 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
     );
 
     await servicio.guardarMaleta(widget.idViaje, lista);
+
+    // 🔥 MARCAR COMO GENERADA
+    await viajeRef.update({"maletaGenerada": true});
   }
 
   void mostrarDialogo() {
@@ -134,6 +129,7 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
 
   @override
   Widget build(BuildContext context) {
+    final destinoFormateado = FormateadorDestino.formatear(widget.destino);
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
 
@@ -176,7 +172,7 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    widget.destino,
+                    destinoFormateado,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white.withOpacity(0.9),

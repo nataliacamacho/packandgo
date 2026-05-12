@@ -16,12 +16,7 @@ class MapboxServicio {
         '$origenLng,$origenLat;$destinoLng,$destinoLat'
         '?geometries=geojson&access_token=$token';
 
-    print("URL: $url");
-
     final response = await http.get(Uri.parse(url));
-
-    print("STATUS: ${response.statusCode}");
-    print("BODY: ${response.body}");
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

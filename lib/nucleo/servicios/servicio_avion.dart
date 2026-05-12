@@ -10,12 +10,19 @@ class ServicioAvion {
     required String origen,
     required String destino,
   }) async {
-    final aeroOrigen = await google.buscarAeropuerto(origen);
-    final aeroDestino = await google.buscarAeropuerto(destino);
+    // 🔥 PETICIONES EN PARALELO
+    final resultados = await Future.wait([
+      google.buscarAeropuerto(origen),
+      google.buscarAeropuerto(destino),
+    ]);
 
-    if (aeroOrigen == null || aeroDestino == null) return [];
+    final aeroOrigen = resultados[0];
+    final aeroDestino = resultados[1];
 
-    // 🔥 DISTANCIA REAL (línea recta)
+    if (aeroOrigen == null || aeroDestino == null) {
+      return [];
+    }
+
     final km = calcularDistanciaKm(
       aeroOrigen["lat"],
       aeroOrigen["lng"],

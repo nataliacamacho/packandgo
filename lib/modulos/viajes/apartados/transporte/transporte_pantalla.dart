@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/widgets/selector_transporte.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
 
 class TransportePantalla extends StatelessWidget {
   final String destino;
@@ -11,12 +12,13 @@ class TransportePantalla extends StatelessWidget {
     super.key,
     required this.destino,
     required this.destinoLat,
-    required this.destinoLng, 
+    required this.destinoLng,
     required this.origen,
   });
 
   @override
   Widget build(BuildContext context) {
+    final destinoFormateado = FormateadorDestino.formatear(destino);
     return Scaffold(
       extendBodyBehindAppBar: false,
 
@@ -31,33 +33,30 @@ class TransportePantalla extends StatelessWidget {
                 right: 16,
                 bottom: 16,
               ),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF6A230),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFFF6A230)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-
                   const SizedBox(height: 20),
 
                   Center(
-                      child: Text(
-                        "Opciones de \nTransporte",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                    child: Text(
+                      "Opciones de \nTransporte",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
+                    ),
                   ),
 
                   const SizedBox(height: 10),
 
                   // 🔥 DESTINO ABAJO IZQUIERDA
                   Text(
-                    destino,
+                    destinoFormateado,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white.withOpacity(0.9),
@@ -77,10 +76,7 @@ class TransportePantalla extends StatelessWidget {
                   onTap: () => Navigator.pop(context),
                   child: const Padding(
                     padding: EdgeInsets.all(10.0),
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.arrow_back, color: Colors.white),
                   ),
                 ),
               ),

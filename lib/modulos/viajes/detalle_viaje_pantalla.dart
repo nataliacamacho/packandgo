@@ -1,16 +1,18 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:proyecto/modulos/viajes/apartados/hospedaje/hospedaje_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/maleta/maleta_pantalla.dart';
-import 'package:proyecto/modulos/viajes/apartados/diario_personal/diario_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/diario_personal/lista_diario_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/itinerario/itinerario_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
+import 'package:path/path.dart' as path;
 
-
-
-class DetalleViajePantalla extends StatelessWidget {
+class DetalleViajePantalla extends StatefulWidget {
   final String idViaje;
   final String nombre;
   final DateTime fechaInicio;
@@ -34,11 +36,65 @@ class DetalleViajePantalla extends StatelessWidget {
     required this.origen,
   });
 
+  @override
+  State<DetalleViajePantalla> createState() => _DetalleViajePantallaState();
+}
+
+class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
+  File? imagenLocal;
+  String? imagenUrl;
+  final ImagePicker picker = ImagePicker();
+
+  Future<void> seleccionarImagen() async {
+    final XFile? imagen = await picker.pickImage(source: ImageSource.gallery);
+
+    if (imagen == null) return;
+
+    final file = File(imagen.path);
+
+    setState(() {
+      imagenLocal = file; // muestra inmediato
+    });
+
+    final url = await subirImagen(file);
+
+    if (url != null) {
+      setState(() {
+        imagenUrl = url; // actualiza desde Firebase
+      });
+
+      await FirebaseFirestore.instance
+          .collection('viajes')
+          .doc(widget.idViaje)
+          .update({'imagen': url});
+    }
+  }
+
+  Future<String?> subirImagen(File imagen) async {
+    try {
+      final nombre = path.basename(imagen.path);
+
+      final ref = FirebaseStorage.instance.ref().child(
+        'viajes/${widget.idViaje}/portada.jpg',
+      );
+
+      await ref.putFile(imagen);
+
+      return await ref.getDownloadURL();
+    } catch (e) {
+      debugPrint("Error subiendo imagen: $e");
+      return null;
+    }
+  }
+
   bool yaTerminoViaje() {
     final hoy = DateTime.now();
-
     final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
-    final fin = DateTime(fechaFin.year, fechaFin.month, fechaFin.day);
+    final fin = DateTime(
+      widget.fechaFin.year,
+      widget.fechaFin.month,
+      widget.fechaFin.day,
+    );
 
     return hoySinHora.isAfter(fin);
   }
@@ -48,10 +104,7 @@ class DetalleViajePantalla extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
-
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
-        // 🔥 HEADER
         title: Row(
           children: const [
             Icon(Icons.cancel_outlined, color: Color(0xFFF6A230)),
@@ -62,31 +115,17 @@ class DetalleViajePantalla extends StatelessWidget {
             ),
           ],
         ),
-
-        // 🔥 CONTENIDO
         content: const Text(
           "Este viaje se marcará como CANCELADO y pasará a viajes pasados.",
-          style: TextStyle(fontSize: 14),
         ),
-
-        actionsAlignment: MainAxisAlignment.center,
-
         actions: [
-          // 🔹 NO
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("No", style: TextStyle(color: Colors.grey)),
+            child: const Text("No"),
           ),
-
-          const SizedBox(width: 8),
-
-          // 🔹 SÍ CANCELAR
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFFF6A230), // 👈 naranja app
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              backgroundColor: const Color(0xFFF6A230),
             ),
             onPressed: () async {
               await FirebaseFirestore.instance
@@ -96,17 +135,11 @@ class DetalleViajePantalla extends StatelessWidget {
 
               Navigator.pop(dialogContext);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Viaje cancelado"),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Viaje cancelado")));
             },
-            child: const Text(
-              "Cancelar",
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text("Cancelar"),
           ),
         ],
       ),
@@ -114,80 +147,161 @@ class DetalleViajePantalla extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    cargarImagen();
+  }
+
+  Future<void> cargarImagen() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('viajes')
+        .doc(widget.idViaje)
+        .get();
+
+    final data = doc.data();
+
+    if (data != null && data['imagen'] != null) {
+      setState(() {
+        imagenUrl = data['imagen'];
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    FormateadorDestino.formatear(widget.destino);
     final fechaInicioTexto =
-        "${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}";
-    final fechaFinTexto = "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}";
+        "${widget.fechaInicio.day}/${widget.fechaInicio.month}/${widget.fechaInicio.year}";
+    final fechaFinTexto =
+        "${widget.fechaFin.day}/${widget.fechaFin.month}/${widget.fechaFin.year}";
 
     final viajeTerminado = yaTerminoViaje();
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0066D2),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                Container(
-                  height: 240,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(color: Color(0xFF0066D2)),
+      extendBodyBehindAppBar: false,
+
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(200),
+        child: AppBar(
+          automaticallyImplyLeading: true,
+          backgroundColor: const Color(0xFF0066D2),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+
+          flexibleSpace: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 🔥 PRIMERO el fondo
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  image: (imagenLocal != null)
+                      ? DecorationImage(
+                          image: FileImage(imagenLocal!),
+                          fit: BoxFit.cover,
+                        )
+                      : (imagenUrl != null)
+                      ? DecorationImage(
+                          image: NetworkImage(imagenUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        nombre,
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      if (descripcion.isNotEmpty)
-                        Text(
-                          descripcion,
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontSize: 16,
-                          ),
-                        ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "$fechaInicioTexto - $fechaFinTexto",
-                            style: GoogleFonts.poppins(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
+              ),
+
+              // Gradiente encima del fondo
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.2),
+                      Colors.black.withOpacity(0.6),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
 
-            const SizedBox(height: 10),
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: seleccionarImagen,
+                    child: Center(
+                      child: (imagenLocal == null && imagenUrl == null)
+                          ? const Icon(
+                              Icons.add_a_photo,
+                              size: 40,
+                              color: Colors.white70,
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Texto
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.nombre,
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    if (widget.descripcion.isNotEmpty)
+                      Text(
+                        widget.descripcion,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+
+                    const SizedBox(height: 6),
+
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          "$fechaInicioTexto - $fechaFinTexto",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+          children: [
+            const SizedBox(height: 12),
 
             item(
               context,
@@ -199,10 +313,10 @@ class DetalleViajePantalla extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => TransportePantalla(
-                      origen: origen,
-                      destino: destino,
-                      destinoLat: destinoLat,
-                      destinoLng: destinoLng,
+                      origen: widget.origen,
+                      destino: widget.destino,
+                      destinoLat: widget.destinoLat,
+                      destinoLng: widget.destinoLng,
                     ),
                   ),
                 );
@@ -219,11 +333,11 @@ class DetalleViajePantalla extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => HospedajePantalla(
-                      lat: destinoLat,
-                      lng: destinoLng,
-                      fechaInicio: fechaInicio,
-                      fechaFin: fechaFin,
-                      destino: destino,
+                      lat: widget.destinoLat,
+                      lng: widget.destinoLng,
+                      fechaInicio: widget.fechaInicio,
+                      fechaFin: widget.fechaFin,
+                      destino: widget.destino,
                     ),
                   ),
                 );
@@ -239,8 +353,10 @@ class DetalleViajePantalla extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        MaletaPantalla(idViaje: idViaje, destino: destino),
+                    builder: (_) => MaletaPantalla(
+                      idViaje: widget.idViaje,
+                      destino: widget.destino,
+                    ),
                   ),
                 );
               },
@@ -256,7 +372,9 @@ class DetalleViajePantalla extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ItinerarioPantalla(
-                      idViaje: idViaje, fechaInicio: fechaInicio, fechaFin: fechaFin, 
+                      idViaje: widget.idViaje,
+                      fechaInicio: widget.fechaInicio,
+                      fechaFin: widget.fechaFin,
                     ),
                   ),
                 );
@@ -273,9 +391,9 @@ class DetalleViajePantalla extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ListaDiarioPantalla(
-                      idViaje: idViaje,      
-                      fechaInicio: fechaInicio, 
-                      fechaFin: fechaFin,
+                      idViaje: widget.idViaje,
+                      fechaInicio: widget.fechaInicio,
+                      fechaFin: widget.fechaFin,
                     ),
                   ),
                 );
@@ -284,44 +402,41 @@ class DetalleViajePantalla extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // 🔥 BOTONES SOLO SI YA TERMINÓ
             if (viajeTerminado)
               Padding(
                 padding: const EdgeInsets.only(bottom: 30),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await FirebaseFirestore.instance
-                              .collection('viajes')
-                              .doc(idViaje)
-                              .update({'realizado': true});
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Viaje realizado")),
-                          );
-
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade300,
-                        ),
-                        child: const Text(
-                          "Se realizó",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    const SizedBox(width: 20),
                     ElevatedButton(
                       onPressed: () async {
                         await FirebaseFirestore.instance
                             .collection('viajes')
-                            .doc(idViaje)
+                            .doc(widget.idViaje)
+                            .update({'realizado': true});
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Viaje realizado")),
+                        );
+
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade300,
+                      ),
+                      child: const Text(
+                        "Se realizó",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    ElevatedButton(
+                      onPressed: () async {
+                        await FirebaseFirestore.instance
+                            .collection('viajes')
+                            .doc(widget.idViaje)
                             .update({'realizado': false});
 
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -342,38 +457,20 @@ class DetalleViajePantalla extends StatelessWidget {
                 ),
               ),
 
-            // 🔥 MENSAJE SI AÚN NO TERMINA
-            /*if (!viajeTerminado)
-              const Padding(
-                padding: EdgeInsets.all(5),
-                child: Center(
-                  child: Text(
-                    "Podrás marcar este viaje cuando termine",
-                    style: TextStyle(color: Colors.grey, fontSize: 15),
-                    
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 20),*/
-
-            // SOLO PARTE IMPORTANTE (AGREGAR BOTÓN CANCELAR)
             if (!viajeTerminado)
               Padding(
                 padding: const EdgeInsets.only(bottom: 30),
                 child: Center(
-                  child: SizedBox(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        mostrarDialogoCancelar(context, idViaje);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                      ),
-                      child: const Text(
-                        "Cancelar viaje",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      mostrarDialogoCancelar(context, widget.idViaje);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                    ),
+                    child: const Text(
+                      "Cancelar viaje",
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
                 ),

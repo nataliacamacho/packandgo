@@ -34,8 +34,7 @@ class GooglePlacesServicio {
     int radio = 15000,
   }) async {
     try {
-      final googleTipo =
-          tipo != null ? _tipoAGoogleType[tipo] : null;
+      final googleTipo = tipo != null ? _tipoAGoogleType[tipo] : null;
 
       String url;
 
@@ -43,10 +42,9 @@ class GooglePlacesServicio {
       // TEXT SEARCH
       // ---------------------------------------------------------------------
       if (query.isNotEmpty) {
-        final queryFinal =
-            googleTipo != null
-                ? '${_traducirTipo(tipo!)} cerca de mi'
-                : query;
+        final queryFinal = googleTipo != null
+            ? '${_traducirTipo(tipo!)} cerca de mi'
+            : query;
 
         url =
             'https://maps.googleapis.com/maps/api/place/textsearch/json'
@@ -54,13 +52,13 @@ class GooglePlacesServicio {
             '&location=$lat,$lng'
             '&radius=$radio'
             '&language=es'
+            '&fields=photos,name,geometry,rating,place_id,types,vicinity'
             '&key=$_apiKey';
 
         if (googleTipo != null) {
           url += '&type=$googleTipo';
         }
       }
-
       // ---------------------------------------------------------------------
       // NEARBY SEARCH
       // ---------------------------------------------------------------------
@@ -69,7 +67,9 @@ class GooglePlacesServicio {
             'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
             '?location=$lat,$lng'
             '&radius=$radio'
+            '&region=mx'
             '&language=es'
+            '&fields=photos,name,geometry,rating,place_id,types,vicinity'
             '&key=$_apiKey';
 
         // 🔥 SOLO poner type si realmente existe
@@ -99,10 +99,7 @@ class GooglePlacesServicio {
         final loc = place['geometry']?['location'];
 
         final types =
-            (place['types'] as List?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [];
+            (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
         final categoria = _mapearCategoria(types);
 
@@ -143,17 +140,12 @@ class GooglePlacesServicio {
           // -----------------------------------------------------------------
           // POPULARIDAD
           // -----------------------------------------------------------------
-          'popularity': _popularidad(
-            place['user_ratings_total'],
-          ),
+          'popularity': _popularidad(place['user_ratings_total']),
 
           // -----------------------------------------------------------------
           // PRECIO
           // -----------------------------------------------------------------
-          'precio':
-              priceLevel != null
-                  ? _mapearPrecio(priceLevel)
-                  : null,
+          'precio': priceLevel != null ? _mapearPrecio(priceLevel) : null,
 
           // -----------------------------------------------------------------
           // FOTO
@@ -332,16 +324,28 @@ class GooglePlacesServicio {
   // FOTO
   // ---------------------------------------------------------------------------
   static String? _fotoUrl(List? photos) {
-    if (photos == null || photos.isEmpty) return null;
+    try {
+      if (photos == null || photos.isEmpty) {
+        return null;
+      }
 
-    final ref = photos[0]['photo_reference'];
+      final primeraFoto = photos.first;
 
-    if (ref == null) return null;
+      final ref =
+          primeraFoto['photo_reference'] ?? primeraFoto['photoReference'];
 
-    return 'https://maps.googleapis.com/maps/api/place/photo'
-        '?maxwidth=400'
-        '&photo_reference=$ref'
-        '&key=$_apiKey';
+      if (ref == null) {
+        return null;
+      }
+
+      return 'https://maps.googleapis.com/maps/api/place/photo'
+          '?maxwidth=800'
+          '&photo_reference=$ref'
+          '&key=$_apiKey';
+    } catch (e) {
+      print('❌ ERROR FOTO GOOGLE: $e');
+      return null;
+    }
   }
 
   // ---------------------------------------------------------------------------

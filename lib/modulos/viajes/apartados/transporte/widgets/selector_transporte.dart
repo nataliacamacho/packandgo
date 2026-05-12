@@ -4,6 +4,7 @@ import 'package:proyecto/modulos/viajes/apartados/transporte/avion/avion_pantall
 import 'package:proyecto/modulos/viajes/apartados/transporte/carro/carro_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/mixtas/rutamixta_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/autobus/autobus_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
 
 class SelectorTransporte extends StatelessWidget {
   final double destinoLat;
@@ -21,6 +22,7 @@ class SelectorTransporte extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final destinoFormateado = FormateadorDestino.formatear(destinoNombre);
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -38,7 +40,7 @@ class SelectorTransporte extends StatelessWidget {
                   builder: (_) => CarroPantalla(
                     destinoLat: destinoLat,
                     destinoLng: destinoLng,
-                    destinoNombre: destinoNombre,
+                    destinoNombre: destinoFormateado,
                     origen: origen,
                   ),
                 ),
@@ -59,7 +61,7 @@ class SelectorTransporte extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => PantallaAutobus(
-                    destino: destinoNombre,
+                    destino: destinoFormateado,
                     destinoLat: destinoLat,
                     destinoLng: destinoLng,
                     origen: origen,
@@ -81,10 +83,9 @@ class SelectorTransporte extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PantallaAvion(
-                    destino: destinoNombre,
-                  ),
-                )
+                  builder: (_) =>
+                      PantallaAvion(destino: destinoFormateado, origen: origen),
+                ),
               );
             },
           ),
@@ -104,8 +105,8 @@ class SelectorTransporte extends StatelessWidget {
                   builder: (_) => RutaMixtaPantalla(
                     destinoLat: destinoLat,
                     destinoLng: destinoLng,
-                    origen: origen, 
-                    destinoNombre: destinoNombre,
+                    origen: origen,
+                    destinoNombre: destinoFormateado,
                   ),
                 ),
               );

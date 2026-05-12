@@ -8,7 +8,9 @@ class MaletaFirebaseServicio {
 
   String get uid => _auth.currentUser!.uid;
 
+  // ============================
   // 🔹 STREAM
+  // ============================
   Stream<List<ItemMaleta>> obtenerMaleta(String idViaje) {
     return _db
         .collection("usuarios")
@@ -17,15 +19,17 @@ class MaletaFirebaseServicio {
         .doc(idViaje)
         .collection("maleta")
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ItemMaleta.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ItemMaleta.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
+  // ============================
   // 🔹 GUARDAR LISTA
-  Future<void> guardarMaleta(
-      String idViaje, List<ItemMaleta> lista) async {
-
+  // ============================
+  Future<void> guardarMaleta(String idViaje, List<ItemMaleta> lista) async {
     final ref = _db
         .collection("usuarios")
         .doc(uid)
@@ -36,14 +40,20 @@ class MaletaFirebaseServicio {
     final batch = _db.batch();
 
     for (var item in lista) {
-      final doc = ref.doc();
+      // 🔥 ID FIJO
+      final id = item.nombre.toLowerCase().replaceAll(" ", "_");
+
+      final doc = ref.doc(id);
+
       batch.set(doc, item.toMap());
     }
 
     await batch.commit();
   }
 
+  // ============================
   // 🔹 AGREGAR
+  // ============================
   Future<void> agregarItem(String idViaje, ItemMaleta item) async {
     final ref = _db
         .collection("usuarios")
@@ -52,13 +62,20 @@ class MaletaFirebaseServicio {
         .doc(idViaje)
         .collection("maleta");
 
-    await ref.add(item.toMap());
+    // 🔥 ID FIJO
+    final id = item.nombre.toLowerCase().replaceAll(" ", "_");
+
+    await ref.doc(id).set(item.toMap());
   }
 
+  // ============================
   // 🔹 CHECK
+  // ============================
   Future<void> actualizarEstado(
-      String idViaje, String idItem, bool estado) async {
-
+    String idViaje,
+    String idItem,
+    bool estado,
+  ) async {
     final ref = _db
         .collection("usuarios")
         .doc(uid)
@@ -70,7 +87,9 @@ class MaletaFirebaseServicio {
     await ref.update({"completado": estado});
   }
 
+  // ============================
   // 🔹 ELIMINAR
+  // ============================
   Future<void> eliminarItem(String idViaje, String idItem) async {
     final ref = _db
         .collection("usuarios")

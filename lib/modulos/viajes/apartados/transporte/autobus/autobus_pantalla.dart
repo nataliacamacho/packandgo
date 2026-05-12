@@ -35,57 +35,41 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
   }
 
   Future<void> cargar() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-
     try {
-      final ubicacionServicio = UbicacionServicio();
-
-      // 🔥 PRIORIDAD:
-      // 1. Si viene origen desde navegación → usarlo
-      // 2. Si no → usar ubicación actual
       String? ciudadOrigen = widget.origen;
 
       if (ciudadOrigen.isEmpty) {
-        ciudadOrigen = await ubicacionServicio.obtenerCiudadActual();
+        ciudadOrigen = await UbicacionServicio().obtenerCiudadActual();
       }
 
       if (ciudadOrigen == null || ciudadOrigen.isEmpty) {
+        if (!mounted) return;
+
         setState(() {
-          rutas = [];
           error = "No se pudo obtener la ubicación.";
           loading = false;
         });
+
         return;
       }
-
-      // 🔥 DEBUG útil
-      print("📍 ORIGEN FINAL: $ciudadOrigen");
-      print("📍 DESTINO FINAL: ${widget.destino}");
-      print("📍 DESTINO LAT/LNG: ${widget.destinoLat}, ${widget.destinoLng}");
 
       final rutasCalculadas = await servicio.obtenerRutas(
         origen: ciudadOrigen,
         destino: widget.destino,
       );
 
-      if (rutasCalculadas.isEmpty) {
-        setState(() {
-          rutas = [];
-          error = "No se encontraron rutas disponibles.";
-          loading = false;
-        });
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         rutas = rutasCalculadas;
+        error = rutasCalculadas.isEmpty
+            ? "No se encontraron rutas disponibles."
+            : null;
+
         loading = false;
       });
     } catch (e) {
-      print("❌ ERROR PANTALLA: $e");
+      if (!mounted) return;
 
       setState(() {
         error = "Ocurrió un error al obtener las rutas.";

@@ -39,13 +39,7 @@ class OpenTripMapServicio {
           '&format=json'
           '&apikey=$_apiKey';
 
-      print("🌍 OTM URL:");
-      print(url);
-
       final res = await http.get(Uri.parse(url));
-
-      print("🟩 OTM STATUS: ${res.statusCode}");
-      print("🟩 OTM BODY: ${res.body}");
 
       if (res.statusCode != 200) {
         return [];
@@ -73,7 +67,6 @@ class OpenTripMapServicio {
 
       return lugares;
     } catch (e) {
-      print("❌ OPENTRIP ERROR: $e");
       return [];
     }
   }

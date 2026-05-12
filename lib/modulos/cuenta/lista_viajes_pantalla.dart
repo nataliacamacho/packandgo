@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto/modulos/viajes/detalle_viaje_pantalla.dart';
+import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
 import 'package:proyecto/nucleo/utilidades/viaje_estado.dart';
 
 class ListaViajesPantalla extends StatelessWidget {
@@ -30,7 +31,6 @@ class ListaViajesPantalla extends StatelessWidget {
         return Colors.grey.shade300;
     }
   }
-  
 
   void mostrarDialogoCancelar(BuildContext context, String idViaje) {
     showDialog(
@@ -278,8 +278,9 @@ class ListaViajesPantalla extends StatelessWidget {
             itemBuilder: (context, index) {
               final viaje = lista[index];
               final data = viaje.data() as Map<String, dynamic>;
+              final destinoRaw = data["destino"] ?? "Sin destino";
 
-              final destino = data["destino"] ?? "Sin destino";
+              final destino = FormateadorDestino.formatear(destinoRaw);
               final descripcion = data["descripcion"] ?? "";
               final origen = data["origen"] ?? "Sin origen";
 

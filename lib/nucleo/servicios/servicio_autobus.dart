@@ -67,15 +67,19 @@ class ServicioAutobus {
     required String origen,
     required String destino,
   }) async {
-    // 🔥 1. Buscar terminales reales
-    final terminalOrigen = await google.buscarTerminalAutobus(origen);
-    final terminalDestino = await google.buscarTerminalAutobus(destino);
+    // 🔥 EN PARALELO
+    final resultados = await Future.wait([
+      google.buscarTerminalAutobus(origen),
+      google.buscarTerminalAutobus(destino),
+    ]);
 
-    // fallback si Google falla
+    final terminalOrigen = resultados[0];
+    final terminalDestino = resultados[1];
+
     final origenTexto = terminalOrigen?["nombre"] ?? origen;
+
     final destinoTexto = terminalDestino?["nombre"] ?? destino;
 
-    // 🔥 2. Usar coordenadas si existen
     final origenCoords = terminalOrigen != null
         ? "${terminalOrigen["lat"]},${terminalOrigen["lng"]}"
         : origen;

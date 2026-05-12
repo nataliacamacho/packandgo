@@ -51,15 +51,40 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
   double tiempoTotal = 0;
 
   final List<CiudadNodo> ciudadesNodoBase = [
-    CiudadNodo(nombre: "Guadalajara", lat: 20.67, lng: -103.35),
-    CiudadNodo(nombre: "CDMX", lat: 19.43, lng: -99.13),
-    CiudadNodo(nombre: "Monterrey", lat: 25.68, lng: -100.31),
-    CiudadNodo(nombre: "Cancún", lat: 21.16, lng: -86.85),
-    CiudadNodo(nombre: "Mérida", lat: 20.97, lng: -89.62),
-    CiudadNodo(nombre: "Puebla", lat: 19.04, lng: -98.20),
-    CiudadNodo(nombre: "Oaxaca", lat: 17.07, lng: -96.72),
-    CiudadNodo(nombre: "Querétaro", lat: 20.59, lng: -100.39),
-    CiudadNodo(nombre: "Tijuana", lat: 32.51, lng: -117.04),
+    CiudadNodo(nombre: "Ciudad de México", lat: 19.4326, lng: -99.1332),
+    CiudadNodo(nombre: "Guadalajara", lat: 20.6597, lng: -103.3496),
+    CiudadNodo(nombre: "Monterrey", lat: 25.6866, lng: -100.3161),
+    CiudadNodo(nombre: "Cancún", lat: 21.1619, lng: -86.8515),
+    CiudadNodo(nombre: "Puebla", lat: 19.0414, lng: -98.2063),
+    CiudadNodo(nombre: "Mérida", lat: 20.9674, lng: -89.5926),
+    CiudadNodo(nombre: "Tijuana", lat: 32.5149, lng: -117.0382),
+    CiudadNodo(nombre: "León", lat: 21.1220, lng: -101.6823),
+    CiudadNodo(nombre: "Querétaro", lat: 20.5888, lng: -100.3899),
+    CiudadNodo(nombre: "Toluca", lat: 19.2826, lng: -99.6557),
+    CiudadNodo(nombre: "Acapulco", lat: 16.8531, lng: -99.8237),
+    CiudadNodo(nombre: "Puerto Vallarta", lat: 20.6534, lng: -105.2253),
+    CiudadNodo(nombre: "Los Cabos", lat: 22.8905, lng: -109.9167),
+    CiudadNodo(nombre: "Mazatlán", lat: 23.2494, lng: -106.4111),
+    CiudadNodo(nombre: "Veracruz", lat: 19.1738, lng: -96.1342),
+    CiudadNodo(nombre: "Oaxaca", lat: 17.0732, lng: -96.7266),
+    CiudadNodo(nombre: "Morelia", lat: 19.7050, lng: -101.1949),
+    CiudadNodo(nombre: "Zacatecas", lat: 22.7709, lng: -102.5832),
+    CiudadNodo(nombre: "Tuxtla Gutiérrez", lat: 16.7528, lng: -93.1167),
+    CiudadNodo(nombre: "Villahermosa", lat: 17.9895, lng: -92.9475),
+    CiudadNodo(nombre: "Campeche", lat: 19.8301, lng: -90.5349),
+    CiudadNodo(nombre: "Chetumal", lat: 18.5043, lng: -88.3053),
+    CiudadNodo(nombre: "Cozumel", lat: 20.4229, lng: -86.9223),
+    CiudadNodo(nombre: "Aguascalientes", lat: 21.8853, lng: -102.2916),
+    CiudadNodo(nombre: "Torreón", lat: 25.5428, lng: -103.4068),
+    CiudadNodo(nombre: "Chihuahua", lat: 28.6329, lng: -106.0691),
+    CiudadNodo(nombre: "Ciudad Juárez", lat: 31.6904, lng: -106.4245),
+    CiudadNodo(nombre: "Durango", lat: 24.0277, lng: -104.6532),
+    CiudadNodo(nombre: "Hermosillo", lat: 29.0729, lng: -110.9559),
+    CiudadNodo(nombre: "La Paz", lat: 24.1426, lng: -110.3128),
+    CiudadNodo(nombre: "Colima", lat: 19.2433, lng: -103.7241),
+    CiudadNodo(nombre: "Tepic", lat: 21.5085, lng: -104.8956),
+    CiudadNodo(nombre: "San Luis Potosí", lat: 22.1565, lng: -100.9855),
+    CiudadNodo(nombre: "Xalapa", lat: 19.5438, lng: -96.9102),
   ];
 
   List<CiudadNodo> get ciudadesNodo {
@@ -69,13 +94,91 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
   }
 
   final List<String> aeropuertos = [
+    "Ciudad de México",
     "Guadalajara",
-    "CDMX",
     "Monterrey",
-    "Tijuana",
     "Cancún",
+    "Puebla",
     "Mérida",
+    "Tijuana",
+    "León",
+    "Querétaro",
+    "Toluca",
+    "Acapulco",
+    "Puerto Vallarta",
+    "Los Cabos",
+    "Mazatlán",
+    "Veracruz",
+    "Oaxaca",
+    "Morelia",
+    "Zacatecas",
+    "Tuxtla Gutiérrez",
+    "Villahermosa",
+    "Campeche",
+    "Chetumal",
+    "Cozumel",
+    "Aguascalientes",
+    "Torreón",
+    "Chihuahua",
+    "Ciudad Juárez",
+    "Durango",
+    "Hermosillo",
+    "La Paz",
+    "Colima",
+    "Tepic",
+    "San Luis Potosí",
   ];
+
+  final Map<String, String> aeropuertoPorDestino = {
+    // Morelos
+    "cuernavaca": "Ciudad de México",
+    "tepoztlan": "Ciudad de México",
+    "taxco": "Ciudad de México",
+
+    // Estado de México
+    "metepec": "Toluca",
+    "valle de bravo": "Toluca",
+
+    // Guanajuato
+    "san miguel de allende": "Querétaro",
+    "guanajuato": "León",
+
+    // Quintana Roo
+    "playa del carmen": "Cancún",
+    "tulum": "Cancún",
+    "isla holbox": "Cancún",
+    "bacalar": "Chetumal",
+
+    // Yucatán
+    "izamal": "Mérida",
+    "valladolid": "Mérida",
+
+    // Veracruz
+    "coatepec": "Xalapa",
+    "orizaba": "Veracruz",
+
+    // Hidalgo
+    "pachuca": "Ciudad de México",
+    "tula de allende": "Ciudad de México",
+
+    // Jalisco
+    "tequila": "Guadalajara",
+    "chapala": "Guadalajara",
+    "ajijic": "Guadalajara",
+    "nuevo vallarta": "Puerto Vallarta",
+
+    // Chiapas
+    "san cristobal de las casas": "Tuxtla Gutiérrez",
+
+    // Sonora
+    "caborca": "Hermosillo",
+
+    // Baja California
+    "ensenada": "Tijuana",
+
+    // San Luis Potosí
+    "real de catorce": "San Luis Potosí",
+  };
 
   @override
   void initState() {
@@ -104,6 +207,58 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
     }
 
     return mejor;
+  }
+
+  String formatearTiempo(double horas) {
+    final totalMinutos = (horas * 60).round();
+
+    final dias = totalMinutos ~/ 1440;
+    final horasRestantes = (totalMinutos % 1440) ~/ 60;
+    final minutos = totalMinutos % 60;
+
+    if (dias > 0) {
+      if (minutos == 0) {
+        return "$dias d ${horasRestantes} h";
+      }
+      return "$dias d ${horasRestantes} h ${minutos} min";
+    }
+
+    if (horasRestantes > 0) {
+      if (minutos == 0) {
+        return "${horasRestantes} h";
+      }
+      return "${horasRestantes} h ${minutos} min";
+    }
+
+    return "$minutos min";
+  }
+
+  CiudadNodo obtenerAeropuertoDestinoInteligente() {
+    final destinoNormalizado = normalizar(widget.destinoNombre);
+
+    // Revisar reglas manuales
+    if (aeropuertoPorDestino.containsKey(destinoNormalizado)) {
+      final nombreAeropuerto = aeropuertoPorDestino[destinoNormalizado];
+
+      return ciudadesNodoBase.firstWhere(
+        (n) => normalizar(n.nombre) == normalizar(nombreAeropuerto!),
+        orElse: () =>
+            obtenerAeropuertoMasCercano(widget.destinoLat, widget.destinoLng),
+      );
+    }
+
+    // Si el destino ya tiene aeropuerto
+    final ciudadDirecta = ciudadesNodoBase.where((n) {
+      return normalizar(n.nombre) == destinoNormalizado &&
+          aeropuertos.contains(n.nombre);
+    });
+
+    if (ciudadDirecta.isNotEmpty) {
+      return ciudadDirecta.first;
+    }
+
+    // fallback
+    return obtenerAeropuertoMasCercano(widget.destinoLat, widget.destinoLng);
   }
 
   CiudadNodo obtenerNodoMasCercano(double lat, double lng) {
@@ -161,7 +316,23 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
       .replaceAll('ó', 'o')
       .replaceAll('ú', 'u');
 
-  // ================= LÓGICA =================
+  String obtenerDescripcionSegmento(SegmentoRuta s) {
+    if (s.tipo == "avion") {
+      return "Vuelo de ${s.origen} a ${s.destino}";
+    }
+
+    // Ir al aeropuerto
+    if (aeropuertos.contains(s.destino) && !aeropuertos.contains(s.origen)) {
+      return "Traslado al aeropuerto más cercano: ${s.origen} → ${s.destino}";
+    }
+
+    // Del aeropuerto al destino
+    if (aeropuertos.contains(s.origen) && !aeropuertos.contains(s.destino)) {
+      return "Traslado desde aeropuerto al destino: ${s.origen} → ${s.destino}";
+    }
+
+    return "${s.origen} → ${s.destino}";
+  }
 
   Future<void> calcularRuta() async {
     segmentos.clear();
@@ -192,17 +363,22 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
       origen['lng']!,
     );
 
-    final aeropuertoDestino = obtenerAeropuertoMasCercano(
-      widget.destinoLat,
-      widget.destinoLng,
-    );
+    final aeropuertoDestino = obtenerAeropuertoDestinoInteligente();
+
+    debugPrint("DESTINO: ${widget.destinoNombre}");
+    debugPrint("LAT DESTINO: ${widget.destinoLat}");
+    debugPrint("LNG DESTINO: ${widget.destinoLng}");
+
+    debugPrint("AEROPUERTO: ${aeropuertoDestino.nombre}");
+    debugPrint("LAT AEROPUERTO: ${aeropuertoDestino.lat}");
+    debugPrint("LNG AEROPUERTO: ${aeropuertoDestino.lng}");
 
     // ================= CARRO INICIAL =================
     final distCarro1 = ubicacionServicio.calcularDistanciaEnKm(
       origenLat: origen['lat']!,
       origenLng: origen['lng']!,
-      destinoLat: nodoOrigen.lat,
-      destinoLng: nodoOrigen.lng,
+      destinoLat: aeropuertoOrigen.lat,
+      destinoLng: aeropuertoOrigen.lng,
     );
 
     // ================= AVIÓN =================
@@ -226,20 +402,24 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
 
     // ================= ARMADO DE RUTA =================
     if (usarAvion && distVuelo > 200) {
-      segmentos.addAll([
+      // ================= PRIMER TRAMO =================
+      segmentos.add(
         SegmentoRuta(
           tipo: "carro",
           origen: nombreOrigen ?? "Tu ubicación",
-          destino: nodoOrigen.nombre,
+          destino: aeropuertoOrigen.nombre,
           origenLat: origen['lat']!,
           origenLng: origen['lng']!,
-          destinoLat: nodoOrigen.lat,
-          destinoLng: nodoOrigen.lng,
+          destinoLat: aeropuertoOrigen.lat,
+          destinoLng: aeropuertoOrigen.lng,
           distancia: distCarro1,
           tiempo: distCarro1 / 80,
           costo: distCarro1 * 2,
         ),
+      );
 
+      // ================= VUELO =================
+      segmentos.add(
         SegmentoRuta(
           tipo: "avion",
           origen: aeropuertoOrigen.nombre,
@@ -252,20 +432,29 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
           tiempo: (distVuelo / 800) + 2,
           costo: (distVuelo * 2.5).clamp(900, 10000),
         ),
+      );
 
-        SegmentoRuta(
-          tipo: "carro",
-          origen: aeropuertoDestino.nombre,
-          destino: widget.destinoNombre,
-          origenLat: aeropuertoDestino.lat,
-          origenLng: aeropuertoDestino.lng,
-          destinoLat: widget.destinoLat,
-          destinoLng: widget.destinoLng,
-          distancia: distCarro2,
-          tiempo: distCarro2 / 60,
-          costo: distCarro2 * 2,
-        ),
-      ]);
+      // ================= ÚLTIMO TRAMO SOLO SI ES NECESARIO =================
+      final mismoDestino =
+          normalizar(aeropuertoDestino.nombre) ==
+          normalizar(widget.destinoNombre);
+
+      if (!mismoDestino && distCarro2 > 5) {
+        segmentos.add(
+          SegmentoRuta(
+            tipo: "carro",
+            origen: aeropuertoDestino.nombre,
+            destino: widget.destinoNombre,
+            origenLat: aeropuertoDestino.lat,
+            origenLng: aeropuertoDestino.lng,
+            destinoLat: widget.destinoLat,
+            destinoLng: widget.destinoLng,
+            distancia: distCarro2,
+            tiempo: distCarro2 / 60,
+            costo: distCarro2 * 2,
+          ),
+        );
+      }
     } else {
       // fallback: todo en carretera inteligente
       final distTotal = ubicacionServicio.calcularDistanciaEnKm(
@@ -440,23 +629,20 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
                 const SizedBox(height: 4),
 
                 Text(
-                  "${s.origen} → ${s.destino}",
+                  obtenerDescripcionSegmento(s),
                   style: const TextStyle(fontSize: 14),
                 ),
 
                 const SizedBox(height: 8),
 
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, size: 16),
-                    const SizedBox(width: 4),
-                    Text("${s.tiempo.toStringAsFixed(1)} h"),
+                Text(
+                  "Tiempo: ${formatearTiempo(s.tiempo)}",
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
 
-                    const SizedBox(width: 16),
-
-                    const SizedBox(width: 4),
-                    Text("\$${s.costo.toStringAsFixed(0)}"),
-                  ],
+                Text(
+                  "Costo aprox: \$${s.costo.toStringAsFixed(0)} MXN",
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ],
             ),

@@ -44,7 +44,10 @@ class _CarroPantallaState extends State<CarroPantalla> {
   @override
   void initState() {
     super.initState();
-    _cargarRuta();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarRuta();
+    });
   }
 
   LatLngBounds _calcularBounds(List<LatLng> puntos) {
@@ -66,11 +69,13 @@ class _CarroPantallaState extends State<CarroPantalla> {
   void _ajustarMapa() {
     if (ruta.isEmpty) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
       final bounds = _calcularBounds(ruta);
 
       _mapController.fitCamera(
-        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(60)),
       );
     });
   }
@@ -117,18 +122,56 @@ class _CarroPantallaState extends State<CarroPantalla> {
       final decision = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text("Ruta larga detectada"),
-          content: const Text(
-            "El trayecto supera los 500 km. ¿Deseas continuar en carro o ver una ruta mixta más eficiente?",
+          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
+
+          title: Row(
+            children: const [
+              Text(
+                "Ruta larga detectada",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 21),
+              ),
+            ],
+          ),
+
+          content: const Text(
+            "El trayecto supera los 500 km.\n\n¿Deseas continuar en carro o ver una ruta mixta más eficiente?",
+            style: TextStyle(fontSize: 14),
+          ),
+
+          actionsAlignment: MainAxisAlignment.center,
+
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, "carro"),
-              child: const Text("Seguir en carro"),
+              onPressed: () {
+                Navigator.pop(context, "carro");
+              },
+              child: const Text(
+                "Seguir en carro",
+                style: TextStyle(color: Color.fromARGB(255, 126, 126, 126)),
+              ),
             ),
+
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, "mixta"),
-              child: const Text("Ver ruta mixta"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF6A230),
+
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+
+              onPressed: () {
+                Navigator.pop(context, "mixta");
+              },
+
+              child: const Text(
+                "Ver ruta mixta",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -292,7 +335,7 @@ class _CarroPantallaState extends State<CarroPantalla> {
                 initialCenter: ruta.isNotEmpty
                     ? ruta.first
                     : const LatLng(0, 0),
-                initialZoom: 12,
+                initialZoom: 5,
               ),
               children: [
                 TileLayer(
@@ -311,7 +354,7 @@ class _CarroPantallaState extends State<CarroPantalla> {
                         height: 40,
                         child: const Icon(
                           Icons.location_on,
-                          color: Colors.blue,
+                          color: Color(0xFF0066D2),
                           size: 35,
                         ),
                       ),
