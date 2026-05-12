@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/avion/avion_pantalla.dart';
@@ -40,6 +42,30 @@ class SelectorTransporte extends StatelessWidget {
       debugPrint("NUEVA LAT: $latCorregida");
       debugPrint("NUEVA LNG: $lngCorregida");
     }
+
+    // ================= LÓGICA INTELIGENTE =================
+
+    final distanciaAprox = _calcularDistanciaSimple(
+      20.6597, // Guadalajara aprox origen demo
+      -103.3496,
+      latCorregida,
+      lngCorregida,
+    );
+
+    final mostrarAvion = distanciaAprox > 350;
+
+    final mostrarRutaMixta = distanciaAprox > 500;
+
+    String? recomendado;
+
+    if (distanciaAprox < 250) {
+      recomendado = "Carro";
+    } else if (distanciaAprox < 500) {
+      recomendado = "Autobús";
+    } else {
+      recomendado = "Ruta mixta";
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -50,6 +76,7 @@ class SelectorTransporte extends StatelessWidget {
             subtitulo: "Ruta directa en carretera",
             icono: Icons.directions_car,
             color: const Color(0xFF0066D2),
+            recomendado: recomendado == "Carro",
             onTap: () {
               Navigator.push(
                 context,
@@ -73,6 +100,7 @@ class SelectorTransporte extends StatelessWidget {
             subtitulo: "Opciones de central de autobuses",
             icono: Icons.directions_bus,
             color: Colors.green,
+            recomendado: recomendado == "Autobús",
             onTap: () {
               Navigator.push(
                 context,
@@ -90,48 +118,70 @@ class SelectorTransporte extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          _cardTransporte(
-            context,
-            titulo: "Avión",
-            subtitulo: "Viajes en avión disponibles",
-            icono: Icons.flight,
-            color: Colors.orange,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      PantallaAvion(destino: destinoFormateado, origen: origen),
-                ),
-              );
-            },
-          ),
+          if (mostrarAvion)
+            _cardTransporte(
+              context,
+              titulo: "Avión",
+              subtitulo: "Viajes en avión disponibles",
+              icono: Icons.flight,
+              color: const Color.fromRGBO(255, 152, 0, 1),
+              recomendado: recomendado == "Avión",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PantallaAvion(
+                      destino: destinoFormateado,
+                      origen: origen,
+                    ),
+                  ),
+                );
+              },
+            ),
 
           const SizedBox(height: 10),
 
-          _cardTransporte(
-            context,
-            titulo: "Ruta mixta",
-            subtitulo: "Combinación de transportes",
-            icono: Icons.alt_route,
-            color: Colors.purple,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => RutaMixtaPantalla(
-                    destinoLat: latCorregida,
-                    destinoLng: lngCorregida,
-                    origen: origen,
-                    destinoNombre: nombreCorregido,
+          if (mostrarRutaMixta)
+            _cardTransporte(
+              context,
+              titulo: "Ruta mixta",
+              subtitulo: "Combinación de transportes",
+              icono: Icons.alt_route,
+              color: Colors.purple,
+              recomendado: recomendado == "Ruta mixta",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RutaMixtaPantalla(
+                      destinoLat: latCorregida,
+                      destinoLng: lngCorregida,
+                      origen: origen,
+                      destinoNombre: nombreCorregido,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
     );
+  }
+
+  double _calcularDistanciaSimple(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const p = 0.017453292519943295;
+
+    final a =
+        0.5 -
+        cos((lat2 - lat1) * p) / 2 +
+        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+
+    return 12742 * asin(sqrt(a));
   }
 
   Widget _cardTransporte(
@@ -141,6 +191,7 @@ class SelectorTransporte extends StatelessWidget {
     required IconData icono,
     required Color color,
     required VoidCallback onTap,
+    bool recomendado = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -159,12 +210,38 @@ class SelectorTransporte extends StatelessWidget {
         child: ListTile(
           leading: Icon(icono, color: color),
 
-          title: Text(
-            titulo,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+
+              if (recomendado)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    "Recomendado",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
           ),
 
           subtitle: Text(subtitulo, style: GoogleFonts.poppins(fontSize: 14)),
