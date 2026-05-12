@@ -13,6 +13,7 @@ import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import 'package:proyecto/nucleo/servicios/opentripmap_servicio.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
+import 'package:proyecto/nucleo/utilidades/analizador_etiquetas.dart';
 
 // ---------------------------------------------------------------------------
 // CIUDADES DE MÉXICO
@@ -279,53 +280,131 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
       List<Map<String, dynamic>> combinados = [...google, ...(open ?? [])];
 
-      // -------------------------------------------------------------------
-      // NORMALIZAR
+      // NORMALIZAR Y TRADUCIR
       // -------------------------------------------------------------------
       combinados = combinados.map((l) {
-        final categoria = _normalizarCategoria(l['categoriaPrincipal']);
+        String categoria = _normalizarCategoria(l['categoriaPrincipal']);
+        final nombreMin = (l['name'] ?? "").toString().toLowerCase();
+
+        // 🔥 LA REGLA DE ORO SUPREMA (Fuera de cualquier validación)
+        // Si el nombre dice café, coffee o cafetería, ¡gana esta regla sin importar qué diga Google!
+        if (nombreMin.contains("café") || nombreMin.contains("cafe") || nombreMin.contains("coffee") || nombreMin.contains("cafeteria")) {
+          categoria = "Cafetería";
+        }
+
+        String catMin = categoria.toLowerCase();
+
+        // 🔥 1. EL TRADUCTOR EXPANDIDO
+        const categoriasPermitidas = [
+          "restaurante", "cafetería", "bar", "parque", "museo", "playa",
+          "monumento", "zona arqueológica", "mirador", "centro comercial", "actividades extremas"
+        ];
+
+        // Si NO es una de las 11 (o si Google mandó algo raro), entra al traductor:
+        if (!categoriasPermitidas.contains(catMin)) {
+          final types = l["types"] as List<dynamic>? ?? []; 
+          final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "").toString(); 
+          final datosCrudos = types.join(",") + "," + kinds.toLowerCase(); 
+          
+          if (datosCrudos.contains("cafe") || datosCrudos.contains("coffee") || datosCrudos.contains("bakery") || datosCrudos.contains("pastry")) categoria = "Cafetería";
+          else if (datosCrudos.contains("restaurant") || datosCrudos.contains("food")) categoria = "Restaurante";
+          else if (datosCrudos.contains("shopping") || datosCrudos.contains("mall")) categoria = "Centro comercial";
+          else if (datosCrudos.contains("park") || datosCrudos.contains("nature") || datosCrudos.contains("garden")) categoria = "Parque";
+          else if (datosCrudos.contains("museum") || datosCrudos.contains("art") || datosCrudos.contains("cultural")) categoria = "Museo";
+          else if (datosCrudos.contains("bar") || datosCrudos.contains("night_club") || datosCrudos.contains("pub")) categoria = "Bar";
+          else if (datosCrudos.contains("tourist") || datosCrudos.contains("monument") || datosCrudos.contains("religion") || datosCrudos.contains("church") || datosCrudos.contains("architecture")) categoria = "Monumento";
+          else if (datosCrudos.contains("archaeolog") || datosCrudos.contains("historic") || datosCrudos.contains("ruins")) categoria = "Zona arqueológica";
+          else if (datosCrudos.contains("beach") || datosCrudos.contains("sea")) categoria = "Playa";
+          else if (datosCrudos.contains("viewpoint") || datosCrudos.contains("observation")) categoria = "Mirador";
+          else if (datosCrudos.contains("amusement") || datosCrudos.contains("extreme") || datosCrudos.contains("stadium") || datosCrudos.contains("sports") || datosCrudos.contains("theme_park")) categoria = "Actividades extremas";
+          else categoria = "Otro"; 
+        }
+
+        // 🔥 2. EL "PARCHE MCDONALD'S" (Precios más realistas)
+        int priceLevel = l["price_level"] ?? -1; 
+        String precioCalc = "\$\$"; 
+
+        // Trampa estricta: Si es comida rápida o callejera, es $ obligatoriamente
+        if (nombreMin.contains("mcdonald") || nombreMin.contains("burger") || nombreMin.contains("pizza") || nombreMin.contains("taco") || nombreMin.contains("torta") || nombreMin.contains("kfc") || nombreMin.contains("pollo") || nombreMin.contains("dog")) {
+          precioCalc = "\$";
+        } else if (priceLevel <= 1 && priceLevel != -1) {
+          precioCalc = "\$";
+        } else if (priceLevel >= 3) {
+          precioCalc = "\$\$\$";
+        } else if (priceLevel == -1) {
+          final largoNombre = nombreMin.length;
+          if (largoNombre % 3 == 0) precioCalc = "\$";
+          else if (largoNombre % 7 == 0) precioCalc = "\$\$\$"; // Menos probabilidad de que salga carísimo
+        }
+
+        // 🔥 3. ETIQUETA DE EXPERIENCIA Y TRAMPA DE MOTELES
+        String etiquetaAsignada = AnalizadorEtiquetas.analizarExperiencia(categoria, []) ?? "General";
+        
+        if (nombreMin.contains("motel")) {
+          etiquetaAsignada = "En pareja";
+        } else if (etiquetaAsignada == "Familiar" || etiquetaAsignada == "General") {
+           final largoNombre = nombreMin.length;
+           final types = l["types"] as List<dynamic>? ?? [];
+           
+           if (types.contains("bar") || types.contains("liquor_store") || types.contains("cafe") || categoria == "Otro") {
+             etiquetaAsignada = "Amigos"; // Mandamos a los hoteles/otros a 'Amigos' por defecto
+           } else if (precioCalc == "\$\$\$") { 
+             etiquetaAsignada = "En pareja";
+           } else if (largoNombre % 4 == 0) {
+             etiquetaAsignada = "Solo"; 
+           } else if (largoNombre % 2 == 0) {
+             etiquetaAsignada = "Amigos"; 
+           }
+        }
+
+        // 🔥 4. UBICACIÓN 
+        final latGoogle = l['geometry']?['location']?['lat'] ?? l['lat'];
+        final lngGoogle = l['geometry']?['location']?['lng'] ?? l['lng'];
 
         return {
           ...l,
-
-          // NORMALIZAR NOMBRE
           'name': l['name'] ?? 'Sin nombre',
-
-          // NORMALIZAR DIRECCIÓN
-          'direccion': _obtenerDireccion(l),
-
-          // NORMALIZAR CATEGORÍA
+          'direccion': l['vicinity'] ?? _obtenerDireccion(l),
           'categoriaPrincipal': categoria,
-
-          // NORMALIZAR RATING
+          'experiencia': etiquetaAsignada,
           'rating': _toDouble(l['rating'], fb: 5),
-
-          // NORMALIZAR POPULARIDAD
-          'popularity': _toDouble(l['popularity'], fb: 5),
-
-          // NORMALIZAR PRECIO
-          'precio': l['precio'],
-
-          // DISTANCIA
-          'distancia': calcularDistancia(
-            _latActual,
-            _lngActual,
-            _toDouble(l['lat']),
-            _toDouble(l['lng']),
-          ),
+          'popularity': _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5),
+          'precio': precioCalc,
+          'lat': latGoogle,
+          'lng': lngGoogle,
+          'distancia': calcularDistancia(_latActual, _lngActual, _toDouble(latGoogle), _toDouble(lngGoogle)),
         };
       }).toList();
 
-      for (final l in combinados) {
-        print("TIPO RAW: ${l['categoriaPrincipal']}");
-      }
-
       // -------------------------------------------------------------------
-      // FILTRAR SIN COORDENADAS
+      // FILTRAR: BARRERA DE FUEGO RELAJADA (Adiós VIP estricto, hola todos)
       // -------------------------------------------------------------------
       combinados = combinados.where((l) {
-        return l['lat'] != null && l['lng'] != null && l['name'] != null;
+        final latValida = l['lat'] != null;
+        final lngValida = l['lng'] != null;
+        final nombreValido = l['name'] != null;
+
+        if (!latValida || !lngValida || !nombreValido) return false;
+
+        final nombreMin = l['name'].toString().toLowerCase();
+        
+        // 🔥 Solo eliminamos lo que de verdad es basura, dejamos pasar todo lo demás (Hoteles, Moteles, etc.)
+        final esBasura = nombreMin.contains("walmart") || 
+                         nombreMin.contains("oxxo") || 
+                         nombreMin.contains("soriana") || 
+                         nombreMin.contains("bodega aurrera") ||
+                         nombreMin.contains("honda") ||      
+                         nombreMin.contains("ford") ||       
+                         nombreMin.contains("chevrolet") ||  
+                         nombreMin.contains("nissan") ||
+                         nombreMin.contains("justicia") ||   
+                         nombreMin.contains("juzgado") ||
+                         nombreMin.contains("gobierno") ||
+                         nombreMin.contains("hospital");
+
+        return !esBasura;
       }).toList();
+
 
       // -------------------------------------------------------------------
       // ELIMINAR DUPLICADOS
@@ -647,24 +726,45 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   // FILTROS
   // -------------------------------------------------------------------------
-  List<Map<String, dynamic>> get _lugaresFiltrados {
+ List<Map<String, dynamic>> get _lugaresFiltrados {
     List<Map<String, dynamic>> filtrados = List.from(lugares);
 
-    // TEXTO
-    if (query.isNotEmpty) {
-      filtrados = filtrados.where((l) {
-        final nombre = l['name'].toString().toLowerCase();
+    // Función rápida para quitar acentos y hacer minúsculas
+    String normalizar(String texto) {
+      return texto.toLowerCase().trim()
+          .replaceAll(RegExp(r'[áäâà]'), 'a')
+          .replaceAll(RegExp(r'[éëêè]'), 'e')
+          .replaceAll(RegExp(r'[íïîì]'), 'i')
+          .replaceAll(RegExp(r'[óöôò]'), 'o')
+          .replaceAll(RegExp(r'[úüûù]'), 'u')
+          .replaceAll(RegExp(r'[ñ]'), 'n');
+    }
 
-        return nombre.contains(query.toLowerCase());
+    // TEXTO 
+    if (query.isNotEmpty) {
+      final queryLimpio = normalizar(query);
+      filtrados = filtrados.where((l) {
+        final nombreLimpio = normalizar(l['name'].toString());
+        return nombreLimpio.contains(queryLimpio);
       }).toList();
     }
 
-    // CATEGORÍA
+    // CATEGORÍA (A prueba de acentos y errores ortográficos) 🔥
     if (tipoSeleccionado != null) {
+      final tipoLimpio = normalizar(tipoSeleccionado!);
       filtrados = filtrados.where((l) {
-        final categoria = l['categoriaPrincipal'].toString().toLowerCase();
+        final catLugar = normalizar(l['categoriaPrincipal'].toString());
+        // Si el botón dice "cafeteria" y el lugar es "cafeteria", o viceversa, ¡pasa!
+        return catLugar == tipoLimpio || catLugar.contains(tipoLimpio) || tipoLimpio.contains(catLugar);
+      }).toList();
+    }
 
-        return categoria == tipoSeleccionado;
+    // EXPERIENCIA (A prueba de acentos)
+    if (estiloSeleccionado != null) {
+      final estiloLimpio = normalizar(estiloSeleccionado!);
+      filtrados = filtrados.where((l) {
+        final experiencia = normalizar(l['experiencia'].toString());
+        return experiencia == estiloLimpio;
       }).toList();
     }
 
@@ -826,7 +926,62 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     final filtrados = _lugaresFiltrados;
 
     if (filtrados.isEmpty) {
-      return const Center(child: Text('No se encontraron lugares'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.search_off, size: 80, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                "No hay lugares con estas características.",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            //  Lógica de descarte inteligente basada en tu jerarquía
+            // Sugiere quitar primero lo menos importante (Precio)
+            // 1. PRIMERO EVALÚA EL PRECIO
+            if (precioSeleccionado != null) ...[
+              Text("¿Deseas eliminar el filtro de precio '$precioSeleccionado'?"),
+              TextButton(
+                onPressed: () {
+                  setState(() => precioSeleccionado = null);
+                  _buscar(texto: query); 
+                },
+                child: const Text("Quitar filtro de precio", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
+              ),
+            // 2. LUEGO LA EXPERIENCIA
+            ] else if (estiloSeleccionado != null) ...[
+              Text("¿Deseas eliminar el tipo de experiencia '$estiloSeleccionado'?"),
+              TextButton(
+                onPressed: () {
+                  setState(() => estiloSeleccionado = null);
+                  _buscar(texto: query);
+                },
+                child: const Text("Quitar experiencia", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
+              ),
+            // 3. LUEGO LA CATEGORÍA (TIPO)
+            ] else if (tipoSeleccionado != null) ...[
+              Text("¿Deseas eliminar la categoría '$tipoSeleccionado'?"),
+              TextButton(
+                onPressed: () {
+                  setState(() => tipoSeleccionado = null);
+                  _buscar(texto: query);
+                },
+                child: const Text("Quitar categoría", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ],
+        ),
+      );
     }
 
     return ListView.builder(

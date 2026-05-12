@@ -27,61 +27,41 @@ class OpenTripMapServicio {
     String? tipo,
     int radio = 15000,
   }) async {
-    try {
-
-      final url =
-          'https://api.opentripmap.com/0.1/en/places/radius'
-          '?radius=$radio'
-          '&lon=$lng'
-          '&lat=$lat'
-          '&rate=1'
-          '&limit=60'
-          '&format=json'
-          '&apikey=$_apiKey';
-
-      print("🌍 OTM URL:");
-      print(url);
-
-      final res = await http.get(Uri.parse(url));
-
-      print("🟩 OTM STATUS: ${res.statusCode}");
-      print("🟩 OTM BODY: ${res.body}");
-
-      if (res.statusCode != 200) {
-        return [];
-      }
-
-    // Pedimos lugares turísticos (interesting_places) en un radio de 5km
-    // Ojo: OpenTripMap usa 'lon' en lugar de 'lng'
     final url = Uri.parse(
       'https://api.opentripmap.com/0.1/en/places/radius'
-      '?radius=20000' // 20 km para alcanzar zonas hoteleras
+      '?radius=$radio'
       '&lon=$lng'
       '&lat=$lat'
-      '&kinds=foods,cultural,religion,natural,architecture,amusement_parks' // 🔥 LA MAGIA AQUÍ
-      '&rate=1' // Para que traiga lugares moderadamente populares
+      '&kinds=foods,cultural,religion,natural,architecture,amusement_parks'
+      '&rate=1'
       '&limit=100'
-      '&apikey=$apiKey'
+      '&apikey=${_apiKey}',
     );
 
     try {
+      print("🌍 OTM URL:");
+      print(url);
+
       final respuesta = await http.get(url);
+
+      print("🟩 OTM STATUS: ${respuesta.statusCode}");
+      print("🟩 OTM BODY: ${respuesta.body}");
 
       if (respuesta.statusCode == 200) {
         final datos = json.decode(respuesta.body);
         print("✅ ¡POR FIN! Conexión exitosa a OpenTripMap 🌍");
 
-        // OpenTripMap agrupa sus resultados dentro de 'features'
         if (datos['features'] != null && datos['features'].isNotEmpty) {
-          return datos['features'];
+          return (datos['features'] as List<dynamic>).cast<Map<String, dynamic>>();
         }
       } else {
         print("❌ Error en OpenTripMap. Código: ${respuesta.statusCode}");
       }
     } catch (e) {
       print("❌ OPENTRIP ERROR: $e");
-      return [];
     }
+
+    return [];
   }
 
   static Map<String, dynamic> _normalizarOTM(Map<String, dynamic> raw) {
