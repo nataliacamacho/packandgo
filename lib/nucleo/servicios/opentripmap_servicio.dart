@@ -27,48 +27,42 @@ class OpenTripMapServicio {
     String? tipo,
     int radio = 15000,
   }) async {
+    final url = Uri.parse(
+      'https://api.opentripmap.com/0.1/en/places/radius'
+      '?radius=$radio'
+      '&lon=$lng'
+      '&lat=$lat'
+      '&kinds=foods,cultural,religion,natural,architecture,amusement_parks'
+      '&rate=1'
+      '&limit=100'
+      '&apikey=${_apiKey}',
+    );
+
     try {
+      print("🌍 OTM URL:");
+      print(url);
 
-      final url =
-          'https://api.opentripmap.com/0.1/en/places/radius'
-          '?radius=$radio'
-          '&lon=$lng'
-          '&lat=$lat'
-          '&rate=1'
-          '&limit=60'
-          '&format=json'
-          '&apikey=$_apiKey';
+      final respuesta = await http.get(url);
 
-      final res = await http.get(Uri.parse(url));
+      print("🟩 OTM STATUS: ${respuesta.statusCode}");
+      print("🟩 OTM BODY: ${respuesta.body}");
 
-      if (res.statusCode != 200) {
-        return [];
+      if (respuesta.statusCode == 200) {
+        final datos = json.decode(respuesta.body);
+        print("✅ ¡POR FIN! Conexión exitosa a OpenTripMap 🌍");
+
+        if (datos['features'] != null && datos['features'].isNotEmpty) {
+          return (datos['features'] as List<dynamic>).cast<Map<String, dynamic>>();
+        }
+      } else {
+        print("❌ Error en OpenTripMap. Código: ${respuesta.statusCode}");
       }
-
-      final data = jsonDecode(res.body);
-
-      if (data is! List) {
-        return [];
-      }
-
-      List<Map<String, dynamic>> lugares = data
-          .whereType<Map>()
-          .map((e) => _normalizarOTM(Map<String, dynamic>.from(e)))
-          .toList();
-
-      // 🔥 búsqueda local por texto
-      if (query.isNotEmpty) {
-        lugares = lugares.where((l) {
-          return (l['name'] ?? '').toString().toLowerCase().contains(
-            query.toLowerCase(),
-          );
-        }).toList();
-      }
-
-      return lugares;
     } catch (e) {
+      print("❌ OPENTRIP ERROR: $e");
       return [];
     }
+
+    return [];
   }
 
   static Map<String, dynamic> _normalizarOTM(Map<String, dynamic> raw) {

@@ -5,6 +5,7 @@ import 'package:proyecto/modulos/viajes/apartados/transporte/carro/carro_pantall
 import 'package:proyecto/modulos/viajes/apartados/transporte/mixtas/rutamixta_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/autobus/autobus_pantalla.dart';
 import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
+import 'package:proyecto/nucleo/utilidades/destinos_corregidos.dart';
 
 class SelectorTransporte extends StatelessWidget {
   final double destinoLat;
@@ -23,6 +24,22 @@ class SelectorTransporte extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final destinoFormateado = FormateadorDestino.formatear(destinoNombre);
+
+    double latCorregida = destinoLat;
+    double lngCorregida = destinoLng;
+    String nombreCorregido = destinoFormateado;
+
+    final correccion = DestinosCorregidos.obtener(destinoFormateado);
+
+    if (correccion != null) {
+      latCorregida = correccion["lat"];
+      lngCorregida = correccion["lng"];
+      nombreCorregido = correccion["nombre"];
+
+      debugPrint("DESTINO CORREGIDO");
+      debugPrint("NUEVA LAT: $latCorregida");
+      debugPrint("NUEVA LNG: $lngCorregida");
+    }
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -103,10 +120,10 @@ class SelectorTransporte extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => RutaMixtaPantalla(
-                    destinoLat: destinoLat,
-                    destinoLng: destinoLng,
+                    destinoLat: latCorregida,
+                    destinoLng: lngCorregida,
                     origen: origen,
-                    destinoNombre: destinoFormateado,
+                    destinoNombre: nombreCorregido,
                   ),
                 ),
               );

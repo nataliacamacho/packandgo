@@ -28,25 +28,13 @@ class FoursquareServicio {
       return [];
     }
 
-    if (apiKey.isEmpty) {
-      print("❌ API KEY de Foursquare no encontrada");
-      return [];
-    }
-
-    // Construimos los query params dinámicamente
-    final queryParams = {
-      'll': '$lat,$lng',
-      'radius': '$radio',
-      'limit': '$limite',
-      'fields': 'name,location,categories,rating,photos,website,hours', // 👈 solo pedimos lo que necesitamos
-      if (categoria != null && categorias.containsKey(categoria))
-        'categories': categorias[categoria]!,
-    };
-
-    final url = Uri.https(
-      'api.foursquare.com',
-      '/v3/places/search',
-      queryParams,
+    final url = Uri.parse(
+      'https://api.foursquare.com/v3/places/search'
+      '?ll=$lat,$lng'
+      '&radius=20000' // 🔥 Subimos a 20 km para alcanzar zonas hoteleras
+      '&limit=50'     // 🔥 Pedimos 50 lugares para garantizar que haya restaurantes y bares
+      // 🔥 LA MAGIA: Le exigimos que nos mande las reseñas, calificaciones y precios
+      '&fields=fsq_id,name,geocodes,location,categories,price,rating,popularity,tastes,tips'
     );
 
     try {
@@ -55,6 +43,7 @@ class FoursquareServicio {
         headers: {
           'Authorization': apiKey, 
           'Accept': 'application/json',
+          'Accept-Language': 'es',
           'Content-Type': 'application/json',
         },
       ).timeout(const Duration(seconds: 10));

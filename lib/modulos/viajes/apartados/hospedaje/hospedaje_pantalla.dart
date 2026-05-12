@@ -99,7 +99,9 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   }
 
   Future<void> _abrirLink(String urlBase) async {
-    final destino = normalizarDestino(FormateadorDestino.formatear(widget.destino));
+    final destino = normalizarDestino(
+      FormateadorDestino.formatear(widget.destino),
+    );
 
     final checkin =
         "${widget.fechaInicio.year}-${widget.fechaInicio.month.toString().padLeft(2, '0')}-${widget.fechaInicio.day.toString().padLeft(2, '0')}";
@@ -337,12 +339,36 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
 
                   GestureDetector(
                     onTap: () async {
-                      final uri = Uri.parse(h.link);
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
+                      final destino = Uri.encodeComponent(
+                        normalizarDestino(
+                          FormateadorDestino.formatear(widget.destino),
+                        ),
                       );
+
+                      final nombreHotel = Uri.encodeComponent(h.nombre);
+
+                      final checkin =
+                          "${widget.fechaInicio.year}-${widget.fechaInicio.month.toString().padLeft(2, '0')}-${widget.fechaInicio.day.toString().padLeft(2, '0')}";
+
+                      final checkout =
+                          "${widget.fechaFin.year}-${widget.fechaFin.month.toString().padLeft(2, '0')}-${widget.fechaFin.day.toString().padLeft(2, '0')}";
+
+                      final bookingUrl =
+                          "https://www.booking.com/searchresults.html"
+                          "?ss=$destino+$nombreHotel"
+                          "&checkin=$checkin"
+                          "&checkout=$checkout";
+
+                      final uri = Uri.parse(bookingUrl);
+
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
                     },
+
                     child: Row(
                       children: const [
                         Icon(Icons.open_in_new, size: 13, color: Colors.blue),
