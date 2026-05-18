@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 import 'package:proyecto/compartidos/widgets/barra_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/filtros_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/tarjeta_lugar.dart';

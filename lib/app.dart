@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:proyecto/modulos/viajes/apartados/hospedaje/hospedaje_pantalla.dart';
 import 'package:proyecto/nucleo/utilidades/auth_wrapper.dart';
 import 'modulos/autenticacion/inicio_pantalla.dart';
 import 'modulos/exploracion/exploracion_pantalla.dart';
