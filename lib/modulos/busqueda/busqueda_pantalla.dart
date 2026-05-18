@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:proyecto/compartidos/widgets/barra_busqueda.dart';
 import 'package:proyecto/compartidos/widgets/filtros_busqueda.dart';
@@ -30,92 +31,37 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
   {"id": "queretaro", "nombre": "Querétaro", "lat": 20.5888, "lng": -100.3899},
   {"id": "toluca", "nombre": "Toluca", "lat": 19.2826, "lng": -99.6557},
   {"id": "acapulco", "nombre": "Acapulco", "lat": 16.8531, "lng": -99.8237},
-  {
-    "id": "puertovallarta",
-    "nombre": "Puerto Vallarta",
-    "lat": 20.6534,
-    "lng": -105.2253,
-  },
+  {"id": "puertovallarta", "nombre": "Puerto Vallarta", "lat": 20.6534, "lng": -105.2253},
   {"id": "loscabos", "nombre": "Los Cabos", "lat": 22.8905, "lng": -109.9167},
   {"id": "mazatlan", "nombre": "Mazatlán", "lat": 23.2494, "lng": -106.4111},
   {"id": "veracruz", "nombre": "Veracruz", "lat": 19.1738, "lng": -96.1342},
   {"id": "oaxaca", "nombre": "Oaxaca", "lat": 17.0732, "lng": -96.7266},
-  {
-    "id": "sanmiguel",
-    "nombre": "San Miguel de Allende",
-    "lat": 20.9144,
-    "lng": -100.7430,
-  },
-  {
-    "id": "guanajuato",
-    "nombre": "Guanajuato",
-    "lat": 21.0190,
-    "lng": -101.2574,
-  },
+  {"id": "sanmiguel", "nombre": "San Miguel de Allende", "lat": 20.9144, "lng": -100.7430},
+  {"id": "guanajuato", "nombre": "Guanajuato", "lat": 21.0190, "lng": -101.2574},
   {"id": "morelia", "nombre": "Morelia", "lat": 19.7050, "lng": -101.1949},
   {"id": "zacatecas", "nombre": "Zacatecas", "lat": 22.7709, "lng": -102.5832},
-  {
-    "id": "tuxtla",
-    "nombre": "Tuxtla Gutiérrez",
-    "lat": 16.7528,
-    "lng": -93.1167,
-  },
-  {
-    "id": "sancristobal",
-    "nombre": "San Cristóbal de las Casas",
-    "lat": 16.7370,
-    "lng": -92.6376,
-  },
-  {
-    "id": "villahermosa",
-    "nombre": "Villahermosa",
-    "lat": 17.9895,
-    "lng": -92.9475,
-  },
+  {"id": "tuxtla", "nombre": "Tuxtla Gutiérrez", "lat": 16.7528, "lng": -93.1167},
+  {"id": "sancristobal", "nombre": "San Cristóbal de las Casas", "lat": 16.7370, "lng": -92.6376},
+  {"id": "villahermosa", "nombre": "Villahermosa", "lat": 17.9895, "lng": -92.9475},
   {"id": "campeche", "nombre": "Campeche", "lat": 19.8301, "lng": -90.5349},
   {"id": "chetumal", "nombre": "Chetumal", "lat": 18.5043, "lng": -88.3053},
-  {
-    "id": "playadelcarmen",
-    "nombre": "Playa del Carmen",
-    "lat": 20.6296,
-    "lng": -87.0739,
-  },
+  {"id": "playadelcarmen", "nombre": "Playa del Carmen", "lat": 20.6296, "lng": -87.0739},
   {"id": "tulum", "nombre": "Tulum", "lat": 20.2114, "lng": -87.4654},
   {"id": "cozumel", "nombre": "Cozumel", "lat": 20.4229, "lng": -86.9223},
-  {
-    "id": "aguascalientes",
-    "nombre": "Aguascalientes",
-    "lat": 21.8853,
-    "lng": -102.2916,
-  },
+  {"id": "aguascalientes", "nombre": "Aguascalientes", "lat": 21.8853, "lng": -102.2916},
   {"id": "saltillo", "nombre": "Saltillo", "lat": 25.4383, "lng": -100.9737},
   {"id": "torreon", "nombre": "Torreón", "lat": 25.5428, "lng": -103.4068},
   {"id": "chihuahua", "nombre": "Chihuahua", "lat": 28.6329, "lng": -106.0691},
   {"id": "juarez", "nombre": "Ciudad Juárez", "lat": 31.6904, "lng": -106.4245},
   {"id": "durango", "nombre": "Durango", "lat": 24.0277, "lng": -104.6532},
-  {
-    "id": "hermosillo",
-    "nombre": "Hermosillo",
-    "lat": 29.0729,
-    "lng": -110.9559,
-  },
+  {"id": "hermosillo", "nombre": "Hermosillo", "lat": 29.0729, "lng": -110.9559},
   {"id": "caborca", "nombre": "Caborca", "lat": 30.7167, "lng": -112.1500},
   {"id": "lapaz", "nombre": "La Paz", "lat": 24.1426, "lng": -110.3128},
   {"id": "ensenada", "nombre": "Ensenada", "lat": 31.8667, "lng": -116.6000},
   {"id": "colima", "nombre": "Colima", "lat": 19.2433, "lng": -103.7241},
-  {
-    "id": "manzanillo",
-    "nombre": "Manzanillo",
-    "lat": 19.1138,
-    "lng": -104.3385,
-  },
+  {"id": "manzanillo", "nombre": "Manzanillo", "lat": 19.1138, "lng": -104.3385},
   {"id": "tepic", "nombre": "Tepic", "lat": 21.5085, "lng": -104.8956},
-  {
-    "id": "nuevovallarta",
-    "nombre": "Nuevo Vallarta",
-    "lat": 20.6829,
-    "lng": -105.2850,
-  },
+  {"id": "nuevovallarta", "nombre": "Nuevo Vallarta", "lat": 20.6829, "lng": -105.2850},
   {"id": "cuernavaca", "nombre": "Cuernavaca", "lat": 18.9242, "lng": -99.2216},
   {"id": "taxco", "nombre": "Taxco", "lat": 18.5563, "lng": -99.6057},
   {"id": "tlaxcala", "nombre": "Tlaxcala", "lat": 19.3139, "lng": -98.2404},
@@ -125,22 +71,12 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
   {"id": "coatepec", "nombre": "Coatepec", "lat": 19.4524, "lng": -96.9613},
   {"id": "orizaba", "nombre": "Orizaba", "lat": 18.8506, "lng": -97.1036},
   {"id": "metepec", "nombre": "Metepec", "lat": 19.2530, "lng": -99.6010},
-  {
-    "id": "vallebravo",
-    "nombre": "Valle de Bravo",
-    "lat": 19.1925,
-    "lng": -100.1327,
-  },
+  {"id": "vallebravo", "nombre": "Valle de Bravo", "lat": 19.1925, "lng": -100.1327},
   {"id": "izamal", "nombre": "Izamal", "lat": 20.9300, "lng": -89.0200},
   {"id": "valladolid", "nombre": "Valladolid", "lat": 20.6896, "lng": -88.2017},
   {"id": "bacalar", "nombre": "Bacalar", "lat": 18.6783, "lng": -88.3891},
   {"id": "holbox", "nombre": "Isla Holbox", "lat": 21.5236, "lng": -87.3000},
-  {
-    "id": "realcatorce",
-    "nombre": "Real de Catorce",
-    "lat": 23.6900,
-    "lng": -100.8900,
-  },
+  {"id": "realcatorce", "nombre": "Real de Catorce", "lat": 23.6900, "lng": -100.8900},
   {"id": "slp", "nombre": "San Luis Potosí", "lat": 22.1565, "lng": -100.9855},
   {"id": "tequila", "nombre": "Tequila", "lat": 20.8823, "lng": -103.8355},
   {"id": "chapala", "nombre": "Chapala", "lat": 20.2967, "lng": -103.1917},
@@ -286,21 +222,17 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         String categoria = _normalizarCategoria(l['categoriaPrincipal']);
         final nombreMin = (l['name'] ?? "").toString().toLowerCase();
 
-        // 🔥 LA REGLA DE ORO SUPREMA (Fuera de cualquier validación)
-        // Si el nombre dice café, coffee o cafetería, ¡gana esta regla sin importar qué diga Google!
         if (nombreMin.contains("café") || nombreMin.contains("cafe") || nombreMin.contains("coffee") || nombreMin.contains("cafeteria")) {
           categoria = "Cafetería";
         }
 
         String catMin = categoria.toLowerCase();
 
-        // 🔥 1. EL TRADUCTOR EXPANDIDO
         const categoriasPermitidas = [
           "restaurante", "cafetería", "bar", "parque", "museo", "playa",
           "monumento", "zona arqueológica", "mirador", "centro comercial", "actividades extremas"
         ];
 
-        // Si NO es una de las 11 (o si Google mandó algo raro), entra al traductor:
         if (!categoriasPermitidas.contains(catMin)) {
           final types = l["types"] as List<dynamic>? ?? []; 
           final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "").toString(); 
@@ -320,11 +252,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           else categoria = "Otro"; 
         }
 
-        // 🔥 2. EL "PARCHE MCDONALD'S" (Precios más realistas)
         int priceLevel = l["price_level"] ?? -1; 
         String precioCalc = "\$\$"; 
 
-        // Trampa estricta: Si es comida rápida o callejera, es $ obligatoriamente
         if (nombreMin.contains("mcdonald") || nombreMin.contains("burger") || nombreMin.contains("pizza") || nombreMin.contains("taco") || nombreMin.contains("torta") || nombreMin.contains("kfc") || nombreMin.contains("pollo") || nombreMin.contains("dog")) {
           precioCalc = "\$";
         } else if (priceLevel <= 1 && priceLevel != -1) {
@@ -334,10 +264,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         } else if (priceLevel == -1) {
           final largoNombre = nombreMin.length;
           if (largoNombre % 3 == 0) precioCalc = "\$";
-          else if (largoNombre % 7 == 0) precioCalc = "\$\$\$"; // Menos probabilidad de que salga carísimo
+          else if (largoNombre % 7 == 0) precioCalc = "\$\$\$";
         }
 
-        // 🔥 3. ETIQUETA DE EXPERIENCIA Y TRAMPA DE MOTELES
         String etiquetaAsignada = AnalizadorEtiquetas.analizarExperiencia(categoria, []) ?? "General";
         
         if (nombreMin.contains("motel")) {
@@ -347,7 +276,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
            final types = l["types"] as List<dynamic>? ?? [];
            
            if (types.contains("bar") || types.contains("liquor_store") || types.contains("cafe") || categoria == "Otro") {
-             etiquetaAsignada = "Amigos"; // Mandamos a los hoteles/otros a 'Amigos' por defecto
+             etiquetaAsignada = "Amigos";
            } else if (precioCalc == "\$\$\$") { 
              etiquetaAsignada = "En pareja";
            } else if (largoNombre % 4 == 0) {
@@ -357,9 +286,20 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
            }
         }
 
-        // 🔥 4. UBICACIÓN 
         final latGoogle = l['geometry']?['location']?['lat'] ?? l['lat'];
         final lngGoogle = l['geometry']?['location']?['lng'] ?? l['lng'];
+
+        // ========================================================
+        // 🔥 FOTOS DE GOOGLE (Con la llave que funciona en Detalle)
+        // ========================================================
+        String urlImagen = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
+        final photos = l["photos"] as List<dynamic>?;
+        if (photos != null && photos.isNotEmpty) {
+          final photoRef = photos[0]["photo_reference"].toString().trim();
+          // USAMOS TU LLAVE DIRECTA PARA EVITAR FALLOS DE DOTENV
+          final apiKey = "AIzaSyARaWdvsXGpJZD4uMUNoeAEXDoMcl3GGuQ"; 
+          urlImagen = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$photoRef&key=$apiKey";
+        }
 
         return {
           ...l,
@@ -373,11 +313,12 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           'lat': latGoogle,
           'lng': lngGoogle,
           'distancia': calcularDistancia(_latActual, _lngActual, _toDouble(latGoogle), _toDouble(lngGoogle)),
+          'imagen': urlImagen,
         };
       }).toList();
 
       // -------------------------------------------------------------------
-      // FILTRAR: BARRERA DE FUEGO RELAJADA (Adiós VIP estricto, hola todos)
+      // FILTRAR BASURA
       // -------------------------------------------------------------------
       combinados = combinados.where((l) {
         final latValida = l['lat'] != null;
@@ -388,7 +329,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
         final nombreMin = l['name'].toString().toLowerCase();
         
-        // 🔥 Solo eliminamos lo que de verdad es basura, dejamos pasar todo lo demás (Hoteles, Moteles, etc.)
         final esBasura = nombreMin.contains("walmart") || 
                          nombreMin.contains("oxxo") || 
                          nombreMin.contains("soriana") || 
@@ -405,18 +345,13 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         return !esBasura;
       }).toList();
 
-
       // -------------------------------------------------------------------
       // ELIMINAR DUPLICADOS
       // -------------------------------------------------------------------
       final Map<String, Map<String, dynamic>> unicos = {};
 
       for (final lugar in combinados) {
-        final key =
-            "${lugar['name']}"
-            "${lugar['lat']}"
-            "${lugar['lng']}";
-
+        final key = "${lugar['name']}${lugar['lat']}${lugar['lng']}";
         unicos[key] = lugar;
       }
 
@@ -448,7 +383,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       });
     } catch (e) {
       print("❌ ERROR BUSQUEDA: $e");
-
       setState(() {
         error = 'Error al buscar lugares';
         cargando = false;
@@ -461,36 +395,20 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   String _obtenerDireccion(Map<String, dynamic> l) {
     final direccion = l['direccion']?.toString().trim() ?? '';
-
-    if (direccion.isNotEmpty && direccion.toLowerCase() != 'sin dirección') {
-      return direccion;
-    }
-
+    if (direccion.isNotEmpty && direccion.toLowerCase() != 'sin dirección') return direccion;
     final categoria = _normalizarCategoria(l['categoriaPrincipal']);
-
     switch (categoria) {
-      case 'restaurante':
-        return 'Restaurante';
-      case 'cafeteria':
-        return 'Cafetería';
-      case 'bar':
-        return 'Bar';
-      case 'museo':
-        return 'Museo';
-      case 'parque':
-        return 'Parque';
-      case 'playa':
-        return 'Playa';
-      case 'mirador':
-        return 'Mirador';
-      case 'centro_comercial':
-        return 'Centro comercial';
-      case 'zona_arqueologica':
-        return 'Zona arqueológica';
-      case 'monumento':
-        return 'Monumento';
-      default:
-        return 'Lugar turístico';
+      case 'restaurante': return 'Restaurante';
+      case 'cafeteria': return 'Cafetería';
+      case 'bar': return 'Bar';
+      case 'museo': return 'Museo';
+      case 'parque': return 'Parque';
+      case 'playa': return 'Playa';
+      case 'mirador': return 'Mirador';
+      case 'centro_comercial': return 'Centro comercial';
+      case 'zona_arqueologica': return 'Zona arqueológica';
+      case 'monumento': return 'Monumento';
+      default: return 'Lugar turístico';
     }
   }
 
@@ -499,12 +417,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   String _normalizarCategoria(dynamic input) {
     if (input == null) return 'otro';
-
     final texto = input.toString().toLowerCase();
-
-    // ----------------------------------------------------------------
-    // YA NORMALIZADAS
-    // ----------------------------------------------------------------
     if (texto == 'restaurante') return 'restaurante';
     if (texto == 'cafeteria') return 'cafeteria';
     if (texto == 'bar') return 'bar';
@@ -515,98 +428,19 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     if (texto == 'zona_arqueologica') return 'zona_arqueologica';
     if (texto == 'mirador') return 'mirador';
     if (texto == 'centro_comercial') return 'centro_comercial';
-    if (texto == 'actividades_extremas') {
-      return 'actividades_extremas';
-    }
+    if (texto == 'actividades_extremas') return 'actividades_extremas';
 
-    // ----------------------------------------------------------------
-    // RESTAURANTES
-    // ----------------------------------------------------------------
-    if (texto.contains('restaurant')) return 'restaurante';
-    if (texto.contains('meal_takeaway')) return 'restaurante';
-    if (texto.contains('meal_delivery')) return 'restaurante';
-    if (texto.contains('food')) return 'restaurante';
-
-    // ----------------------------------------------------------------
-    // CAFETERÍAS
-    // ----------------------------------------------------------------
-    if (texto.contains('cafe')) return 'cafeteria';
-    if (texto.contains('coffee')) return 'cafeteria';
-    if (texto.contains('coffee_shop')) return 'cafeteria';
-    if (texto.contains('bakery')) return 'cafeteria';
-
-    // ----------------------------------------------------------------
-    // BARES
-    // ----------------------------------------------------------------
-    if (texto.contains('bar')) return 'bar';
-    if (texto.contains('night_club')) return 'bar';
-    if (texto.contains('pub')) return 'bar';
-
-    // ----------------------------------------------------------------
-    // PARQUES
-    // ----------------------------------------------------------------
-    if (texto.contains('park')) return 'parque';
-    if (texto.contains('natural')) return 'parque';
-    if (texto.contains('garden')) return 'parque';
-
-    // ----------------------------------------------------------------
-    // PLAYAS
-    // ----------------------------------------------------------------
+    if (texto.contains('restaurant') || texto.contains('meal_takeaway') || texto.contains('meal_delivery') || texto.contains('food')) return 'restaurante';
+    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('coffee_shop') || texto.contains('bakery')) return 'cafeteria';
+    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub')) return 'bar';
+    if (texto.contains('park') || texto.contains('natural') || texto.contains('garden')) return 'parque';
     if (texto.contains('beach')) return 'playa';
-
-    // ----------------------------------------------------------------
-    // MUSEOS
-    // ----------------------------------------------------------------
-    if (texto.contains('museum')) return 'museo';
-    if (texto.contains('art_gallery')) return 'museo';
-
-    // ----------------------------------------------------------------
-    // MONUMENTOS
-    // ----------------------------------------------------------------
-    if (texto.contains('historic')) return 'monumento';
-    if (texto.contains('monument')) return 'monumento';
-
-    // ----------------------------------------------------------------
-    // ZONAS ARQUEOLÓGICAS
-    // ----------------------------------------------------------------
-    if (texto.contains('archaeology')) {
-      return 'zona_arqueologica';
-    }
-
-    // ----------------------------------------------------------------
-    // MIRADORES
-    // ----------------------------------------------------------------
+    if (texto.contains('museum') || texto.contains('art_gallery')) return 'museo';
+    if (texto.contains('historic') || texto.contains('monument')) return 'monumento';
+    if (texto.contains('archaeology')) return 'zona_arqueologica';
     if (texto.contains('view')) return 'mirador';
-
-    // ----------------------------------------------------------------
-    // CENTROS COMERCIALES
-    // ----------------------------------------------------------------
-    if (texto.contains('shopping')) {
-      return 'centro_comercial';
-    }
-
-    if (texto.contains('shopping_mall')) {
-      return 'centro_comercial';
-    }
-
-    if (texto.contains('department_store')) {
-      return 'centro_comercial';
-    }
-
-    if (texto.contains('mall')) {
-      return 'centro_comercial';
-    }
-
-    // ----------------------------------------------------------------
-    // ACTIVIDADES
-    // ----------------------------------------------------------------
-    if (texto.contains('sport')) {
-      return 'actividades_extremas';
-    }
-
-    if (texto.contains('amusement_park')) {
-      return 'actividades_extremas';
-    }
+    if (texto.contains('shopping') || texto.contains('shopping_mall') || texto.contains('department_store') || texto.contains('mall')) return 'centro_comercial';
+    if (texto.contains('sport') || texto.contains('amusement_park')) return 'actividades_extremas';
 
     return 'otro';
   }
@@ -616,19 +450,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   double calcularDistancia(double lat1, double lng1, double lat2, double lng2) {
     const R = 6371;
-
     final dLat = (lat2 - lat1) * (pi / 180);
     final dLng = (lng2 - lng1) * (pi / 180);
-
-    final a =
-        sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * (pi / 180)) *
-            cos(lat2 * (pi / 180)) *
-            sin(dLng / 2) *
-            sin(dLng / 2);
-
+    final a = sin(dLat / 2) * sin(dLat / 2) + cos(lat1 * (pi / 180)) * cos(lat2 * (pi / 180)) * sin(dLng / 2) * sin(dLng / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
     return R * c;
   }
 
@@ -638,35 +463,20 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
     return lista.map((lugar) {
       final rating = _toDouble(lugar['rating'], fb: 5);
-
       final popularity = _toDouble(lugar['popularity'], fb: 5);
-
       final distancia = _toDouble(lugar['distancia'], fb: 1);
-
       final categoria = lugar['categoriaPrincipal'].toString().toLowerCase();
 
       double distanciaPeso = 10 / (distancia + 1);
-
-      if (distanciaPeso > 10) {
-        distanciaPeso = 10;
-      }
+      if (distanciaPeso > 10) distanciaPeso = 10;
 
       double interes = 0;
-
       if (_intereses.containsKey(categoria)) {
         final puntos = _intereses[categoria];
-
-        if (puntos is int) {
-          interes = puntos >= 8 ? 10 : puntos * 1.25;
-        }
+        if (puntos is int) interes = puntos >= 8 ? 10 : puntos * 1.25;
       }
 
-      lugar['relevancia'] =
-          (rating * 0.4) +
-          (popularity * 0.2) +
-          (distanciaPeso * 0.2) +
-          (interes * 0.2);
-
+      lugar['relevancia'] = (rating * 0.4) + (popularity * 0.2) + (distanciaPeso * 0.2) + (interes * 0.2);
       return lugar;
     }).toList();
   }
@@ -676,21 +486,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _quickSort(List<Map<String, dynamic>> lista) {
     if (lista.length <= 1) return lista;
-
     final pivote = _toDouble(lista[lista.length ~/ 2]['relevancia']);
-
-    final mayores = lista.where((e) {
-      return _toDouble(e['relevancia']) > pivote;
-    }).toList();
-
-    final iguales = lista.where((e) {
-      return _toDouble(e['relevancia']) == pivote;
-    }).toList();
-
-    final menores = lista.where((e) {
-      return _toDouble(e['relevancia']) < pivote;
-    }).toList();
-
+    final mayores = lista.where((e) => _toDouble(e['relevancia']) > pivote).toList();
+    final iguales = lista.where((e) => _toDouble(e['relevancia']) == pivote).toList();
+    final menores = lista.where((e) => _toDouble(e['relevancia']) < pivote).toList();
     return [..._quickSort(mayores), ...iguales, ..._quickSort(menores)];
   }
 
@@ -699,37 +498,27 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _top5(List<Map<String, dynamic>> lista) {
     final Map<String, Map<String, dynamic>> categorias = {};
-
     final List<Map<String, dynamic>> res = [];
 
     for (final l in lista) {
       final categoria = l['categoriaPrincipal']?.toString() ?? 'otro';
-
-      if (!categorias.containsKey(categoria)) {
-        categorias[categoria] = l;
-      }
+      if (!categorias.containsKey(categoria)) categorias[categoria] = l;
     }
-
     res.addAll(categorias.values);
 
     for (final l in lista) {
       if (res.length >= 5) break;
-
-      if (!res.contains(l)) {
-        res.add(l);
-      }
+      if (!res.contains(l)) res.add(l);
     }
-
     return res.take(5).toList();
   }
 
   // -------------------------------------------------------------------------
-  // FILTROS
+  // FILTROS 🔥 AQUÍ INYECTAMOS EL FILTRO VIP 
   // -------------------------------------------------------------------------
- List<Map<String, dynamic>> get _lugaresFiltrados {
+  List<Map<String, dynamic>> get _lugaresFiltrados {
     List<Map<String, dynamic>> filtrados = List.from(lugares);
 
-    // Función rápida para quitar acentos y hacer minúsculas
     String normalizar(String texto) {
       return texto.toLowerCase().trim()
           .replaceAll(RegExp(r'[áäâà]'), 'a')
@@ -740,7 +529,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           .replaceAll(RegExp(r'[ñ]'), 'n');
     }
 
-    // TEXTO 
     if (query.isNotEmpty) {
       final queryLimpio = normalizar(query);
       filtrados = filtrados.where((l) {
@@ -749,17 +537,14 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       }).toList();
     }
 
-    // CATEGORÍA (A prueba de acentos y errores ortográficos) 🔥
     if (tipoSeleccionado != null) {
       final tipoLimpio = normalizar(tipoSeleccionado!);
       filtrados = filtrados.where((l) {
         final catLugar = normalizar(l['categoriaPrincipal'].toString());
-        // Si el botón dice "cafeteria" y el lugar es "cafeteria", o viceversa, ¡pasa!
         return catLugar == tipoLimpio || catLugar.contains(tipoLimpio) || tipoLimpio.contains(catLugar);
       }).toList();
     }
 
-    // EXPERIENCIA (A prueba de acentos)
     if (estiloSeleccionado != null) {
       final estiloLimpio = normalizar(estiloSeleccionado!);
       filtrados = filtrados.where((l) {
@@ -768,12 +553,38 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       }).toList();
     }
 
-    // PRECIO
     if (precioSeleccionado != null) {
       filtrados = filtrados.where((l) {
         return l['precio'] == precioSeleccionado;
       }).toList();
     }
+
+    // 🔥 EL TOQUE MÁGICO: ORDENAMIENTO POR RELEVANCIA (Tu Filtro VIP original)
+    // Esto evita que "Pizza Hut" salga primero, dándole prioridad a lugares de alta calidad.
+    filtrados.sort((a, b) {
+      // 1. Obtenemos las estrellas de Google (rating)
+      double ratingA = _toDouble(a['rating'], fb: 0.0);
+      double ratingB = _toDouble(b['rating'], fb: 0.0);
+
+      // 2. Obtenemos la cantidad de reseñas (para desempatar)
+      int reviewsA = _toDouble(a['popularity'] ?? a['user_ratings_total'], fb: 0.0).toInt();
+      int reviewsB = _toDouble(b['popularity'] ?? b['user_ratings_total'], fb: 0.0).toInt();
+
+      // 3. Calculamos un "Puntaje Pack&Go"
+      // Le damos un bonus a los lugares que tienen más de 100 reseñas (son más confiables)
+      double scoreA = ratingA + (reviewsA > 100 ? 0.5 : 0.0);
+      double scoreB = ratingB + (reviewsB > 100 ? 0.5 : 0.0);
+
+      // 4. Castigamos un poquito a las cadenas de comida rápida para que bajen en la lista
+      final nombreA = a['name'].toString().toLowerCase();
+      final nombreB = b['name'].toString().toLowerCase();
+      
+      if (nombreA.contains('pizza hut') || nombreA.contains('burger king') || nombreA.contains('kfc') || nombreA.contains('mcdonald') || nombreA.contains('subway') || nombreA.contains('starbucks')) scoreA -= 2.0;
+      if (nombreB.contains('pizza hut') || nombreB.contains('burger king') || nombreB.contains('kfc') || nombreB.contains('mcdonald') || nombreB.contains('subway') || nombreB.contains('starbucks')) scoreB -= 2.0;
+
+      // Comparamos para que el puntaje MÁS ALTO quede HASTA ARRIBA
+      return scoreB.compareTo(scoreA); 
+    });
 
     return filtrados;
   }
@@ -783,15 +594,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   double _toDouble(dynamic v, {double fb = 0}) {
     if (v == null) return fb;
-
     if (v is double) return v;
-
     if (v is int) return v.toDouble();
-
-    if (v is String) {
-      return double.tryParse(v) ?? fb;
-    }
-
+    if (v is String) return double.tryParse(v) ?? fb;
     return fb;
   }
 
@@ -802,88 +607,46 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         title: Text('Pack&Go', style: GoogleFonts.poppins(fontSize: 36)),
       ),
-
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-
         child: Column(
           children: [
             const SizedBox(height: 16),
-
-            // -------------------------------------------------------------
-            // BARRA
-            // -------------------------------------------------------------
             BarraBusqueda(
               onChanged: (v) {
-                setState(() {
-                  query = v;
-                });
-
-                if (v.length >= 3) {
-                  _buscar(texto: v);
-                }
-
-                if (v.isEmpty) {
-                  _buscar();
-                }
+                setState(() => query = v);
+                if (v.length >= 3) _buscar(texto: v);
+                if (v.isEmpty) _buscar();
               },
             ),
-
             const SizedBox(height: 12),
-
-            // -------------------------------------------------------------
-            // FILTROS
-            // -------------------------------------------------------------
             FiltrosBusqueda(
               destinoSeleccionado: destinoSeleccionado,
-
               tipoSeleccionado: tipoSeleccionado,
-
               estiloSeleccionado: estiloSeleccionado,
-
               precioSeleccionado: precioSeleccionado,
-
               onDestinoChanged: (v) {
-                setState(() {
-                  destinoSeleccionado = v;
-                });
-
+                setState(() => destinoSeleccionado = v);
                 _buscar(texto: query);
               },
-
               onTipoChanged: (v) {
-                setState(() {
-                  tipoSeleccionado = v;
-                });
-
+                setState(() => tipoSeleccionado = v);
                 _buscar(texto: query);
               },
-
               onEstiloChanged: (v) {
-                setState(() {
-                  estiloSeleccionado = v;
-                });
+                setState(() => estiloSeleccionado = v);
               },
-
               onPrecioChanged: (v) {
-                setState(() {
-                  precioSeleccionado = v;
-                });
+                setState(() => precioSeleccionado = v);
               },
             ),
-
             const SizedBox(height: 16),
-
-            // -------------------------------------------------------------
-            // LISTA
-            // -------------------------------------------------------------
             Expanded(child: _buildLista()),
           ],
         ),
@@ -895,9 +658,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // LISTA
   // -------------------------------------------------------------------------
   Widget _buildLista() {
-    if (cargando) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (cargando) return const Center(child: CircularProgressIndicator());
 
     if (error != null) {
       return Center(
@@ -905,17 +666,11 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey),
-
             const SizedBox(height: 8),
-
             Text(error!, style: const TextStyle(color: Colors.grey)),
-
             const SizedBox(height: 12),
-
             TextButton(
-              onPressed: () {
-                _buscar(texto: query);
-              },
+              onPressed: () => _buscar(texto: query),
               child: const Text('Reintentar'),
             ),
           ],
@@ -936,19 +691,12 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
               padding: EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 "No hay lugares con estas características.",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                 textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 20),
             
-            //  Lógica de descarte inteligente basada en tu jerarquía
-            // Sugiere quitar primero lo menos importante (Precio)
-            // 1. PRIMERO EVALÚA EL PRECIO
             if (precioSeleccionado != null) ...[
               Text("¿Deseas eliminar el filtro de precio '$precioSeleccionado'?"),
               TextButton(
@@ -958,7 +706,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                 },
                 child: const Text("Quitar filtro de precio", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
               ),
-            // 2. LUEGO LA EXPERIENCIA
             ] else if (estiloSeleccionado != null) ...[
               Text("¿Deseas eliminar el tipo de experiencia '$estiloSeleccionado'?"),
               TextButton(
@@ -968,7 +715,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                 },
                 child: const Text("Quitar experiencia", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
               ),
-            // 3. LUEGO LA CATEGORÍA (TIPO)
             ] else if (tipoSeleccionado != null) ...[
               Text("¿Deseas eliminar la categoría '$tipoSeleccionado'?"),
               TextButton(
@@ -986,24 +732,18 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
     return ListView.builder(
       itemCount: filtrados.length,
-
       itemBuilder: (context, index) {
         final l = filtrados[index];
 
         return TarjetaLugar(
           nombre: l['name']?.toString() ?? 'Sin nombre',
-
           ubicacion: l['direccion']?.toString() ?? 'Sin dirección',
-
           lat: _toDouble(l['lat']),
           lng: _toDouble(l['lng']),
-
           categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
-
+          imagenUrl: l['imagen']?.toString() ?? '', 
+          lugar: l, // 🔥 EL PUENTE MÁGICO QUE LE MANDA LOS DATOS A LA TARJETA
           onTap: () {
-            // ---------------------------------------------------
-            // SI VIENE DESDE ITINERARIO
-            // ---------------------------------------------------
             if (widget.esSeleccion) {
               Navigator.pop(context, {
                 "nombre": l['name'],
@@ -1011,20 +751,19 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                 "lat": l['lat'],
                 "lng": l['lng'],
                 "hours": l['hours'],
-                "foto": l['photo'],
+                "foto": l['imagen'] ?? l['photo'], 
                 "direccion": l['direccion'],
                 "rating": l['rating'],
               });
-
               return;
             }
 
-            // ---------------------------------------------------
-            // MODO NORMAL
-            // ---------------------------------------------------
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => LugarDetallePantalla(lugar: l)),
+              MaterialPageRoute(builder: (_) => LugarDetallePantalla(
+                lugar: l,
+                imagenUrl: l['imagen'], 
+              )),
             );
           },
         );

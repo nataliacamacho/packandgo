@@ -1,143 +1,60 @@
-// lib/nucleo/utilidades/analizador_etiquetas.dart
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AnalizadorEtiquetas {
-  // El umbral que definieron en el documento
-  static const double UMBRAL_MINIMO = 8.0;
+  
+  // ====================================================================
+  // 🔥 1. EL SALVAVIDAS: Tu función original para que Búsqueda no explote
+  // ====================================================================
+  static String? analizarExperiencia(String categoria, List<dynamic> tags) {
+    // Retorna null para que tu búsqueda use el "General" y su propia lógica local
+    return null; 
+  }
 
-  // Tu lista de palabras ignoradas para evitar falsos positivos
-  static const List<String> _listaNegra = [
-    'bonito', 'agradable', 'bueno', 'lindo', 'bien', 'mal', 'feo'
-  ];
+  // ====================================================================
+  // 🚀 2. LA FÁBRICA NUEVA: La usaremos después para limpiar el código
+  // ====================================================================
+  static Map<String, dynamic> enriquecerLugar(Map<String, dynamic> l) {
+    final nombreCrudo = l['name'] ?? l['properties']?['name'] ?? 'Sin nombre';
+    final String nombreMin = nombreCrudo.toString().toLowerCase();
 
-  // El diccionario exacto de palabras y pesos según el documento
-  // Estructura: Categoria -> Etiqueta Experiencia -> Palabra -> Peso
-  static const Map<String, Map<String, Map<String, double>>> _diccionarioPesos = {
-    "restaurante": {
-      "Familiar": {
-        "niños": 5.0, "comida": 2.0, "menú infantil": 5.0, 
-        "divertido": 3.0, "seguro": 4.0, "amable": 2.0
-      },
-      "Amigos": {
-        "comida": 2.0, "bebidas": 4.0, "social": 5.0, 
-        "animado": 4.0, "grupo": 5.0, "ambiente": 3.0
-      },
-      "Solo": {
-        "tranquilo": 4.0, "personal": 3.0, "lectura": 5.0, 
-        "relajante": 4.0, "atento": 2.0
-      },
-      "En pareja": {
-        "romántico": 5.0, "íntimo": 5.0, "cena": 3.0, 
-        "elegante": 4.0, "acogedor": 3.0, "especial": 4.0
-      }
-    },
-    "parque": {
-      "Familiar": {
-        "niños": 5.0, "picnic": 4.0, "juegos": 5.0, 
-        "seguro": 4.0, "paseo": 3.0, "educativo": 3.0, "verde": 2.0
-      },
-      "Amigos": {
-        "grupo": 5.0, "diversión": 3.0, "paseo": 2.0, 
-        "animado": 4.0, "deporte": 5.0
-      },
-      "Solo": {
-        "tranquilo": 4.0, "relajante": 4.0, "naturaleza": 3.0, 
-        "paseo": 2.0, "lectura": 5.0
-      },
-      "En pareja": {
-        "romántico": 5.0, "tranquilo": 4.0, "paseo": 2.0, 
-        "vista": 4.0, "especial": 4.0
-      }
-    },
-    // Nota: Aquí se agregarían las demás de tus 11 categorías siguiendo el mismo patrón
-  };
+    final types = l["types"] as List<dynamic>? ?? []; 
+    final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "").toString(); 
+    final datosCrudos = types.join(",") + "," + kinds.toLowerCase(); 
 
-  /// Analiza una lista de reseñas de un lugar y devuelve la mejor etiqueta de experiencia.
-  /// Si ninguna supera los 8 puntos, devuelve null (se queda la de por defecto).
-  static String? analizarExperiencia(String categoriaLugar, List<String> resenas) {
-    String categoria = categoriaLugar.toLowerCase();
-    
-    // Si no tenemos diccionario para esta categoría, salimos
-    if (!_diccionarioPesos.containsKey(categoria)) return null;
+    String categoria = "Otro";
+    if (nombreMin.contains("café") || nombreMin.contains("cafe") || nombreMin.contains("coffee") || nombreMin.contains("cafeteria")) categoria = "Cafetería";
+    else if (datosCrudos.contains("restaurant") || datosCrudos.contains("food")) categoria = "Restaurante";
+    else if (datosCrudos.contains("bar") || datosCrudos.contains("night_club") || datosCrudos.contains("pub")) categoria = "Bar";
+    else if (datosCrudos.contains("park") || datosCrudos.contains("nature")) categoria = "Parque";
+    else if (datosCrudos.contains("museum") || datosCrudos.contains("art")) categoria = "Museo";
 
-    Map<String, double> puntajesTotales = {
-      "Familiar": 0.0,
-      "Amigos": 0.0,
-      "Solo": 0.0,
-      "En pareja": 0.0
+    int priceLevel = l["price_level"] ?? -1; 
+    String precioCalc = "\$\$"; 
+    if (nombreMin.contains("mcdonald") || nombreMin.contains("burger") || nombreMin.contains("pizza") || nombreMin.contains("taco") || nombreMin.contains("kfc") || nombreMin.contains("vips")) precioCalc = "\$";
+    else if (priceLevel <= 1 && priceLevel != -1) precioCalc = "\$";
+    else if (priceLevel >= 3) precioCalc = "\$\$\$";
+
+    String etiquetaAsignada = "General";
+    if (nombreMin.contains("motel")) etiquetaAsignada = "En pareja";
+    else if (types.contains("bar") || types.contains("liquor_store") || categoria == "Bar") etiquetaAsignada = "Amigos";
+
+    String urlImagen = "";
+    final photos = l["photos"] as List<dynamic>?;
+    if (photos != null && photos.isNotEmpty) {
+      final photoRef = photos[0]["photo_reference"].toString().trim();
+      final apiKey = dotenv.env['GOOGLE_API_KEY'] ?? "AIzaSyARaWdvsXGpJZD4uMUNoeAEXDoMcl3GGuQ";
+      urlImagen = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$photoRef&key=$apiKey";
+    } else if (l['imagen'] != null) {
+      urlImagen = l['imagen'];
+    }
+
+    return {
+      ...l,
+      'name': nombreCrudo,
+      'categoriaPrincipal': categoria,
+      'experiencia': etiquetaAsignada,
+      'precio': precioCalc,
+      'imagen': urlImagen,
     };
-
-    // 1. Limpiar y juntar todas las reseñas en un solo texto gigante
-    String textoCompleto = resenas.join(" ").toLowerCase();
-
-    // 2. Filtrar lista negra (reemplazar esas palabras por vacío)
-    for (String palabraProhibida in _listaNegra) {
-      textoCompleto = textoCompleto.replaceAll(palabraProhibida, "");
-    }
-
-    // 3. Analizar palabra por palabra contra el diccionario
-    Map<String, Map<String, double>> diccionarioCategoria = _diccionarioPesos[categoria]!;
-
-    diccionarioCategoria.forEach((experiencia, palabrasClave) {
-      double puntajeEtiqueta = 0.0;
-
-      palabrasClave.forEach((palabra, peso) {
-        // Contar cuántas veces aparece la palabra clave en el texto
-        int ocurrencias = palabra.allMatches(textoCompleto).length;
-        
-        if (ocurrencias > 0) {
-          // Lógica de Peso Normalizado (penalización)
-          double pesoNormalizado = _calcularPesoNormalizado(categoria, palabra, peso);
-          
-          // PuntajeEtiqueta = Sumatoria de (peso * veces que apareció)
-          puntajeEtiqueta += (pesoNormalizado * ocurrencias);
-        }
-      });
-
-      puntajesTotales[experiencia] = puntajeEtiqueta;
-    });
-
-    // 4. Buscar la experiencia ganadora que supere el umbral
-    String experienciaGanadora = "";
-    double puntajeMaximo = 0.0;
-
-    puntajesTotales.forEach((experiencia, puntaje) {
-      if (puntaje > puntajeMaximo && puntaje >= UMBRAL_MINIMO) {
-        puntajeMaximo = puntaje;
-        experienciaGanadora = experiencia;
-      }
-    });
-
-    return experienciaGanadora.isNotEmpty ? experienciaGanadora : _obtenerEtiquetaPorDefecto(categoria);
-  }
-
-  /// Calcula el peso normalizado: peso / numero de categorías donde aparece
-  static double _calcularPesoNormalizado(String categoria, String palabra, double pesoOriginal) {
-    int nCategoriasAparece = 0;
-    
-    _diccionarioPesos[categoria]!.forEach((exp, palabras) {
-      if (palabras.containsKey(palabra)) {
-        nCategoriasAparece++;
-      }
-    });
-
-    // Fórmula: pesoNormalizado = pesopalabra / ncategorias
-    return nCategoriasAparece > 0 ? (pesoOriginal / nCategoriasAparece) : pesoOriginal;
-  }
-
-  static String _obtenerEtiquetaPorDefecto(String categoria) {
-    switch (categoria.toLowerCase()) {
-      case "restaurante": return "Familiar"; 
-      case "parque": return "Familiar";
-      case "museo": return "Familiar";
-      case "playa": return "Familiar";
-      case "zona arqueológica": return "Familiar";
-      case "centro comercial": return "Familiar";
-      case "mirador": return "En pareja";
-      case "cafetería": return "Amigos";
-      case "bar": return "Amigos";
-      case "actividades extremas": return "Amigos";
-      case "monumento": return "Solo";
-      default: return "General";
-    }
   }
 }

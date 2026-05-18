@@ -233,8 +233,11 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        LugarDetallePantalla(lugar: lugar),
+                                                                                  builder: (_) => LugarDetallePantalla(
+                                      lugar: lugar,
+                        // 🔥 Le pasamos la foto de Natalia ('foto') a la variable que acabamos de crear
+                                      imagenUrl: lugar['foto'] ?? "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
+                                   ),
                                   ),
                                 );
                               },

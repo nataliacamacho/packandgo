@@ -14,12 +14,8 @@ Future<void> main() async {
 
   await Firebase.initializeApp();
 
-  MapboxOptions.setAccessToken('');
-  if (!kIsWeb) {
-    MapboxOptions.setAccessToken(
-      dotenv.env['MAPBOX_ACCESS_TOKEN']?.trim() ?? '',
-    );
-  }
+  String mapboxToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? ""; 
+  MapboxOptions.setAccessToken(mapboxToken);
 
   runApp(const PackandGo());
 }
