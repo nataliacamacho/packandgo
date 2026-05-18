@@ -42,8 +42,8 @@ class AnalizadorEtiquetas {
     final photos = l["photos"] as List<dynamic>?;
     if (photos != null && photos.isNotEmpty) {
       final photoRef = photos[0]["photo_reference"].toString().trim();
-      final apiKey = dotenv.env['GOOGLE_API_KEY'] ?? "AIzaSyARaWdvsXGpJZD4uMUNoeAEXDoMcl3GGuQ";
-      urlImagen = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$photoRef&key=$apiKey";
+// Línea 45 corregida: si no encuentra la variable en el .env, queda vacía en lugar de exponer la llave
+      final apiKey = dotenv.env['GOOGLE_API_KEY'] ?? "";      urlImagen = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$photoRef&key=$apiKey";
     } else if (l['imagen'] != null) {
       urlImagen = l['imagen'];
     }
