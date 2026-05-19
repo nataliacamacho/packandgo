@@ -76,10 +76,34 @@ class FiltrosEtiquetasServicio {
     return fb;
   }
 
-  /// Valida si el destino consultado se encuentra dentro del catálogo nacional mexicano
+/// Valida si el destino consultado se encuentra dentro del catálogo nacional mexicano
   Future<bool> validarDestinoEnMexico(String destino, List<String> ciudadesValidas) async {
-    String normalizado = destino.toLowerCase().trim();
-    return ciudadesValidas.any((c) => c.toLowerCase().trim() == normalizado);
+    String destinoNormalizado = destino.toLowerCase().trim();
+
+    // 🔥 EXCEPCIÓN GEOGRÁFICA CRÍTICA: Forzar el contexto de México para "La Paz"
+    if (destinoNormalizado == 'la paz' || destinoNormalizado == 'lapaz') {
+      destinoNormalizado = 'la paz baja california sur';
+    }
+
+    String normalizado = destinoNormalizado
+        .replaceAll(RegExp(r'[áäâà]'), 'a')
+        .replaceAll(RegExp(r'[éëêè]'), 'e')
+        .replaceAll(RegExp(r'[íïîì]'), 'i')
+        .replaceAll(RegExp(r'[óöôò]'), 'o')
+        .replaceAll(RegExp(r'[úüûù]'), 'u');
+
+    // Revisamos si el de la barra o botón coincide con nuestro catálogo local
+    return ciudadesValidas.any((c) {
+      String ciudadNorm = c.toLowerCase().trim()
+        .replaceAll(RegExp(r'[áäâà]'), 'a')
+        .replaceAll(RegExp(r'[éëêè]'), 'e')
+        .replaceAll(RegExp(r'[íïîì]'), 'i')
+        .replaceAll(RegExp(r'[óöôò]'), 'o')
+        .replaceAll(RegExp(r'[úüûù]'), 'u');
+      
+      // Si el destino es nuestra excepción forzada, la subcadena "la paz" pasará la validación con éxito
+      return normalizado.contains(ciudadNorm) || ciudadNorm.contains(normalizado) || 'la paz'.contains(ciudadNorm);
+    });
   }
 
   /// Genera una firma única MD5 para el control de peticiones repetidas

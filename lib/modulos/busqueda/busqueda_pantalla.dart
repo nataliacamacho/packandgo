@@ -259,7 +259,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
       // 🔽 VALIDACIÓN DE DESTINO DENTRO DE MÉXICO (MÁSESTRICTA Y REFINADA)
       // Tomamos lo que esté en la barra de texto o lo que esté seleccionado en el filtro
-      String destinoAValidar = texto.isNotEmpty ? texto : (destinoSeleccionado ?? '');
+      String textoLimpio = texto.trim();
+      String destinoAValidar = textoLimpio.isNotEmpty ? textoLimpio : (destinoSeleccionado ?? '');
 
       if (destinoAValidar.isNotEmpty) {
         // Extraemos solo los nombres de tus ciudades en México
@@ -287,10 +288,16 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       try {
           await _resolverCoordenadas();
 
+          // Forzar contexto geográfico para la consulta de las APIs
+      String textoConsultaApi = texto.trim();
+      if (textoConsultaApi.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'lapaz') {
+        textoConsultaApi = "La Paz, Baja California Sur, Mexico";
+      }
+
       final google = await GooglePlacesServicio.buscarLugares(
         _latActual,
         _lngActual,
-        query: texto,
+        query: textoConsultaApi,
         tipo: tipoSeleccionado,
       );
       for (var lugar in google.take(3)) {
@@ -302,7 +309,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       final open = await OpenTripMapServicio.buscarLugaresCulturales(
         _latActual,
         _lngActual,
-        query: texto,
+        query: textoConsultaApi,
         tipo: tipoSeleccionado,
       );
 
@@ -504,6 +511,14 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
         return !esBasura;
       }).toList();
+      if (combinados.isEmpty && destinoAValidar.isNotEmpty) {
+        setState(() {
+          error = "Por ahora, solo trabajamos con destinos dentro de México.";
+          lugares = [];
+          cargando = false;
+        });
+        return;
+      }
 
       // -------------------------------------------------------------------
       // ELIMINAR DUPLICADOS
@@ -1027,13 +1042,14 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                         // 🔍 BUSCADOR
                         BarraBusqueda(
                           onChanged: (v) {
-                            setState(() => query = v);
+                            final textoLimpio = v.trim();
+                            setState(() => query = textoLimpio);
 
-                            if (v.length >= 3) {
-                              _buscar(texto: v);
+                            if (textoLimpio.length >= 3) {
+                              _buscar(texto: textoLimpio);
                             }
 
-                            if (v.isEmpty) {
+                            if (textoLimpio.isEmpty) {
                               _buscar();
                             }
                           },
