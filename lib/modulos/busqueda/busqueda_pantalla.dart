@@ -262,43 +262,16 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         ? textoLimpio 
         : (destinoSeleccionado ?? '').toLowerCase().trim();
 
-    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO SINO ACENTOS)
+   // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
     if (destinoAValidar.isNotEmpty) {
-      // Función interna rápida para quitar acentos y caracteres especiales
-      String removerAcentes(String texto) {
-        return texto.toLowerCase().trim()
-            .replaceAll(RegExp(r'[áäâà]'), 'a')
-            .replaceAll(RegExp(r'[éëêè]'), 'e')
-            .replaceAll(RegExp(r'[íïîì]'), 'i')
-            .replaceAll(RegExp(r'[óöôò]'), 'o')
-            .replaceAll(RegExp(r'[úüûù]'), 'u')
-            .replaceAll(RegExp(r'[ñ]'), 'n');
-      }
-
-      String destinoLimpioDeAcentos = removerAcentes(destinoAValidar);
-
-      // Extraemos y limpiamos los nombres e IDs de tu lista estática de ciudades
-      List<String> ciudadesCatalogo = [];
-      for (var c in _ciudadesMexico) {
-        if (c['nombre'] != null) ciudadesCatalogo.add(removerAcentes(c['nombre'].toString()));
-        if (c['id'] != null) ciudadesCatalogo.add(removerAcentes(c['id'].toString()));
-      }
-
-      // Verificamos si lo que escribió o seleccionó el usuario coincide con tu catálogo mexicano
-      bool esCiudadMexicanaValida = ciudadesCatalogo.any((ciudad) => 
-          destinoLimpioDeAcentos == ciudad || 
-          destinoLimpioDeAcentos.contains(ciudad) || 
-          ciudad.contains(destinoLimpioDeAcentos));
-
-      // Filtro estricto para palabras internacionales reales que no están en México
+      // Filtro estricto únicamente para palabras internacionales reales prohibidas
       final esPalabraInternacional = 
-          destinoLimpioDeAcentos == "paris" || 
-          destinoLimpioDeAcentos == "bolivia" || 
-          destinoLimpioDeAcentos == "francia" || 
-          destinoLimpioDeAcentos == "europa";
+          destinoAValidar == "paris" || 
+          destinoAValidar == "bolivia" || 
+          destinoAValidar == "francia" || 
+          destinoAValidar == "europa";
 
-      // Si de verdad no está en tu catálogo o es una palabra internacional prohibida, bloqueamos
-      if (!esCiudadMexicanaValida || esPalabraInternacional) {
+      if (esPalabraInternacional) {
         setState(() {
           error = "Por ahora, solo trabajamos con destinos dentro de México.";
           lugares = []; 
@@ -306,6 +279,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         });
         return; 
       }
+      
+      // NOTA: Si busca términos generales ("tacos") o municipios aledaños ("Jocotepec"), 
+      // el flujo continuará nativamente usando tus coordenadas base del estado de Jalisco.
     }
 
     // 3. CONTINUACIÓN DEL FLUJO NORMAL (Si pasa el candado, empieza la búsqueda)
@@ -361,6 +337,18 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
             nombreMin.contains("coffee") ||
             nombreMin.contains("cafeteria")) {
           categoria = "Cafetería";
+        }
+        // 🏖️ APERTURA DETECTORA DE PLAYAS
+        final types = l["tipos_raw"] as List<dynamic>? ?? [];
+        final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "").toString().toLowerCase();
+        final datosCrudos = types.join(",") + "," + kinds;
+
+        if (datosCrudos.contains("beach") || 
+            datosCrudos.contains("sea") || 
+            datosCrudos.contains("coast") || 
+            nombreMin.contains("playa") || 
+            nombreMin.contains("beach")) {
+          categoria = "playa";
         }
 
         String catMin = categoria.toLowerCase();
@@ -461,8 +449,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
             precioCalc = "\$";
           }
         }
-        final types = l["tipos_raw"] as List<dynamic>? ?? [];
-
         final latGoogle = l['geometry']?['location']?['lat'] ?? l['lat'];
         final lngGoogle = l['geometry']?['location']?['lng'] ?? l['lng'];
         String urlImagen = l['foto']?.toString() ?? l['imagen']?.toString() ?? "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
