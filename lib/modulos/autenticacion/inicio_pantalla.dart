@@ -19,7 +19,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
   String? errorCorreo;
   String? errorPassword;
-  
+
   @override
   void initState() {
     super.initState();
@@ -31,35 +31,65 @@ class _LoginPantallaState extends State<LoginPantalla> {
     passwordController.dispose();
     super.dispose();
   }
-  //ya no es necesario, pero lo dejo por si acaso 
-  void inyectarListaNegra() async {
-  List<String> listaMala = [
-    'pendejo', 'pendeja', 'pendejos', 'pendejas',
-    'cabron', 'cabrón', 'cabrona', 'cabrones',
-    'puto', 'puta', 'putos', 'putas',
-    'mierda', 'mierdas',
-    'pinche', 'pinches',
-    'idiota', 'idiotas',
-    'estupido', 'estúpido', 'estupida', 'estúpida',
-    'imbecil', 'imbécil', 'imbeciles',
-    'verga', 'v3rga', 'pito', 'culo', 'culero', 'culera',
-    'mamada', 'mamadas',
-    'chingar', 'chinga', 'chingas', 'chingada', 'chingado', 'chingaquedito'
-  ];
 
-  try {
-    await FirebaseFirestore.instance
-        .collection('configuracion')
-        .doc('filtros_comunidad')
-        .set({
-          'palabras_prohibidas': listaMala
-        }, SetOptions(merge: true)); // merge evita que borres otros campos si ya los tenías
-        
-    print("✅ ¡Lista negra inyectada en Firebase de un solo golpe!");
-  } catch (e) {
-    print("❌ Error: $e");
+  //ya no es necesario, pero lo dejo por si acaso
+  void inyectarListaNegra() async {
+    List<String> listaMala = [
+      'pendejo',
+      'pendeja',
+      'pendejos',
+      'pendejas',
+      'cabron',
+      'cabrón',
+      'cabrona',
+      'cabrones',
+      'puto',
+      'puta',
+      'putos',
+      'putas',
+      'mierda',
+      'mierdas',
+      'pinche',
+      'pinches',
+      'idiota',
+      'idiotas',
+      'estupido',
+      'estúpido',
+      'estupida',
+      'estúpida',
+      'imbecil',
+      'imbécil',
+      'imbeciles',
+      'verga',
+      'v3rga',
+      'pito',
+      'culo',
+      'culero',
+      'culera',
+      'mamada',
+      'mamadas',
+      'chingar',
+      'chinga',
+      'chingas',
+      'chingada',
+      'chingado',
+      'chingaquedito',
+    ];
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('configuracion')
+          .doc('filtros_comunidad')
+          .set(
+            {'palabras_prohibidas': listaMala},
+            SetOptions(merge: true),
+          ); // merge evita que borres otros campos si ya los tenías
+
+      print("✅ ¡Lista negra inyectada en Firebase de un solo golpe!");
+    } catch (e) {
+      print("❌ Error: $e");
+    }
   }
-}
 
   Future<void> obtenerUbicacion() async {
     final posicion = await ubicacionServicio.obtenerUbicacionActual();
@@ -79,49 +109,41 @@ class _LoginPantallaState extends State<LoginPantalla> {
     });
 
     if (correoController.text.isEmpty) {
-      setState(() {
-        errorCorreo = "El correo es obligatorio";
-      });
+      setState(() => errorCorreo = "El correo es obligatorio");
       return;
     }
 
     if (passwordController.text.isEmpty) {
-      setState(() {
-        errorPassword = "La contraseña es obligatoria";
-      });
+      setState(() => errorPassword = "La contraseña es obligatoria");
       return;
     }
 
     try {
+      // 👇 Si hay sesión anónima activa, cerrarla primero
+      final usuarioActual = FirebaseAuth.instance.currentUser;
+      if (usuarioActual != null && usuarioActual.isAnonymous) {
+        await FirebaseAuth.instance.signOut();
+      }
+
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: correoController.text.trim(),
         password: passwordController.text.trim(),
       );
 
       await obtenerUbicacion();
-
-      // ❌ ELIMINAR ESTO:
-      // Navigator.pushReplacementNamed(context, '/exploracion');
-
-      // ✅ NO HAGAS NADA AQUÍ
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        setState(() {
-          errorCorreo = "No existe una cuenta con este correo";
-        });
+        setState(() => errorCorreo = "No existe una cuenta con este correo");
       } else if (e.code == 'invalid-email') {
-        setState(() {
-          errorCorreo = "El formato del correo es incorrecto";
-        });
+        setState(() => errorCorreo = "El formato del correo es incorrecto");
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        setState(() {
-          errorPassword = "La contraseña es incorrecta";
-        });
+        setState(() => errorPassword = "La contraseña es incorrecta");
       } else {
-        setState(() {
-          errorCorreo = "Error al iniciar sesión";
-        });
+        setState(() => errorCorreo = "Error: ${e.code}");
       }
+    } catch (e) {
+      setState(() => errorCorreo = "Error inesperado: $e");
+      debugPrint("❌ ERROR LOGIN: $e");
     }
   }
 
@@ -317,7 +339,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                                 TextButton(
                                   onPressed: () {
-                                    Navigator.pushReplacementNamed(
+                                    Navigator.pushNamed(
                                       context,
                                       '/registro',
                                     );

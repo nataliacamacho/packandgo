@@ -151,8 +151,13 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
 // ---------------------------------------------------------------------------
 class BusquedaPantalla extends StatefulWidget {
   final bool esSeleccion;
+  final String? destinoInicial;
 
-  const BusquedaPantalla({super.key, this.esSeleccion = false});
+  const BusquedaPantalla({
+    super.key,
+    this.esSeleccion = false,
+    this.destinoInicial,
+  });
 
   @override
   State<BusquedaPantalla> createState() => _BusquedaPantallaState();
@@ -194,7 +199,24 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   @override
   void initState() {
     super.initState();
+    if (widget.destinoInicial != null) {
+      destinoSeleccionado = _resolverIdDestino(widget.destinoInicial!);
+    }
     _inicializar();
+  }
+
+  String? _resolverIdDestino(String nombreDestino) {
+    final normalizado = nombreDestino.toLowerCase().trim();
+    try {
+      final ciudad = _ciudadesMexico.firstWhere(
+        (c) =>
+            c['nombre'].toString().toLowerCase().contains(normalizado) ||
+            normalizado.contains(c['nombre'].toString().toLowerCase()),
+      );
+      return ciudad['id'] as String;
+    } catch (_) {
+      return null; // No encontró coincidencia, no pasa nada
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -256,10 +278,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
     // 1. Limpiamos y normalizamos el texto ingresado
     String textoLimpio = texto.trim().toLowerCase();
-    
+
     // Si la barra está vacía, tomamos el destino seleccionado de las etiquetas/filtros
-    String destinoAValidar = textoLimpio.isNotEmpty 
-        ? textoLimpio 
+    String destinoAValidar = textoLimpio.isNotEmpty
+        ? textoLimpio
         : (destinoSeleccionado ?? '').toLowerCase().trim();
 
    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
@@ -274,10 +296,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       if (esPalabraInternacional) {
         setState(() {
           error = "Por ahora, solo trabajamos con destinos dentro de México.";
-          lugares = []; 
+          lugares = [];
           cargando = false;
         });
-        return; 
+        return;
       }
       
       // NOTA: Si busca términos generales ("tacos") o municipios aledaños ("Jocotepec"), 
@@ -292,11 +314,13 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
     try {
       await _resolverCoordenadas();
-      
+
       // Ajustamos el parámetro de búsqueda para las APIs externas
       String textoConsultaApi = texto.trim();
       // Excepción especial para La Paz de BCS para que Google no se vaya a Sudamérica
-      if (textoConsultaApi.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'lapaz') {
+      if (textoConsultaApi.toLowerCase() == 'la paz' ||
+          destinoSeleccionado?.toLowerCase() == 'la paz' ||
+          destinoSeleccionado?.toLowerCase() == 'lapaz') {
         textoConsultaApi = "La Paz, Baja California Sur, Mexico";
       }
 
@@ -451,7 +475,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         }
         final latGoogle = l['geometry']?['location']?['lat'] ?? l['lat'];
         final lngGoogle = l['geometry']?['location']?['lng'] ?? l['lng'];
-        String urlImagen = l['foto']?.toString() ?? l['imagen']?.toString() ?? "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
+        String urlImagen =
+            l['foto']?.toString() ??
+            l['imagen']?.toString() ??
+            "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
 
         // 🔽 SOLUCIÓN DE ERROR: Usamos la definición del objeto Lugar importada del servicio
         Lugar lugarTemporal = Lugar(
@@ -460,17 +487,23 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           tipo: categoria,
           precio: precioCalc,
           rating: _toDouble(l['rating'], fb: 5),
-          numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(),
+          numResenas: _toDouble(
+            l['user_ratings_total'] ?? l['popularity'],
+            fb: 5,
+          ).toInt(),
           latitud: _toDouble(latGoogle),
           longitud: _toDouble(lngGoogle),
-          resenasTexto: const ["lugar muy divertido para ir con niños familiar seguro"], // Simulación de reviews para NLP escolar
+          resenasTexto: const [
+            "lugar muy divertido para ir con niños familiar seguro",
+          ], // Simulación de reviews para NLP escolar
           fotoUrl: urlImagen,
           direccion: l['vicinity'] ?? 'Sin dirección',
           horario: '',
         );
 
         // Invocación del algoritmo NLP externo
-        List<String> etiquetasNLP = _servicioFiltros.calcularEtiquetasExperiencia(lugarTemporal);
+        List<String> etiquetasNLP = _servicioFiltros
+            .calcularEtiquetasExperiencia(lugarTemporal);
 
         String categoriaFinal = categoria
             .toLowerCase()
@@ -483,7 +516,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           'name': l['name'] ?? 'Sin nombre',
           'direccion': l['vicinity'] ?? _obtenerDireccion(l),
           'categoriaPrincipal': categoriaFinal,
-          'experiencias': etiquetasNLP, // Asignamos las etiquetas generadas por el modelo matemático
+          'experiencias':
+              etiquetasNLP, // Asignamos las etiquetas generadas por el modelo matemático
           'rating': _toDouble(l['rating'], fb: 5),
           'popularity': _toDouble(
             l['user_ratings_total'] ?? l['popularity'],
@@ -589,20 +623,24 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           _toDouble(_intereses['Bar']),
           _toDouble(_intereses['Parque']),
         ];
-        List<String> sugerencias = await _servicioFiltros.obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
+        List<String> sugerencias = await _servicioFiltros
+            .obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
         if (sugerencias.isNotEmpty && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Otros viajeros como tú también consultaron este destino")),
+            const SnackBar(
+              content: Text(
+                "Otros viajeros como tú también consultaron este destino",
+              ),
+            ),
           );
         }
       }
 
       // 3. Actualizamos el estado con la lista 'finales'
       setState(() {
-        lugares = finales; 
+        lugares = finales;
         cargando = false;
       });
-
     } catch (e) {
       // 🛑 El catch se queda solo para atrapar errores, así limpito como lo tenías:
       print("❌ ERROR BUSQUEDA: $e");

@@ -106,16 +106,24 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     List<dynamic> lista = [];
 
     for (final c in ciudadesPopulares) {
+      // Busca solo 1 lugar turístico representativo de cada ciudad
       final lugares = await GooglePlacesServicio.buscarLugares(
         c['lat'],
         c['lng'],
-        radio: 8000,
+        tipo: 'monumento', // tourist_attraction → trae fotos bonitas
+        radio: 3000, // radio chico para que salga algo del centro
       );
 
-      lista.addAll(lugares);
-    }
+      if (lugares.isNotEmpty) {
+        // Toma el mejor (primero = mejor rating de Google)
+        final mejor = lugares.first;
 
-    lista = _procesar(lista);
+        // Sobreescribe el nombre con el de la ciudad
+        mejor['name'] = c['name'];
+
+        lista.add(mejor);
+      }
+    }
 
     _set(lista);
   }

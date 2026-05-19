@@ -165,7 +165,7 @@ class CuentaPantalla extends StatelessWidget {
                                 _botonResenas(context),
 
                                 const SizedBox(height: 15),
-                                
+
                                 _botonSeccion(
                                   context,
                                   "Viajes futuros",
@@ -291,8 +291,11 @@ class CuentaPantalla extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFF6A230),
               ),
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/registro');
+              onPressed: () async {
+                // ✅ Cierra sesión anónima → AuthWrapper detecta el cambio
+                // y muestra LoginPantalla automáticamente desde su stream
+                await FirebaseAuth.instance.signOut();
+                // Sin Navigator — el AuthWrapper ya navega solo
               },
               child: const Text(
                 "Crear cuenta",

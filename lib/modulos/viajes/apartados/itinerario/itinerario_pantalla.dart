@@ -347,6 +347,7 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
                         MaterialPageRoute(
                           builder: (context) => BusquedaPantalla(
                             esSeleccion: true,
+                            destinoInicial: destinoViaje,
                           ),
                         ),
                       );
