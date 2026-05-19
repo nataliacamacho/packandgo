@@ -244,11 +244,14 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     } catch (_) {}
   }
 
-  Future<void> _resolverCoordenadas() async {
+Future<void> _resolverCoordenadas() async {
     // DESTINO
     if (destinoSeleccionado != null) {
+      // Pasamos a minúsculas para que haga match perfecto con los id del catálogo ("acapulco", "cancun")
+      final destinoLimpio = destinoSeleccionado!.toLowerCase().trim();
+
       final ciudad = _ciudadesMexico.firstWhere(
-        (c) => c['id'] == destinoSeleccionado,
+        (c) => c['id'] == destinoLimpio || c['nombre'].toString().toLowerCase().trim() == destinoLimpio,
         orElse: () => {},
       );
 
@@ -259,15 +262,18 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       }
     }
 
-    // GPS
+    // GPS REAL (Si no hay destino, regresa a tus coordenadas locales)
     try {
       final pos = await UbicacionServicio().obtenerUbicacionActual();
-
       if (pos != null) {
         _latActual = pos.latitude;
         _lngActual = pos.longitude;
       }
-    } catch (_) {}
+    } catch (_) {
+      // Fallback por si el emulador no responde el GPS, regresa a Guadalajara por defecto
+      _latActual = 20.6597;
+      _lngActual = -103.3496;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -282,7 +288,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     // Si la barra está vacía, tomamos el destino seleccionado de las etiquetas/filtros
     String destinoAValidar = textoLimpio.isNotEmpty
         ? textoLimpio
-        : (destinoSeleccionado ?? '').toString().toLowerCase().trim();
+        : (destinoSeleccionado ?? '').toLowerCase().trim();
 
    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
     if (destinoAValidar.isNotEmpty) {
@@ -314,17 +320,20 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
     try {
       await _resolverCoordenadas();
-
-      // Ajustamos el parámetro de búsqueda para las APIs externas
+      
+      // 🔥 REPARACIÓN HISTÓRICA: Si no hay texto en la barra, le decimos a la API 
+      // qué buscar en ese destino para que traiga 5 cosas variadas en vez del nombre de la ciudad
       String textoConsultaApi = texto.trim();
-      // Excepción especial para La Paz de BCS para que Google no se vaya a Sudamérica
-      if (textoConsultaApi.toLowerCase() == 'la paz' ||
-          destinoSeleccionado?.toLowerCase() == 'la paz' ||
-          destinoSeleccionado?.toLowerCase() == 'lapaz') {
-        textoConsultaApi = "La Paz, Baja California Sur, Mexico";
+      if (textoConsultaApi.isEmpty && destinoSeleccionado != null) {
+        textoConsultaApi = "turismo atracciones restaurantes monumentos"; 
       }
 
-      // A partir de aquí sigue el llamado original a tus servicios de Google y OpenTripMap...
+      // Excepción especial para La Paz de BCS para que Google no se vaya a Sudamérica
+      if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'lapaz') {
+        textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
+      }
+
+      // A partir de aquí tus llamadas a GooglePlacesServicio y OpenTripMapServicio se quedan EXACTAMENTE IGUAL...
 
       final google = await GooglePlacesServicio.buscarLugares(
         _latActual,
@@ -594,8 +603,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       // -------------------------------------------------------------------
       final ordenados = _quickSort(conPesos);
 
-      // -------------------------------------------------------------------
-      // TOP (Aquí termina tu código original del bloque try)
+    // -------------------------------------------------------------------
+      // TOP (TU CÓDIGO VIEJITO ORIGINAL RESTABLECIDO)
       // -------------------------------------------------------------------
       final finales =
           (texto.isEmpty &&
@@ -605,11 +614,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           ? _top5(ordenados)
           : ordenados;
 
-      // 🔽 CORRECCIÓN: ESTO VA AQUÍ (FUERA Y ARRIBA DEL CATCH)
-
       // 1. Guardar en caché inteligente usando la variable 'finales' que es el Top definitivo
       String hashQuery = _servicioFiltros.generarHashConsulta(
-        (destinoSeleccionado ?? 'gps').toString().toLowerCase().trim(), // 🔥 Forzamos minúsculas seguras para el hash
+        destinoSeleccionado ?? 'gps',
         estiloSeleccionado ?? 'general',
         precioSeleccionado ?? 'libre',
       );
@@ -627,11 +634,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
             .obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
         if (sugerencias.isNotEmpty && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Otros viajeros como tú también consultaron este destino",
-              ),
-            ),
+            const SnackBar(content: Text("Otros viajeros como tú también consultaron este destino")),
           );
         }
       }
@@ -922,26 +925,32 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     return [..._quickSort(mayores), ...iguales, ..._quickSort(menores)];
   }
 
-  // -------------------------------------------------------------------------
-  // TOP 5
+// -------------------------------------------------------------------------
+  // TOP 5 REPARADO (COMPLETA SIEMPRE LAS 5 TARJETAS)
   // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _top5(List<Map<String, dynamic>> lista) {
     final Map<String, Map<String, dynamic>> categorias = {};
     final List<Map<String, dynamic>> res = [];
 
+    // Paso 1: Intentamos meter uno de cada categoría para cumplir la variedad
     for (final l in lista) {
       final categoria = l['categoriaPrincipal']?.toString() ?? 'otro';
-      if (!categorias.containsKey(categoria)) categorias[categoria] = l;
+      if (!categorias.containsKey(categoria)) {
+        categorias[categoria] = l;
+      }
     }
     res.addAll(categorias.values);
 
+    // Paso 2: Si no se juntaron los 5 porque la API mandó categorías repetidas,
+    // rellenamos con los mejores lugares ordenados por QuickSort hasta llegar a 5
     for (final l in lista) {
       if (res.length >= 5) break;
-      if (!res.contains(l)) res.add(l);
+      if (!res.any((element) => element['name'] == l['name'] && element['lat'] == l['lat'])) {
+        res.add(l);
+      }
     }
     return res.take(5).toList();
   }
-
   // -------------------------------------------------------------------------
   // FILTROS 🔥 AQUÍ INYECTAMOS EL FILTRO VIP
   // -------------------------------------------------------------------------
