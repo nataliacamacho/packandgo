@@ -117,11 +117,37 @@ class GooglePlacesServicio {
 
       print('🟦 GOOGLE RESULTADOS: ${results.length}');
 
-      return filtrados.map<Map<String, dynamic>>((place) {
+      final filtradosReales = filtrados.where((place) {
+        final rawTypes = place['types'];
+
+        final List<String> types = (rawTypes is List)
+            ? rawTypes.map((e) => e.toString()).toList()
+            : <String>[];
+
+        if (types.isEmpty) return false;
+
+        const bloqueados = [
+          'supermarket',
+          'store',
+          'department_store',
+          'pharmacy',
+          'bank',
+          'gas_station',
+          'lodging',
+        ];
+
+        return !types.any((t) => bloqueados.contains(t));
+      }).toList();
+
+      return filtradosReales.map<Map<String, dynamic>>((place) {
         final loc = place['geometry']?['location'];
 
-        final types =
+        // 🔥 FIX IMPORTANTE: normalizar types correctamente
+        final List<String> types =
             (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
+        print("DEBUG TYPES ${place['name']} => $types");
+
         String categoria = _mapearCategoria(types, nombre: place['name'] ?? '');
 
         final nombre = (place['name'] ?? '').toString().toLowerCase();
@@ -172,7 +198,7 @@ class GooglePlacesServicio {
           // -----------------------------------------------------------------
           'categoriaPrincipal': categoria,
 
-          'tipos_raw': types,
+          'types': types,
 
           // -----------------------------------------------------------------
           // RATING
@@ -207,6 +233,51 @@ class GooglePlacesServicio {
       print('❌ ERROR GOOGLE: $e');
       return [];
     }
+  }
+
+  // Agrega esto al final de la clase, antes del último }
+  static const Map<String, String> _categoriaAGoogleType = {
+    'restaurante': 'restaurant',
+    'cafeteria': 'cafe',
+    'bar': 'bar',
+    'parque': 'park',
+    'museo': 'museum',
+    'monumento': 'tourist_attraction',
+    'actividades_extremas': 'amusement_park',
+    'centro_comercial': 'shopping_mall',
+  };
+
+  static Future<List<Map<String, dynamic>>> buscarPorCategorias(
+    double lat,
+    double lng, {
+    required List<String> categorias,
+    int radio = 15000,
+  }) async {
+    // Llama en paralelo una búsqueda por cada categoría
+    final futures = categorias.map((cat) {
+      final googleType = _categoriaAGoogleType[cat];
+      return buscarLugares(
+        lat,
+        lng,
+        tipo: googleType != null ? cat : null,
+        radio: radio,
+      );
+    });
+
+    final resultados = await Future.wait(futures);
+
+    // Aplana y deduplica por place_id
+    final Map<String, Map<String, dynamic>> vistos = {};
+    for (final lista in resultados) {
+      for (final lugar in lista) {
+        final id = lugar['place_id'] ?? lugar['name'];
+        if (id != null && !vistos.containsKey(id)) {
+          vistos[id] = lugar;
+        }
+      }
+    }
+
+    return vistos.values.toList();
   }
 
   // ---------------------------------------------------------------------------
