@@ -284,13 +284,13 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         ? textoLimpio
         : (destinoSeleccionado ?? '').toLowerCase().trim();
 
-    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
+   // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
     if (destinoAValidar.isNotEmpty) {
       // Filtro estricto únicamente para palabras internacionales reales prohibidas
-      final esPalabraInternacional =
-          destinoAValidar == "paris" ||
-          destinoAValidar == "bolivia" ||
-          destinoAValidar == "francia" ||
+      final esPalabraInternacional = 
+          destinoAValidar == "paris" || 
+          destinoAValidar == "bolivia" || 
+          destinoAValidar == "francia" || 
           destinoAValidar == "europa";
 
       if (esPalabraInternacional) {
@@ -301,8 +301,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         });
         return;
       }
-
-      // NOTA: Si busca términos generales ("tacos") o municipios aledaños ("Jocotepec"),
+      
+      // NOTA: Si busca términos generales ("tacos") o municipios aledaños ("Jocotepec"), 
       // el flujo continuará nativamente usando tus coordenadas base del estado de Jalisco.
     }
 
@@ -364,15 +364,13 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         }
         // 🏖️ APERTURA DETECTORA DE PLAYAS
         final types = l["tipos_raw"] as List<dynamic>? ?? [];
-        final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "")
-            .toString()
-            .toLowerCase();
+        final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "").toString().toLowerCase();
         final datosCrudos = types.join(",") + "," + kinds;
 
-        if (datosCrudos.contains("beach") ||
-            datosCrudos.contains("sea") ||
-            datosCrudos.contains("coast") ||
-            nombreMin.contains("playa") ||
+        if (datosCrudos.contains("beach") || 
+            datosCrudos.contains("sea") || 
+            datosCrudos.contains("coast") || 
+            nombreMin.contains("playa") || 
             nombreMin.contains("beach")) {
           categoria = "playa";
         }
