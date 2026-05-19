@@ -251,48 +251,63 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   // BÚSQUEDA
   // -------------------------------------------------------------------------
-  // -------------------------------------------------------------------------
-    // BÚSQUEDA
-    // -------------------------------------------------------------------------
-    Future<void> _buscar({String texto = ''}) async {
-      if (!mounted) return;
+  Future<void> _buscar({String texto = ''}) async {
+    if (!mounted) return;
 
-      // 🔽 VALIDACIÓN DE DESTINO DENTRO DE MÉXICO (MÁSESTRICTA Y REFINADA)
-      // Tomamos lo que esté en la barra de texto o lo que esté seleccionado en el filtro
-      String textoLimpio = texto.trim();
-      String destinoAValidar = textoLimpio.isNotEmpty ? textoLimpio : (destinoSeleccionado ?? '');
+    // 1. Limpiamos y normalizamos el texto ingresado
+    String textoLimpio = texto.trim().toLowerCase();
+    
+    // Si la barra está vacía, tomamos el destino seleccionado de las etiquetas/filtros
+    String destinoAValidar = textoLimpio.isNotEmpty 
+        ? textoLimpio 
+        : (destinoSeleccionado ?? '').toLowerCase().trim();
 
-      if (destinoAValidar.isNotEmpty) {
-        // Extraemos solo los nombres de tus ciudades en México
-        List<String> ciudadesValidas = _ciudadesMexico.map((c) => c['nombre'].toString()).toList();
-        
-        // Mandamos a comprobar al archivo de servicios externo
-        bool esEnMexico = await _servicioFiltros.validarDestinoEnMexico(destinoAValidar, ciudadesValidas);
-        
-        // Si no se encuentra en tu lista de ciudades mexicanas: ¡Bloqueamos!
-        if (!esEnMexico) {
-          setState(() {
-            error = "Por ahora, solo trabajamos con destinos dentro de México.";
-            lugares = []; // Vaciamos la lista para que no pinte nada viejo
-            cargando = false;
-          });
-          return; // Rompemos la función para que no consuma las APIs
-        }
+    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO
+    if (destinoAValidar.isNotEmpty) {
+      // Extraemos los nombres de tu lista estática de ciudades en minúsculas
+      List<String> nombresCiudadesMexico = _ciudadesMexico
+          .map((c) => c['nombre'].toString().toLowerCase().trim())
+          .toList();
+
+      // Verificamos si lo que escribió el usuario coincide con alguna ciudad de tu lista
+      bool esCiudadMexicanaValida = nombresCiudadesMexico.any((ciudad) => 
+          destinoAValidar == ciudad || destinoAValidar.contains(ciudad));
+
+      // Filtro estricto para palabras internacionales prohibidas
+      final esPalabraInternacional = 
+          destinoAValidar.contains("paris") || 
+          destinoAValidar.contains("bolivia") || 
+          destinoAValidar.contains("francia") || 
+          destinoAValidar.contains("europa");
+
+      // Si no es una ciudad de tu catálogo de México, o es una palabra internacional: ¡BLOQUEAMOS!
+      if (!esCiudadMexicanaValida || esPalabraInternacional) {
+        setState(() {
+          error = "Por ahora, solo trabajamos con destinos dentro de México.";
+          lugares = []; // Vaciamos la lista para limpiar la pantalla de inmediato
+          cargando = false;
+        });
+        return; // 🛑 Rompe la función aquí. Ya no ejecuta las llamadas a las APIs externas.
       }
+    }
 
-      setState(() {
-        cargando = true;
-        error = null;
-      });
+    // 3. CONTINUACIÓN DEL FLUJO NORMAL (Si pasa el candado, empieza la búsqueda)
+    setState(() {
+      cargando = true;
+      error = null;
+    });
 
-      try {
-          await _resolverCoordenadas();
-
-          // Forzar contexto geográfico para la consulta de las APIs
+    try {
+      await _resolverCoordenadas();
+      
+      // Ajustamos el parámetro de búsqueda para las APIs externas
       String textoConsultaApi = texto.trim();
+      // Excepción especial para La Paz de BCS para que Google no se vaya a Sudamérica
       if (textoConsultaApi.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'lapaz') {
         textoConsultaApi = "La Paz, Baja California Sur, Mexico";
       }
+
+      // A partir de aquí sigue el llamado original a tus servicios de Google y OpenTripMap...
 
       final google = await GooglePlacesServicio.buscarLugares(
         _latActual,
@@ -309,7 +324,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       final open = await OpenTripMapServicio.buscarLugaresCulturales(
         _latActual,
         _lngActual,
-        query: textoConsultaApi,
+        query: texto,
         tipo: tipoSeleccionado,
       );
 
