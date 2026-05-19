@@ -282,7 +282,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     // Si la barra está vacía, tomamos el destino seleccionado de las etiquetas/filtros
     String destinoAValidar = textoLimpio.isNotEmpty
         ? textoLimpio
-        : (destinoSeleccionado ?? '').toLowerCase().trim();
+        : (destinoSeleccionado ?? '').toString().toLowerCase().trim();
 
    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
     if (destinoAValidar.isNotEmpty) {
@@ -609,7 +609,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
       // 1. Guardar en caché inteligente usando la variable 'finales' que es el Top definitivo
       String hashQuery = _servicioFiltros.generarHashConsulta(
-        destinoSeleccionado ?? 'gps',
+        (destinoSeleccionado ?? 'gps').toString().toLowerCase().trim(), // 🔥 Forzamos minúsculas seguras para el hash
         estiloSeleccionado ?? 'general',
         precioSeleccionado ?? 'libre',
       );
