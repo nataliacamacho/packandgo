@@ -262,32 +262,49 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         ? textoLimpio 
         : (destinoSeleccionado ?? '').toLowerCase().trim();
 
-    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO
+    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO SINO ACENTOS)
     if (destinoAValidar.isNotEmpty) {
-      // Extraemos los nombres de tu lista estática de ciudades en minúsculas
-      List<String> nombresCiudadesMexico = _ciudadesMexico
-          .map((c) => c['nombre'].toString().toLowerCase().trim())
-          .toList();
+      // Función interna rápida para quitar acentos y caracteres especiales
+      String removerAcentes(String texto) {
+        return texto.toLowerCase().trim()
+            .replaceAll(RegExp(r'[áäâà]'), 'a')
+            .replaceAll(RegExp(r'[éëêè]'), 'e')
+            .replaceAll(RegExp(r'[íïîì]'), 'i')
+            .replaceAll(RegExp(r'[óöôò]'), 'o')
+            .replaceAll(RegExp(r'[úüûù]'), 'u')
+            .replaceAll(RegExp(r'[ñ]'), 'n');
+      }
 
-      // Verificamos si lo que escribió el usuario coincide con alguna ciudad de tu lista
-      bool esCiudadMexicanaValida = nombresCiudadesMexico.any((ciudad) => 
-          destinoAValidar == ciudad || destinoAValidar.contains(ciudad));
+      String destinoLimpioDeAcentos = removerAcentes(destinoAValidar);
 
-      // Filtro estricto para palabras internacionales prohibidas
+      // Extraemos y limpiamos los nombres e IDs de tu lista estática de ciudades
+      List<String> ciudadesCatalogo = [];
+      for (var c in _ciudadesMexico) {
+        if (c['nombre'] != null) ciudadesCatalogo.add(removerAcentes(c['nombre'].toString()));
+        if (c['id'] != null) ciudadesCatalogo.add(removerAcentes(c['id'].toString()));
+      }
+
+      // Verificamos si lo que escribió o seleccionó el usuario coincide con tu catálogo mexicano
+      bool esCiudadMexicanaValida = ciudadesCatalogo.any((ciudad) => 
+          destinoLimpioDeAcentos == ciudad || 
+          destinoLimpioDeAcentos.contains(ciudad) || 
+          ciudad.contains(destinoLimpioDeAcentos));
+
+      // Filtro estricto para palabras internacionales reales que no están en México
       final esPalabraInternacional = 
-          destinoAValidar.contains("paris") || 
-          destinoAValidar.contains("bolivia") || 
-          destinoAValidar.contains("francia") || 
-          destinoAValidar.contains("europa");
+          destinoLimpioDeAcentos == "paris" || 
+          destinoLimpioDeAcentos == "bolivia" || 
+          destinoLimpioDeAcentos == "francia" || 
+          destinoLimpioDeAcentos == "europa";
 
-      // Si no es una ciudad de tu catálogo de México, o es una palabra internacional: ¡BLOQUEAMOS!
+      // Si de verdad no está en tu catálogo o es una palabra internacional prohibida, bloqueamos
       if (!esCiudadMexicanaValida || esPalabraInternacional) {
         setState(() {
           error = "Por ahora, solo trabajamos con destinos dentro de México.";
-          lugares = []; // Vaciamos la lista para limpiar la pantalla de inmediato
+          lugares = []; 
           cargando = false;
         });
-        return; // 🛑 Rompe la función aquí. Ya no ejecuta las llamadas a las APIs externas.
+        return; 
       }
     }
 
