@@ -40,7 +40,7 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
         .where("usuarioId", isEqualTo: user.uid)
         .get();
     final viajes = snapshot.docs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       return data['cancelado'] != true;
     }).toList();
     final hoy = DateTime.now();

@@ -73,10 +73,10 @@ class FiltrosBusqueda extends StatelessWidget {
             _buildDropdown(
               titulo: estiloSeleccionado ?? "Experiencia",
               opciones: const [
-                {"label": "Familiar", "value": "familiar"},
-                {"label": "Amigos", "value": "amigos"},
-                {"label": "Solo", "value": "solo"},
-                {"label": "En pareja", "value": "pareja"},
+                {"label": "Familiar", "value": "Familiar"},
+                {"label": "Amigos", "value": "Amigos"},
+                {"label": "Solo", "value": "Solo"},
+                {"label": "En pareja", "value": "En pareja"},
               ],
               seleccionado: estiloSeleccionado,
               onChanged: onEstiloChanged,

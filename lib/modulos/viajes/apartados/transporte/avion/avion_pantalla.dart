@@ -186,8 +186,8 @@ class _PantallaAvionState extends State<PantallaAvion> {
 
                                 const SizedBox(height: 8),
 
-                                Text("${r.aeropuertoOrigen}"),
-                                Text("${r.aeropuertoDestino}"),
+                                Text(r.aeropuertoOrigen),
+                                Text(r.aeropuertoDestino),
 
                                 const SizedBox(height: 8),
 

@@ -298,16 +298,16 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
 
     if (dias > 0) {
       if (minutos == 0) {
-        return "$dias d ${horasRestantes} h";
+        return "$dias d $horasRestantes h";
       }
-      return "$dias d ${horasRestantes} h ${minutos} min";
+      return "$dias d $horasRestantes h $minutos min";
     }
 
     if (horasRestantes > 0) {
       if (minutos == 0) {
-        return "${horasRestantes} h";
+        return "$horasRestantes h";
       }
-      return "${horasRestantes} h ${minutos} min";
+      return "$horasRestantes h $minutos min";
     }
 
     return "$minutos min";

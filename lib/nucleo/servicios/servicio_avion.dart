@@ -83,7 +83,7 @@ class ServicioAvion {
     final h = horas.floor();
     final min = ((horas - h) * 60).round();
 
-    return "${h} h ${min} min";
+    return "$h h $min min";
   }
 
   // 🔥 PRECIO REALISTA

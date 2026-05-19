@@ -4,8 +4,12 @@ int levenshtein(String a, String b) {
     (_) => List.filled(b.length + 1, 0),
   );
 
-  for (int i = 0; i <= a.length; i++) dp[i][0] = i;
-  for (int j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (int i = 0; i <= a.length; i++) {
+    dp[i][0] = i;
+  }
+  for (int j = 0; j <= b.length; j++) {
+    dp[0][j] = j;
+  }
 
   for (int i = 1; i <= a.length; i++) {
     for (int j = 1; j <= b.length; j++) {

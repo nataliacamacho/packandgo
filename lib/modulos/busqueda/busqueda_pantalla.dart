@@ -12,7 +12,6 @@ import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import 'package:proyecto/nucleo/servicios/opentripmap_servicio.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
-import 'package:proyecto/nucleo/utilidades/analizador_etiquetas.dart';
 
 // ---------------------------------------------------------------------------
 // CIUDADES DE MÉXICO
@@ -29,37 +28,92 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
   {"id": "queretaro", "nombre": "Querétaro", "lat": 20.5888, "lng": -100.3899},
   {"id": "toluca", "nombre": "Toluca", "lat": 19.2826, "lng": -99.6557},
   {"id": "acapulco", "nombre": "Acapulco", "lat": 16.8531, "lng": -99.8237},
-  {"id": "puertovallarta", "nombre": "Puerto Vallarta", "lat": 20.6534, "lng": -105.2253},
+  {
+    "id": "puertovallarta",
+    "nombre": "Puerto Vallarta",
+    "lat": 20.6534,
+    "lng": -105.2253,
+  },
   {"id": "loscabos", "nombre": "Los Cabos", "lat": 22.8905, "lng": -109.9167},
   {"id": "mazatlan", "nombre": "Mazatlán", "lat": 23.2494, "lng": -106.4111},
   {"id": "veracruz", "nombre": "Veracruz", "lat": 19.1738, "lng": -96.1342},
   {"id": "oaxaca", "nombre": "Oaxaca", "lat": 17.0732, "lng": -96.7266},
-  {"id": "sanmiguel", "nombre": "San Miguel de Allende", "lat": 20.9144, "lng": -100.7430},
-  {"id": "guanajuato", "nombre": "Guanajuato", "lat": 21.0190, "lng": -101.2574},
+  {
+    "id": "sanmiguel",
+    "nombre": "San Miguel de Allende",
+    "lat": 20.9144,
+    "lng": -100.7430,
+  },
+  {
+    "id": "guanajuato",
+    "nombre": "Guanajuato",
+    "lat": 21.0190,
+    "lng": -101.2574,
+  },
   {"id": "morelia", "nombre": "Morelia", "lat": 19.7050, "lng": -101.1949},
   {"id": "zacatecas", "nombre": "Zacatecas", "lat": 22.7709, "lng": -102.5832},
-  {"id": "tuxtla", "nombre": "Tuxtla Gutiérrez", "lat": 16.7528, "lng": -93.1167},
-  {"id": "sancristobal", "nombre": "San Cristóbal de las Casas", "lat": 16.7370, "lng": -92.6376},
-  {"id": "villahermosa", "nombre": "Villahermosa", "lat": 17.9895, "lng": -92.9475},
+  {
+    "id": "tuxtla",
+    "nombre": "Tuxtla Gutiérrez",
+    "lat": 16.7528,
+    "lng": -93.1167,
+  },
+  {
+    "id": "sancristobal",
+    "nombre": "San Cristóbal de las Casas",
+    "lat": 16.7370,
+    "lng": -92.6376,
+  },
+  {
+    "id": "villahermosa",
+    "nombre": "Villahermosa",
+    "lat": 17.9895,
+    "lng": -92.9475,
+  },
   {"id": "campeche", "nombre": "Campeche", "lat": 19.8301, "lng": -90.5349},
   {"id": "chetumal", "nombre": "Chetumal", "lat": 18.5043, "lng": -88.3053},
-  {"id": "playadelcarmen", "nombre": "Playa del Carmen", "lat": 20.6296, "lng": -87.0739},
+  {
+    "id": "playadelcarmen",
+    "nombre": "Playa del Carmen",
+    "lat": 20.6296,
+    "lng": -87.0739,
+  },
   {"id": "tulum", "nombre": "Tulum", "lat": 20.2114, "lng": -87.4654},
   {"id": "cozumel", "nombre": "Cozumel", "lat": 20.4229, "lng": -86.9223},
-  {"id": "aguascalientes", "nombre": "Aguascalientes", "lat": 21.8853, "lng": -102.2916},
+  {
+    "id": "aguascalientes",
+    "nombre": "Aguascalientes",
+    "lat": 21.8853,
+    "lng": -102.2916,
+  },
   {"id": "saltillo", "nombre": "Saltillo", "lat": 25.4383, "lng": -100.9737},
   {"id": "torreon", "nombre": "Torreón", "lat": 25.5428, "lng": -103.4068},
   {"id": "chihuahua", "nombre": "Chihuahua", "lat": 28.6329, "lng": -106.0691},
   {"id": "juarez", "nombre": "Ciudad Juárez", "lat": 31.6904, "lng": -106.4245},
   {"id": "durango", "nombre": "Durango", "lat": 24.0277, "lng": -104.6532},
-  {"id": "hermosillo", "nombre": "Hermosillo", "lat": 29.0729, "lng": -110.9559},
+  {
+    "id": "hermosillo",
+    "nombre": "Hermosillo",
+    "lat": 29.0729,
+    "lng": -110.9559,
+  },
   {"id": "caborca", "nombre": "Caborca", "lat": 30.7167, "lng": -112.1500},
   {"id": "lapaz", "nombre": "La Paz", "lat": 24.1426, "lng": -110.3128},
   {"id": "ensenada", "nombre": "Ensenada", "lat": 31.8667, "lng": -116.6000},
   {"id": "colima", "nombre": "Colima", "lat": 19.2433, "lng": -103.7241},
-  {"id": "manzanillo", "nombre": "Manzanillo", "lat": 19.1138, "lng": -104.3385},
+  {
+    "id": "manzanillo",
+    "nombre": "Manzanillo",
+    "lat": 19.1138,
+    "lng": -104.3385,
+  },
   {"id": "tepic", "nombre": "Tepic", "lat": 21.5085, "lng": -104.8956},
-  {"id": "nuevovallarta", "nombre": "Nuevo Vallarta", "lat": 20.6829, "lng": -105.2850},
+  {
+    "id": "nuevovallarta",
+    "nombre": "Nuevo Vallarta",
+    "lat": 20.6829,
+    "lng": -105.2850,
+  },
   {"id": "cuernavaca", "nombre": "Cuernavaca", "lat": 18.9242, "lng": -99.2216},
   {"id": "taxco", "nombre": "Taxco", "lat": 18.5563, "lng": -99.6057},
   {"id": "tlaxcala", "nombre": "Tlaxcala", "lat": 19.3139, "lng": -98.2404},
@@ -69,12 +123,22 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
   {"id": "coatepec", "nombre": "Coatepec", "lat": 19.4524, "lng": -96.9613},
   {"id": "orizaba", "nombre": "Orizaba", "lat": 18.8506, "lng": -97.1036},
   {"id": "metepec", "nombre": "Metepec", "lat": 19.2530, "lng": -99.6010},
-  {"id": "vallebravo", "nombre": "Valle de Bravo", "lat": 19.1925, "lng": -100.1327},
+  {
+    "id": "vallebravo",
+    "nombre": "Valle de Bravo",
+    "lat": 19.1925,
+    "lng": -100.1327,
+  },
   {"id": "izamal", "nombre": "Izamal", "lat": 20.9300, "lng": -89.0200},
   {"id": "valladolid", "nombre": "Valladolid", "lat": 20.6896, "lng": -88.2017},
   {"id": "bacalar", "nombre": "Bacalar", "lat": 18.6783, "lng": -88.3891},
   {"id": "holbox", "nombre": "Isla Holbox", "lat": 21.5236, "lng": -87.3000},
-  {"id": "realcatorce", "nombre": "Real de Catorce", "lat": 23.6900, "lng": -100.8900},
+  {
+    "id": "realcatorce",
+    "nombre": "Real de Catorce",
+    "lat": 23.6900,
+    "lng": -100.8900,
+  },
   {"id": "slp", "nombre": "San Luis Potosí", "lat": 22.1565, "lng": -100.9855},
   {"id": "tequila", "nombre": "Tequila", "lat": 20.8823, "lng": -103.8355},
   {"id": "chapala", "nombre": "Chapala", "lat": 20.2967, "lng": -103.1917},
@@ -201,6 +265,11 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         query: texto,
         tipo: tipoSeleccionado,
       );
+      for (var lugar in google.take(3)) {
+        print("==========");
+        print(lugar['name']);
+        print(lugar['photos']);
+      }
 
       final open = await OpenTripMapServicio.buscarLugaresCulturales(
         _latActual,
@@ -220,97 +289,220 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         String categoria = _normalizarCategoria(l['categoriaPrincipal']);
         final nombreMin = (l['name'] ?? "").toString().toLowerCase();
 
-        if (nombreMin.contains("café") || nombreMin.contains("cafe") || nombreMin.contains("coffee") || nombreMin.contains("cafeteria")) {
+        if (nombreMin.contains("café") ||
+            nombreMin.contains("cafe") ||
+            nombreMin.contains("coffee") ||
+            nombreMin.contains("cafeteria")) {
           categoria = "Cafetería";
         }
 
         String catMin = categoria.toLowerCase();
 
         const categoriasPermitidas = [
-          "restaurante", "cafetería", "bar", "parque", "museo", "playa",
-          "monumento", "zona arqueológica", "mirador", "centro comercial", "actividades extremas"
+          "restaurante",
+          "cafeteria",
+          "bar",
+          "parque",
+          "museo",
+          "playa",
+          "monumento",
+          "zona_arqueologica",
+          "mirador",
+          "centro_comercial",
+          "actividades_extremas",
         ];
 
         if (!categoriasPermitidas.contains(catMin)) {
-          final types = l["types"] as List<dynamic>? ?? []; 
-          final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "").toString(); 
-          final datosCrudos = types.join(",") + "," + kinds.toLowerCase(); 
-          
-          if (datosCrudos.contains("cafe") || datosCrudos.contains("coffee") || datosCrudos.contains("bakery") || datosCrudos.contains("pastry")) categoria = "Cafetería";
-          else if (datosCrudos.contains("restaurant") || datosCrudos.contains("food")) categoria = "Restaurante";
-          else if (datosCrudos.contains("shopping") || datosCrudos.contains("mall")) categoria = "Centro comercial";
-          else if (datosCrudos.contains("park") || datosCrudos.contains("nature") || datosCrudos.contains("garden")) categoria = "Parque";
-          else if (datosCrudos.contains("museum") || datosCrudos.contains("art") || datosCrudos.contains("cultural")) categoria = "Museo";
-          else if (datosCrudos.contains("bar") || datosCrudos.contains("night_club") || datosCrudos.contains("pub")) categoria = "Bar";
-          else if (datosCrudos.contains("tourist") || datosCrudos.contains("monument") || datosCrudos.contains("religion") || datosCrudos.contains("church") || datosCrudos.contains("architecture")) categoria = "Monumento";
-          else if (datosCrudos.contains("archaeolog") || datosCrudos.contains("historic") || datosCrudos.contains("ruins")) categoria = "Zona arqueológica";
-          else if (datosCrudos.contains("beach") || datosCrudos.contains("sea")) categoria = "Playa";
-          else if (datosCrudos.contains("viewpoint") || datosCrudos.contains("observation")) categoria = "Mirador";
-          else if (datosCrudos.contains("amusement") || datosCrudos.contains("extreme") || datosCrudos.contains("stadium") || datosCrudos.contains("sports") || datosCrudos.contains("theme_park")) categoria = "Actividades extremas";
-          else categoria = "Otro"; 
+          final types = l["tipos_raw"] as List<dynamic>? ?? [];
+          final kinds = (l["kinds"] ?? l["properties"]?["kinds"] ?? "")
+              .toString();
+          final datosCrudos = types.join(",") + "," + kinds.toLowerCase();
+
+          if (datosCrudos.contains("cafe") ||
+              datosCrudos.contains("coffee") ||
+              datosCrudos.contains("bakery") ||
+              datosCrudos.contains("pastry"))
+            categoria = "Cafetería";
+          else if (datosCrudos.contains("restaurant") ||
+              datosCrudos.contains("food"))
+            categoria = "Restaurante";
+          else if (datosCrudos.contains("shopping") ||
+              datosCrudos.contains("mall"))
+            categoria = "centro_comercial";
+          else if (datosCrudos.contains("park") ||
+              datosCrudos.contains("nature") ||
+              datosCrudos.contains("garden"))
+            categoria = "Parque";
+          else if (datosCrudos.contains("museum") ||
+              datosCrudos.contains("art") ||
+              datosCrudos.contains("cultural"))
+            categoria = "Museo";
+          else if (datosCrudos.contains("bar") ||
+              datosCrudos.contains("night_club") ||
+              datosCrudos.contains("pub"))
+            categoria = "Bar";
+          else if (datosCrudos.contains("tourist") ||
+              datosCrudos.contains("monument") ||
+              datosCrudos.contains("religion") ||
+              datosCrudos.contains("church") ||
+              datosCrudos.contains("architecture"))
+            categoria = "Monumento";
+          else if (datosCrudos.contains("archaeolog") ||
+              datosCrudos.contains("historic") ||
+              datosCrudos.contains("ruins"))
+            categoria = "zona_arqueologica";
+          else if (datosCrudos.contains("beach") || datosCrudos.contains("sea"))
+            categoria = "Playa";
+          else if (datosCrudos.contains("viewpoint") ||
+              datosCrudos.contains("observation"))
+            categoria = "Mirador";
+          else if (datosCrudos.contains("amusement") ||
+              datosCrudos.contains("extreme") ||
+              datosCrudos.contains("stadium") ||
+              datosCrudos.contains("sports") ||
+              datosCrudos.contains("theme_park"))
+            categoria = "actividades_extremas";
+          else
+            categoria = "Otro";
         }
 
-        int priceLevel = l["price_level"] ?? -1; 
-        String precioCalc = "\$\$"; 
+        int priceLevel = l["price_level"] ?? -1;
+        String precioCalc = "\$\$";
 
-        if (nombreMin.contains("mcdonald") || nombreMin.contains("burger") || nombreMin.contains("pizza") || nombreMin.contains("taco") || nombreMin.contains("torta") || nombreMin.contains("kfc") || nombreMin.contains("pollo") || nombreMin.contains("dog")) {
+        if (nombreMin.contains("mcdonald") ||
+            nombreMin.contains("burger") ||
+            nombreMin.contains("pizza") ||
+            nombreMin.contains("taco") ||
+            nombreMin.contains("torta") ||
+            nombreMin.contains("kfc") ||
+            nombreMin.contains("pollo") ||
+            nombreMin.contains("dog")) {
           precioCalc = "\$";
         } else if (priceLevel <= 1 && priceLevel != -1) {
           precioCalc = "\$";
         } else if (priceLevel >= 3) {
           precioCalc = "\$\$\$";
         } else if (priceLevel == -1) {
-          final largoNombre = nombreMin.length;
-          if (largoNombre % 3 == 0) precioCalc = "\$";
-          else if (largoNombre % 7 == 0) precioCalc = "\$\$\$";
+          if (categoria.toLowerCase() == "bar" ||
+              categoria.toLowerCase() == "centro_comercial") {
+            precioCalc = "\$\$\$";
+          } else if (categoria.toLowerCase() == "cafeteria" ||
+              categoria.toLowerCase() == "museo" ||
+              categoria.toLowerCase() == "restaurante") {
+            precioCalc = "\$\$";
+          } else {
+            precioCalc = "\$";
+          }
+        }
+        final types = l["tipos_raw"] as List<dynamic>? ?? [];
+
+        final datos =
+            (nombreMin +
+                    " " +
+                    categoria.toLowerCase() +
+                    " " +
+                    types.join(" ").toLowerCase())
+                .toLowerCase();
+
+        List<String> etiquetas = [];
+
+        // =====================================================
+        // AMIGOS
+        // =====================================================
+        if (datos.contains("bar") ||
+            datos.contains("night_club") ||
+            datos.contains("pub") ||
+            datos.contains("fiesta") ||
+            datos.contains("music") ||
+            datos.contains("social") ||
+            datos.contains("group") ||
+            categoria.toLowerCase() == "bar" ||
+            categoria.toLowerCase() == "actividades_extremas") {
+          etiquetas.add("Amigos");
         }
 
-        String etiquetaAsignada = AnalizadorEtiquetas.analizarExperiencia(categoria, []) ?? "General";
-        
-        if (nombreMin.contains("motel")) {
-          etiquetaAsignada = "En pareja";
-        } else if (etiquetaAsignada == "Familiar" || etiquetaAsignada == "General") {
-           final largoNombre = nombreMin.length;
-           final types = l["types"] as List<dynamic>? ?? [];
-           
-           if (types.contains("bar") || types.contains("liquor_store") || types.contains("cafe") || categoria == "Otro") {
-             etiquetaAsignada = "Amigos";
-           } else if (precioCalc == "\$\$\$") { 
-             etiquetaAsignada = "En pareja";
-           } else if (largoNombre % 4 == 0) {
-             etiquetaAsignada = "Solo"; 
-           } else if (largoNombre % 2 == 0) {
-             etiquetaAsignada = "Amigos"; 
-           }
+        // =====================================================
+        // EN PAREJA
+        // =====================================================
+        if (datos.contains("romantic") ||
+            datos.contains("romantico") ||
+            datos.contains("intimate") ||
+            datos.contains("spa") ||
+            datos.contains("viewpoint") ||
+            categoria.toLowerCase() == "mirador" ||
+            categoria.toLowerCase() == "playa") {
+          etiquetas.add("en pareja");
+        }
+
+        // =====================================================
+        // FAMILIAR
+        // =====================================================
+        if (datos.contains("family") ||
+            datos.contains("kids") ||
+            datos.contains("children") ||
+            datos.contains("museum") ||
+            datos.contains("park") ||
+            datos.contains("zoo") ||
+            datos.contains("aquarium") ||
+            categoria.toLowerCase() == "museo" ||
+            categoria.toLowerCase() == "parque" ||
+            categoria.toLowerCase() == "zona_arqueologica") {
+          etiquetas.add("Familiar");
+        }
+
+        // =====================================================
+        // SOLO
+        // =====================================================
+        if (datos.contains("cafe") ||
+            datos.contains("coffee") ||
+            datos.contains("study") ||
+            datos.contains("reading") ||
+            datos.contains("library") ||
+            categoria.toLowerCase() == "cafeteria") {
+          etiquetas.add("Solo");
+        }
+
+        // SI NO TIENE NADA
+        if (etiquetas.isEmpty) {
+          etiquetas.add("General");
         }
 
         final latGoogle = l['geometry']?['location']?['lat'] ?? l['lat'];
         final lngGoogle = l['geometry']?['location']?['lng'] ?? l['lng'];
 
         // ========================================================
-        // 🔥 FOTOS DE GOOGLE (Con la llave que funciona en Detalle)
+        // 🔥 FOTO FINAL
         // ========================================================
-        String urlImagen = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
-        final photos = l["photos"] as List<dynamic>?;
-        if (photos != null && photos.isNotEmpty) {
-          final photoRef = photos[0]["photo_reference"].toString().trim();
-          // USAMOS TU LLAVE DIRECTA PARA EVITAR FALLOS DE DOTENV
-          final apiKey = "AIzaSyARaWdvsXGpJZD4uMUNoeAEXDoMcl3GGuQ"; 
-          urlImagen = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$photoRef&key=$apiKey";
-        }
+        String urlImagen =
+            l['foto']?.toString() ??
+            l['imagen']?.toString() ??
+            "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
+        String categoriaFinal = categoria
+            .toLowerCase()
+            .replaceAll(" ", "_")
+            .replaceAll("í", "i")
+            .replaceAll("á", "a");
 
         return {
           ...l,
           'name': l['name'] ?? 'Sin nombre',
           'direccion': l['vicinity'] ?? _obtenerDireccion(l),
-          'categoriaPrincipal': categoria,
-          'experiencia': etiquetaAsignada,
+          'categoriaPrincipal': categoriaFinal,
+          'experiencias': etiquetas,
           'rating': _toDouble(l['rating'], fb: 5),
-          'popularity': _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5),
+          'popularity': _toDouble(
+            l['user_ratings_total'] ?? l['popularity'],
+            fb: 5,
+          ),
           'precio': precioCalc,
           'lat': latGoogle,
           'lng': lngGoogle,
-          'distancia': calcularDistancia(_latActual, _lngActual, _toDouble(latGoogle), _toDouble(lngGoogle)),
+          'distancia': calcularDistancia(
+            _latActual,
+            _lngActual,
+            _toDouble(latGoogle),
+            _toDouble(lngGoogle),
+          ),
           'imagen': urlImagen,
         };
       }).toList();
@@ -326,19 +518,20 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         if (!latValida || !lngValida || !nombreValido) return false;
 
         final nombreMin = l['name'].toString().toLowerCase();
-        
-        final esBasura = nombreMin.contains("walmart") || 
-                         nombreMin.contains("oxxo") || 
-                         nombreMin.contains("soriana") || 
-                         nombreMin.contains("bodega aurrera") ||
-                         nombreMin.contains("honda") ||      
-                         nombreMin.contains("ford") ||       
-                         nombreMin.contains("chevrolet") ||  
-                         nombreMin.contains("nissan") ||
-                         nombreMin.contains("justicia") ||   
-                         nombreMin.contains("juzgado") ||
-                         nombreMin.contains("gobierno") ||
-                         nombreMin.contains("hospital");
+
+        final esBasura =
+            nombreMin.contains("walmart") ||
+            nombreMin.contains("oxxo") ||
+            nombreMin.contains("soriana") ||
+            nombreMin.contains("bodega aurrera") ||
+            nombreMin.contains("honda") ||
+            nombreMin.contains("ford") ||
+            nombreMin.contains("chevrolet") ||
+            nombreMin.contains("nissan") ||
+            nombreMin.contains("justicia") ||
+            nombreMin.contains("juzgado") ||
+            nombreMin.contains("gobierno") ||
+            nombreMin.contains("hospital");
 
         return !esBasura;
       }).toList();
@@ -371,7 +564,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       final finales =
           (texto.isEmpty &&
               destinoSeleccionado == null &&
-              tipoSeleccionado == null)
+              tipoSeleccionado == null &&
+              _intereses.isEmpty)
           ? _top5(ordenados)
           : ordenados;
 
@@ -393,20 +587,32 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   String _obtenerDireccion(Map<String, dynamic> l) {
     final direccion = l['direccion']?.toString().trim() ?? '';
-    if (direccion.isNotEmpty && direccion.toLowerCase() != 'sin dirección') return direccion;
+    if (direccion.isNotEmpty && direccion.toLowerCase() != 'sin dirección')
+      return direccion;
     final categoria = _normalizarCategoria(l['categoriaPrincipal']);
     switch (categoria) {
-      case 'restaurante': return 'Restaurante';
-      case 'cafeteria': return 'Cafetería';
-      case 'bar': return 'Bar';
-      case 'museo': return 'Museo';
-      case 'parque': return 'Parque';
-      case 'playa': return 'Playa';
-      case 'mirador': return 'Mirador';
-      case 'centro_comercial': return 'Centro comercial';
-      case 'zona_arqueologica': return 'Zona arqueológica';
-      case 'monumento': return 'Monumento';
-      default: return 'Lugar turístico';
+      case 'restaurante':
+        return 'Restaurante';
+      case 'cafeteria':
+        return 'Cafetería';
+      case 'bar':
+        return 'Bar';
+      case 'museo':
+        return 'Museo';
+      case 'parque':
+        return 'Parque';
+      case 'playa':
+        return 'Playa';
+      case 'mirador':
+        return 'Mirador';
+      case 'centro_comercial':
+        return 'Centro comercial';
+      case 'zona_arqueologica':
+        return 'Zona arqueológica';
+      case 'monumento':
+        return 'Monumento';
+      default:
+        return 'Lugar turístico';
     }
   }
 
@@ -415,30 +621,171 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   String _normalizarCategoria(dynamic input) {
     if (input == null) return 'otro';
-    final texto = input.toString().toLowerCase();
-    if (texto == 'restaurante') return 'restaurante';
-    if (texto == 'cafeteria') return 'cafeteria';
-    if (texto == 'bar') return 'bar';
-    if (texto == 'parque') return 'parque';
-    if (texto == 'playa') return 'playa';
-    if (texto == 'museo') return 'museo';
-    if (texto == 'monumento') return 'monumento';
-    if (texto == 'zona_arqueologica') return 'zona_arqueologica';
-    if (texto == 'mirador') return 'mirador';
-    if (texto == 'centro_comercial') return 'centro_comercial';
-    if (texto == 'actividades_extremas') return 'actividades_extremas';
 
-    if (texto.contains('restaurant') || texto.contains('meal_takeaway') || texto.contains('meal_delivery') || texto.contains('food')) return 'restaurante';
-    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('coffee_shop') || texto.contains('bakery')) return 'cafeteria';
-    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub')) return 'bar';
-    if (texto.contains('park') || texto.contains('natural') || texto.contains('garden')) return 'parque';
-    if (texto.contains('beach')) return 'playa';
-    if (texto.contains('museum') || texto.contains('art_gallery')) return 'museo';
-    if (texto.contains('historic') || texto.contains('monument')) return 'monumento';
-    if (texto.contains('archaeology')) return 'zona_arqueologica';
-    if (texto.contains('view')) return 'mirador';
-    if (texto.contains('shopping') || texto.contains('shopping_mall') || texto.contains('department_store') || texto.contains('mall')) return 'centro_comercial';
-    if (texto.contains('sport') || texto.contains('amusement_park')) return 'actividades_extremas';
+    final texto = input.toString().toLowerCase();
+
+    // =====================================================
+    // RESTAURANTES
+    // =====================================================
+    if (texto.contains('restaurant') ||
+        texto.contains('meal_takeaway') ||
+        texto.contains('meal_delivery') ||
+        texto.contains('food') ||
+        texto.contains('diner') ||
+        texto.contains('taqueria') ||
+        texto.contains('steakhouse') ||
+        texto.contains('buffet') ||
+        texto.contains('brunch') ||
+        texto.contains('pizza') ||
+        texto.contains('burger')) {
+      return 'restaurante';
+    }
+
+    // =====================================================
+    // CAFETERÍAS
+    // =====================================================
+    if (texto.contains('cafe') ||
+        texto.contains('coffee') ||
+        texto.contains('cafeteria') ||
+        texto.contains('bakery') ||
+        texto.contains('pastry') ||
+        texto.contains('tea_house') ||
+        texto.contains('dessert')) {
+      return 'cafeteria';
+    }
+
+    // =====================================================
+    // BARES
+    // =====================================================
+    if (texto.contains('bar') ||
+        texto.contains('night_club') ||
+        texto.contains('pub') ||
+        texto.contains('cantina') ||
+        texto.contains('brewery') ||
+        texto.contains('disco') ||
+        texto.contains('club')) {
+      return 'bar';
+    }
+
+    // =====================================================
+    // PARQUES
+    // =====================================================
+    if (texto.contains('park') ||
+        texto.contains('garden') ||
+        texto.contains('nature') ||
+        texto.contains('national_park') ||
+        texto.contains('camping') ||
+        texto.contains('forest') ||
+        texto.contains('ecological') ||
+        texto.contains('zoo')) {
+      return 'parque';
+    }
+
+    // =====================================================
+    // PLAYAS
+    // =====================================================
+    if (texto.contains('beach') ||
+        texto.contains('sea') ||
+        texto.contains('coast') ||
+        texto.contains('island') ||
+        texto.contains('waterfront')) {
+      return 'playa';
+    }
+
+    // =====================================================
+    // MUSEOS
+    // =====================================================
+    if (texto.contains('museum') ||
+        texto.contains('art_gallery') ||
+        texto.contains('gallery') ||
+        texto.contains('exhibition') ||
+        texto.contains('cultural') ||
+        texto.contains('history_museum')) {
+      return 'museo';
+    }
+
+    // =====================================================
+    // ZONAS ARQUEOLÓGICAS
+    // =====================================================
+    if (texto.contains('archaeological') ||
+        texto.contains('archaeology') ||
+        texto.contains('ruins') ||
+        texto.contains('historic_ruins') ||
+        texto.contains('pyramid') ||
+        texto.contains('maya') ||
+        texto.contains('aztec') ||
+        texto.contains('temple')) {
+      return 'zona_arqueologica';
+    }
+
+    // =====================================================
+    // MONUMENTOS
+    // =====================================================
+    if (texto.contains('monument') ||
+        texto.contains('historic') ||
+        texto.contains('church') ||
+        texto.contains('cathedral') ||
+        texto.contains('tourist_attraction') ||
+        texto.contains('memorial') ||
+        texto.contains('plaza') ||
+        texto.contains('architecture') ||
+        texto.contains('castle')) {
+      return 'monumento';
+    }
+
+    // =====================================================
+    // MIRADORES
+    // =====================================================
+    if (texto.contains('viewpoint') ||
+        texto.contains('observation') ||
+        texto.contains('scenic') ||
+        texto.contains('lookout') ||
+        texto.contains('panoramic')) {
+      return 'mirador';
+    }
+
+    // =====================================================
+    // CENTROS COMERCIALES
+    // =====================================================
+    if (texto.contains('shopping_mall') ||
+        texto.contains('department_store') ||
+        texto.contains('mall') ||
+        texto.contains('shopping') ||
+        texto.contains('market') ||
+        texto.contains('plaza_commercial')) {
+      return 'centro_comercial';
+    }
+
+    // =====================================================
+    // ACTIVIDADES EXTREMAS
+    // =====================================================
+    if (texto.contains('amusement_park') ||
+        texto.contains('stadium') ||
+        texto.contains('sports_complex') ||
+        texto.contains('sports') ||
+        texto.contains('bowling') ||
+        texto.contains('aquarium') ||
+        texto.contains('casino') ||
+        texto.contains('theme_park') ||
+        texto.contains('kart') ||
+        texto.contains('paintball') ||
+        texto.contains('gotcha') ||
+        texto.contains('escape') ||
+        texto.contains('climbing') ||
+        texto.contains('extreme') ||
+        texto.contains('adventure') ||
+        texto.contains('rafting') ||
+        texto.contains('zipline') ||
+        texto.contains('canopy') ||
+        texto.contains('surf') ||
+        texto.contains('diving') ||
+        texto.contains('bungee') ||
+        texto.contains('skate') ||
+        texto.contains('arcade') ||
+        texto.contains('laser_tag') ||
+        texto.contains('water_park')) {
+      return 'actividades_extremas';
+    }
 
     return 'otro';
   }
@@ -450,7 +797,12 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     const R = 6371;
     final dLat = (lat2 - lat1) * (pi / 180);
     final dLng = (lng2 - lng1) * (pi / 180);
-    final a = sin(dLat / 2) * sin(dLat / 2) + cos(lat1 * (pi / 180)) * cos(lat2 * (pi / 180)) * sin(dLng / 2) * sin(dLng / 2);
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * (pi / 180)) *
+            cos(lat2 * (pi / 180)) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
@@ -474,7 +826,11 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         if (puntos is int) interes = puntos >= 8 ? 10 : puntos * 1.25;
       }
 
-      lugar['relevancia'] = (rating * 0.4) + (popularity * 0.2) + (distanciaPeso * 0.2) + (interes * 0.2);
+      lugar['relevancia'] =
+          (rating * 0.4) +
+          (popularity * 0.2) +
+          (distanciaPeso * 0.2) +
+          (interes * 0.2);
       return lugar;
     }).toList();
   }
@@ -485,9 +841,15 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   List<Map<String, dynamic>> _quickSort(List<Map<String, dynamic>> lista) {
     if (lista.length <= 1) return lista;
     final pivote = _toDouble(lista[lista.length ~/ 2]['relevancia']);
-    final mayores = lista.where((e) => _toDouble(e['relevancia']) > pivote).toList();
-    final iguales = lista.where((e) => _toDouble(e['relevancia']) == pivote).toList();
-    final menores = lista.where((e) => _toDouble(e['relevancia']) < pivote).toList();
+    final mayores = lista
+        .where((e) => _toDouble(e['relevancia']) > pivote)
+        .toList();
+    final iguales = lista
+        .where((e) => _toDouble(e['relevancia']) == pivote)
+        .toList();
+    final menores = lista
+        .where((e) => _toDouble(e['relevancia']) < pivote)
+        .toList();
     return [..._quickSort(mayores), ...iguales, ..._quickSort(menores)];
   }
 
@@ -512,13 +874,15 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   }
 
   // -------------------------------------------------------------------------
-  // FILTROS 🔥 AQUÍ INYECTAMOS EL FILTRO VIP 
+  // FILTROS 🔥 AQUÍ INYECTAMOS EL FILTRO VIP
   // -------------------------------------------------------------------------
   List<Map<String, dynamic>> get _lugaresFiltrados {
     List<Map<String, dynamic>> filtrados = List.from(lugares);
 
     String normalizar(String texto) {
-      return texto.toLowerCase().trim()
+      return texto
+          .toLowerCase()
+          .trim()
           .replaceAll(RegExp(r'[áäâà]'), 'a')
           .replaceAll(RegExp(r'[éëêè]'), 'e')
           .replaceAll(RegExp(r'[íïîì]'), 'i')
@@ -529,9 +893,22 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
     if (query.isNotEmpty) {
       final queryLimpio = normalizar(query);
+
       filtrados = filtrados.where((l) {
-        final nombreLimpio = normalizar(l['name'].toString());
-        return nombreLimpio.contains(queryLimpio);
+        final nombre = normalizar(l['name'].toString());
+
+        final categoria = normalizar(l['categoriaPrincipal'].toString());
+
+        final experiencias = (l['experiencias'] as List<dynamic>? ?? [])
+            .map((e) => normalizar(e.toString()))
+            .join(' ');
+
+        final direccion = normalizar(l['direccion'].toString());
+
+        return nombre.contains(queryLimpio) ||
+            categoria.contains(queryLimpio) ||
+            experiencias.contains(queryLimpio) ||
+            direccion.contains(queryLimpio);
       }).toList();
     }
 
@@ -539,15 +916,18 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       final tipoLimpio = normalizar(tipoSeleccionado!);
       filtrados = filtrados.where((l) {
         final catLugar = normalizar(l['categoriaPrincipal'].toString());
-        return catLugar == tipoLimpio || catLugar.contains(tipoLimpio) || tipoLimpio.contains(catLugar);
+        return catLugar == tipoLimpio;
       }).toList();
     }
 
     if (estiloSeleccionado != null) {
       final estiloLimpio = normalizar(estiloSeleccionado!);
       filtrados = filtrados.where((l) {
-        final experiencia = normalizar(l['experiencia'].toString());
-        return experiencia == estiloLimpio;
+        final experiencias = (l['experiencias'] as List<dynamic>? ?? [])
+            .map((e) => normalizar(e.toString()))
+            .toList();
+
+        return experiencias.contains(estiloLimpio);
       }).toList();
     }
 
@@ -565,23 +945,42 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       double ratingB = _toDouble(b['rating'], fb: 0.0);
 
       // 2. Obtenemos la cantidad de reseñas (para desempatar)
-      int reviewsA = _toDouble(a['popularity'] ?? a['user_ratings_total'], fb: 0.0).toInt();
-      int reviewsB = _toDouble(b['popularity'] ?? b['user_ratings_total'], fb: 0.0).toInt();
+      int reviewsA = _toDouble(
+        a['popularity'] ?? a['user_ratings_total'],
+        fb: 0.0,
+      ).toInt();
+      int reviewsB = _toDouble(
+        b['popularity'] ?? b['user_ratings_total'],
+        fb: 0.0,
+      ).toInt();
 
       // 3. Calculamos un "Puntaje Pack&Go"
       // Le damos un bonus a los lugares que tienen más de 100 reseñas (son más confiables)
-      double scoreA = ratingA + (reviewsA > 100 ? 0.5 : 0.0);
-      double scoreB = ratingB + (reviewsB > 100 ? 0.5 : 0.0);
+      double scoreA = _toDouble(a['relevancia']) + (reviewsA > 100 ? 0.5 : 0.0);
+
+      double scoreB = _toDouble(b['relevancia']) + (reviewsB > 100 ? 0.5 : 0.0);
 
       // 4. Castigamos un poquito a las cadenas de comida rápida para que bajen en la lista
       final nombreA = a['name'].toString().toLowerCase();
       final nombreB = b['name'].toString().toLowerCase();
-      
-      if (nombreA.contains('pizza hut') || nombreA.contains('burger king') || nombreA.contains('kfc') || nombreA.contains('mcdonald') || nombreA.contains('subway') || nombreA.contains('starbucks')) scoreA -= 2.0;
-      if (nombreB.contains('pizza hut') || nombreB.contains('burger king') || nombreB.contains('kfc') || nombreB.contains('mcdonald') || nombreB.contains('subway') || nombreB.contains('starbucks')) scoreB -= 2.0;
+
+      if (nombreA.contains('pizza hut') ||
+          nombreA.contains('burger king') ||
+          nombreA.contains('kfc') ||
+          nombreA.contains('mcdonald') ||
+          nombreA.contains('subway') ||
+          nombreA.contains('starbucks'))
+        scoreA -= 2.0;
+      if (nombreB.contains('pizza hut') ||
+          nombreB.contains('burger king') ||
+          nombreB.contains('kfc') ||
+          nombreB.contains('mcdonald') ||
+          nombreB.contains('subway') ||
+          nombreB.contains('starbucks'))
+        scoreB -= 2.0;
 
       // Comparamos para que el puntaje MÁS ALTO quede HASTA ARRIBA
-      return scoreB.compareTo(scoreA); 
+      return scoreB.compareTo(scoreA);
     });
 
     return filtrados;
@@ -604,6 +1003,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -611,42 +1011,81 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         centerTitle: true,
         title: Text('Pack&Go', style: GoogleFonts.poppins(fontSize: 36)),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            BarraBusqueda(
-              onChanged: (v) {
-                setState(() => query = v);
-                if (v.length >= 3) _buscar(texto: v);
-                if (v.isEmpty) _buscar();
-              },
-            ),
-            const SizedBox(height: 12),
-            FiltrosBusqueda(
-              destinoSeleccionado: destinoSeleccionado,
-              tipoSeleccionado: tipoSeleccionado,
-              estiloSeleccionado: estiloSeleccionado,
-              precioSeleccionado: precioSeleccionado,
-              onDestinoChanged: (v) {
-                setState(() => destinoSeleccionado = v);
-                _buscar(texto: query);
-              },
-              onTipoChanged: (v) {
-                setState(() => tipoSeleccionado = v);
-                _buscar(texto: query);
-              },
-              onEstiloChanged: (v) {
-                setState(() => estiloSeleccionado = v);
-              },
-              onPrecioChanged: (v) {
-                setState(() => precioSeleccionado = v);
-              },
-            ),
-            const SizedBox(height: 16),
-            Expanded(child: _buildLista()),
-          ],
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+
+                        // 🔍 BUSCADOR
+                        BarraBusqueda(
+                          onChanged: (v) {
+                            setState(() => query = v);
+
+                            if (v.length >= 3) {
+                              _buscar(texto: v);
+                            }
+
+                            if (v.isEmpty) {
+                              _buscar();
+                            }
+                          },
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // 🔥 FILTROS
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FiltrosBusqueda(
+                            destinoSeleccionado: destinoSeleccionado,
+                            tipoSeleccionado: tipoSeleccionado,
+                            estiloSeleccionado: estiloSeleccionado,
+                            precioSeleccionado: precioSeleccionado,
+
+                            onDestinoChanged: (v) {
+                              setState(() => destinoSeleccionado = v);
+                              _buscar(texto: query);
+                            },
+
+                            onTipoChanged: (v) {
+                              setState(() => tipoSeleccionado = v);
+                              _buscar(texto: query);
+                            },
+
+                            onEstiloChanged: (v) {
+                              setState(() => estiloSeleccionado = v);
+                            },
+
+                            onPrecioChanged: (v) {
+                              setState(() => precioSeleccionado = v);
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 🔥 LISTA
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.65,
+                          child: _buildLista(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -689,29 +1128,49 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
               padding: EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 "No hay lugares con estas características.",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 20),
-            
+
             if (precioSeleccionado != null) ...[
-              Text("¿Deseas eliminar el filtro de precio '$precioSeleccionado'?"),
+              Text(
+                "¿Deseas eliminar el filtro de precio '$precioSeleccionado'?",
+              ),
               TextButton(
                 onPressed: () {
                   setState(() => precioSeleccionado = null);
-                  _buscar(texto: query); 
+                  _buscar(texto: query);
                 },
-                child: const Text("Quitar filtro de precio", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Quitar filtro de precio",
+                  style: TextStyle(
+                    color: Color(0xFFF6A230),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ] else if (estiloSeleccionado != null) ...[
-              Text("¿Deseas eliminar el tipo de experiencia '$estiloSeleccionado'?"),
+              Text(
+                "¿Deseas eliminar el tipo de experiencia '$estiloSeleccionado'?",
+              ),
               TextButton(
                 onPressed: () {
                   setState(() => estiloSeleccionado = null);
                   _buscar(texto: query);
                 },
-                child: const Text("Quitar experiencia", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Quitar experiencia",
+                  style: TextStyle(
+                    color: Color(0xFFF6A230),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ] else if (tipoSeleccionado != null) ...[
               Text("¿Deseas eliminar la categoría '$tipoSeleccionado'?"),
@@ -720,7 +1179,13 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                   setState(() => tipoSeleccionado = null);
                   _buscar(texto: query);
                 },
-                child: const Text("Quitar categoría", style: TextStyle(color: Color(0xFFF6A230), fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Quitar categoría",
+                  style: TextStyle(
+                    color: Color(0xFFF6A230),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ],
@@ -729,6 +1194,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 30),
+      physics: const BouncingScrollPhysics(),
       itemCount: filtrados.length,
       itemBuilder: (context, index) {
         final l = filtrados[index];
@@ -739,7 +1206,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           lat: _toDouble(l['lat']),
           lng: _toDouble(l['lng']),
           categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
-          imagenUrl: l['imagen']?.toString() ?? '', 
+          imagenUrl: l['imagen']?.toString() ?? '',
           lugar: l, // 🔥 EL PUENTE MÁGICO QUE LE MANDA LOS DATOS A LA TARJETA
           onTap: () {
             if (widget.esSeleccion) {
@@ -749,7 +1216,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                 "lat": l['lat'],
                 "lng": l['lng'],
                 "hours": l['hours'],
-                "foto": l['imagen'] ?? l['photo'], 
+                "foto": l['imagen'] ?? l['photo'],
                 "direccion": l['direccion'],
                 "rating": l['rating'],
               });
@@ -758,10 +1225,10 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => LugarDetallePantalla(
-                lugar: l,
-                imagenUrl: l['imagen'], 
-              )),
+              MaterialPageRoute(
+                builder: (_) =>
+                    LugarDetallePantalla(lugar: l, imagenUrl: l['imagen']),
+              ),
             );
           },
         );

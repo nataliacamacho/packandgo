@@ -26,6 +26,8 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
 
   Map<String, List<Map<String, dynamic>>> itinerarioPorDia = {};
 
+  String destinoViaje = "";
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +44,7 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
 
     final lugarNormalizado = {
       "nombre": lugar["nombre"],
-      "categoria": lugar["categoria"],
+      "categoria": (lugar["categoria"] ?? "").toString().trim(),
       "lat": lugar["lat"],
       "lng": lugar["lng"],
       "hours": lugar["hours"],
@@ -73,11 +75,57 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
     } else {
       ItinerarioServicio.mostrarAlertaCerrado(context);
     }
+
+    debugPrint("LUGAR SELECCIONADO: $lugar");
+  }
+
+  String normalizarDestino(String destino) {
+    destino = destino.toLowerCase().trim();
+
+    // quitar todo después de coma (estado/país)
+    if (destino.contains(",")) {
+      destino = destino.split(",").first.trim();
+    }
+
+    // limpiar palabras comunes
+    final removibles = [
+      "heroica",
+      "de juárez",
+      "juarez",
+      "pueblo mágico",
+      "estado de",
+      "cdmx",
+      "ciudad de",
+    ];
+
+    for (final r in removibles) {
+      destino = destino.replaceAll(r, "");
+    }
+
+    destino = destino.trim();
+
+    // capitalizar
+    return destino
+        .split(" ")
+        .where((p) => p.isNotEmpty)
+        .map((p) => p[0].toUpperCase() + p.substring(1))
+        .join(" ");
   }
 
   Future<void> cargarItinerario() async {
     try {
       String uid = FirebaseAuth.instance.currentUser!.uid;
+
+      final viajeDoc = await FirebaseFirestore.instance
+          .collection('viajes')
+          .doc(widget.idViaje)
+          .get();
+
+      if (viajeDoc.exists) {
+        final dataViaje = viajeDoc.data();
+
+        destinoViaje = dataViaje?['destino'] ?? "";
+      }
 
       DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection('usuarios')
@@ -95,6 +143,7 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
 
           itinerarioFirebase.forEach((diaKey, lugares) {
             List<dynamic> listaLugares = lugares as List<dynamic>;
+
             mapaRecuperado[diaKey] = listaLugares
                 .map((l) => Map<String, dynamic>.from(l))
                 .toList();
@@ -296,8 +345,9 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
                       final lugarSeleccionado = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              BusquedaPantalla(esSeleccion: true),
+                          builder: (context) => BusquedaPantalla(
+                            esSeleccion: true,
+                          ),
                         ),
                       );
 
@@ -342,12 +392,17 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("¡Itinerario guardado!"),
-              backgroundColor: Color.fromARGB(255, 150, 150, 150)),     
+              const SnackBar(
+                content: Text("¡Itinerario guardado!"),
+                backgroundColor: Color.fromARGB(255, 150, 150, 150),
+              ),
             );
           }
         },
-        icon: const Icon(Icons.cloud_upload, color: Color.fromARGB(255, 255, 255, 255)),
+        icon: const Icon(
+          Icons.cloud_upload,
+          color: Color.fromARGB(255, 255, 255, 255),
+        ),
         label: const Text(
           "Guardar",
           style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),

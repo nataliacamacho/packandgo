@@ -70,7 +70,9 @@ class NormalizadorLugares {
   static String? _categoriaFoursquare(Map<String, dynamic> lugar) {
     if (lugar['categories'] == null ||
         lugar['categories'] is! List ||
-        lugar['categories'].isEmpty) return null;
+        lugar['categories'].isEmpty) {
+      return null;
+    }
 
     return lugar['categories'][0]['name'];
   }

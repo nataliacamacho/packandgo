@@ -262,9 +262,9 @@ class ListaViajesPantalla extends StatelessWidget {
 
           List<QueryDocumentSnapshot> lista;
 
-          if (tipo == EstadoViaje.actual)
+          if (tipo == EstadoViaje.actual) {
             lista = actuales;
-          else if (tipo == EstadoViaje.futuro)
+          } else if (tipo == EstadoViaje.futuro)
             lista = futuros;
           else
             lista = pasados;

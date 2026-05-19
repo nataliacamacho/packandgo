@@ -15,12 +15,7 @@ class GooglePlacesServicio {
     'bar': 'bar',
     'parque': 'park',
     'museo': 'museum',
-    'playa': 'natural_feature',
-    'monumento': 'tourist_attraction',
-    'zona_arqueologica': 'tourist_attraction',
-    'mirador': 'tourist_attraction',
     'centro_comercial': 'shopping_mall',
-    'actividades_extremas': 'amusement_park',
   };
 
   // ---------------------------------------------------------------------------
@@ -42,9 +37,17 @@ class GooglePlacesServicio {
       // TEXT SEARCH
       // ---------------------------------------------------------------------
       if (query.isNotEmpty) {
-        final queryFinal = googleTipo != null
-            ? '${_traducirTipo(tipo!)} cerca de mi'
-            : query;
+        String queryFinal = query;
+
+        if (tipo != null) {
+          final tipoTraducido = _traducirTipo(tipo);
+
+          if (query.trim().isEmpty) {
+            queryFinal = tipoTraducido;
+          } else {
+            queryFinal = '$tipoTraducido $query';
+          }
+        }
 
         url =
             'https://maps.googleapis.com/maps/api/place/textsearch/json'
@@ -54,11 +57,10 @@ class GooglePlacesServicio {
             '&language=es'
             '&fields=photos,name,geometry,rating,place_id,types,vicinity'
             '&key=$_apiKey';
-
-        if (googleTipo != null) {
-          url += '&type=$googleTipo';
-        }
       }
+      // ---------------------------------------------------------------------
+      // NEARBY SEARCH
+      // ---------------------------------------------------------------------
       // ---------------------------------------------------------------------
       // NEARBY SEARCH
       // ---------------------------------------------------------------------
@@ -69,12 +71,25 @@ class GooglePlacesServicio {
             '&radius=$radio'
             '&region=mx'
             '&language=es'
-            '&fields=photos,name,geometry,rating,place_id,types,vicinity'
             '&key=$_apiKey';
 
-        // 🔥 SOLO poner type si realmente existe
-        if (googleTipo != null) {
+        // -------------------------------------------------------------
+        // TIPOS NATIVOS GOOGLE
+        // -------------------------------------------------------------
+        if (googleTipo != null &&
+            tipo != 'mirador' &&
+            tipo != 'zona_arqueologica' &&
+            tipo != 'actividades_extremas' &&
+            tipo != 'monumento' &&
+            tipo != 'playa') {
           url += '&type=$googleTipo';
+        }
+        // -------------------------------------------------------------
+        // CATEGORÍAS PERSONALIZADAS
+        // -------------------------------------------------------------
+        else if (tipo != null) {
+          final keyword = _traducirTipo(tipo);
+          url += '&keyword=${Uri.encodeComponent(keyword)}';
         }
       }
 
@@ -93,18 +108,45 @@ class GooglePlacesServicio {
 
       final results = data['results'] as List? ?? [];
 
+      final filtrados = results.where((place) {
+        final nombre = place['name']?.toString() ?? '';
+        final geometry = place['geometry'];
+
+        return nombre.isNotEmpty && geometry != null;
+      }).toList();
+
       print('🟦 GOOGLE RESULTADOS: ${results.length}');
 
-      return results.map<Map<String, dynamic>>((place) {
+      return filtrados.map<Map<String, dynamic>>((place) {
         final loc = place['geometry']?['location'];
 
         final types =
             (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        String categoria = _mapearCategoria(types, nombre: place['name'] ?? '');
 
-        final categoria = _mapearCategoria(types);
+        final nombre = (place['name'] ?? '').toString().toLowerCase();
 
-        print('📍 GOOGLE TYPES: $types');
-        print('✅ CATEGORIA FINAL: $categoria');
+        if (nombre.contains('mirador')) {
+          categoria = 'mirador';
+        }
+
+        if (nombre.contains('zona arqueológica') ||
+            nombre.contains('arqueologica') ||
+            nombre.contains('ruinas')) {
+          categoria = 'zona_arqueologica';
+        }
+
+        if (nombre.contains('mall') ||
+            nombre.contains('plaza') ||
+            nombre.contains('center')) {
+          categoria = 'centro_comercial';
+        }
+
+        if (nombre.contains('extremo') ||
+            nombre.contains('adventure') ||
+            nombre.contains('parque acuatico')) {
+          categoria = 'actividades_extremas';
+        }
 
         final priceLevel = place['price_level'];
 
@@ -151,6 +193,7 @@ class GooglePlacesServicio {
           // FOTO
           // -----------------------------------------------------------------
           'foto': _fotoUrl(place['photos']),
+          'photos': place['photos'],
 
           // -----------------------------------------------------------------
           // IDS
@@ -169,99 +212,119 @@ class GooglePlacesServicio {
   // ---------------------------------------------------------------------------
   // MAPEAR CATEGORÍAS
   // ---------------------------------------------------------------------------
-  static String _mapearCategoria(List<String> types) {
+  static String _mapearCategoria(List<String> types, {String nombre = ''}) {
     final texto = types.join(' ').toLowerCase();
+    final n = nombre.toLowerCase();
 
     // -------------------------------------------------------------------------
     // RESTAURANTES
     // -------------------------------------------------------------------------
-    if (texto.contains('restaurant')) return 'restaurante';
-    if (texto.contains('food')) return 'restaurante';
-    if (texto.contains('meal_takeaway')) return 'restaurante';
-    if (texto.contains('meal_delivery')) return 'restaurante';
+    if (texto.contains('restaurant') ||
+        texto.contains('food') ||
+        texto.contains('meal_takeaway') ||
+        texto.contains('meal_delivery')) {
+      return 'restaurante';
+    }
 
     // -------------------------------------------------------------------------
     // CAFETERÍAS
     // -------------------------------------------------------------------------
-    if (texto.contains('cafe')) return 'cafeteria';
-    if (texto.contains('coffee')) return 'cafeteria';
-    if (texto.contains('bakery')) return 'cafeteria';
+    if (texto.contains('cafe') ||
+        texto.contains('coffee') ||
+        texto.contains('bakery')) {
+      return 'cafeteria';
+    }
 
     // -------------------------------------------------------------------------
     // BARES
     // -------------------------------------------------------------------------
-    if (texto.contains('bar')) return 'bar';
-    if (texto.contains('night_club')) return 'bar';
-    if (texto.contains('pub')) return 'bar';
+    if (texto.contains('bar') ||
+        texto.contains('night_club') ||
+        texto.contains('pub')) {
+      return 'bar';
+    }
 
     // -------------------------------------------------------------------------
     // PARQUES
     // -------------------------------------------------------------------------
-    if (texto.contains('park')) return 'parque';
-    if (texto.contains('garden')) return 'parque';
+    if (texto.contains('park') || texto.contains('garden')) {
+      return 'parque';
+    }
 
     // -------------------------------------------------------------------------
     // MUSEOS
     // -------------------------------------------------------------------------
-    if (texto.contains('museum')) return 'museo';
-    if (texto.contains('art_gallery')) return 'museo';
+    if (texto.contains('museum') || texto.contains('art_gallery')) {
+      return 'museo';
+    }
 
     // -------------------------------------------------------------------------
     // PLAYAS
     // -------------------------------------------------------------------------
-    if (texto.contains('beach')) return 'playa';
-    if (texto.contains('natural_feature')) return 'playa';
+    if (texto.contains('beach') ||
+        texto.contains('natural_feature') ||
+        n.contains('playa') ||
+        n.contains('beach')) {
+      return 'playa';
+    }
 
     // -------------------------------------------------------------------------
     // CENTROS COMERCIALES
     // -------------------------------------------------------------------------
-    if (texto.contains('shopping_mall')) {
-      return 'centro_comercial';
-    }
-
-    if (texto.contains('department_store')) {
-      return 'centro_comercial';
-    }
-
-    if (texto.contains('store')) {
-      return 'centro_comercial';
-    }
-
-    if (texto.contains('mall')) {
+    if (texto.contains('shopping') ||
+        texto.contains('mall') ||
+        texto.contains('shopping_mall') ||
+        texto.contains('department_store') ||
+        texto.contains('store')) {
       return 'centro_comercial';
     }
 
     // -------------------------------------------------------------------------
     // MIRADORES
     // -------------------------------------------------------------------------
-    if (texto.contains('view')) return 'mirador';
+    if (texto.contains('viewpoint') ||
+        texto.contains('observation') ||
+        n.contains('mirador')) {
+      return 'mirador';
+    }
 
     // -------------------------------------------------------------------------
     // ZONAS ARQUEOLÓGICAS
     // -------------------------------------------------------------------------
-    if (texto.contains('archaeological')) {
+    if (texto.contains('archaeological') ||
+        n.contains('zona arqueologica') ||
+        n.contains('arqueologica') ||
+        n.contains('ruinas') ||
+        n.contains('templo maya') ||
+        n.contains('piramide')) {
       return 'zona_arqueologica';
     }
 
     // -------------------------------------------------------------------------
-    // ACTIVIDADES
+    // ACTIVIDADES EXTREMAS
     // -------------------------------------------------------------------------
-    if (texto.contains('amusement_park')) {
-      return 'actividades_extremas';
-    }
-
-    if (texto.contains('stadium')) {
+    if (texto.contains('amusement_park') ||
+        texto.contains('stadium') ||
+        texto.contains('campground') ||
+        texto.contains('rv_park') ||
+        n.contains('xcaret') ||
+        n.contains('rafting') ||
+        n.contains('tirolesa') ||
+        n.contains('extremo') ||
+        n.contains('adventure')) {
       return 'actividades_extremas';
     }
 
     // -------------------------------------------------------------------------
     // MONUMENTOS
     // -------------------------------------------------------------------------
-    if (texto.contains('tourist_attraction')) {
-      return 'monumento';
-    }
-
-    if (texto.contains('historic')) {
+    if (texto.contains('tourist_attraction') ||
+        texto.contains('historic') ||
+        n.contains('monumento') ||
+        n.contains('catedral') ||
+        n.contains('iglesia') ||
+        n.contains('templo') ||
+        n.contains('plaza principal')) {
       return 'monumento';
     }
 
@@ -291,8 +354,20 @@ class GooglePlacesServicio {
       case 'playa':
         return 'playas';
 
+      case 'mirador':
+        return 'miradores';
+
+      case 'zona_arqueologica':
+        return 'zonas arqueológicas';
+
       case 'centro_comercial':
         return 'centros comerciales';
+
+      case 'actividades_extremas':
+        return 'actividades extremas';
+
+      case 'monumento':
+        return 'monumentos turísticos';
 
       default:
         return tipo;

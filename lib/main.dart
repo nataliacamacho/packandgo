@@ -5,19 +5,19 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 
 import 'app.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 1. CARGAR PRIMERO EL .ENV
+
   await dotenv.load(fileName: ".env");
 
-  // 2. Inicializar Firebase y Mapbox después
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Asegúrate de pasar el token guardado en tu .env aquí también
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    print("Firebase ya estaba inicializado: $e");
+  }
+
   String mapboxToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? "";
   MapboxOptions.setAccessToken(mapboxToken);
 

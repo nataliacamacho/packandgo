@@ -36,7 +36,7 @@ class Viaje {
     );
   }
 
-  static get length => null;
+  static Null get length => null;
 
   static String _string(Map d, String k) =>
       d[k]?.toString() ?? "Sin $k";

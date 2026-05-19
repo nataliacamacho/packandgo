@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/modulos/viajes/crear_viaje_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import '../../nucleo/servicios/ubicacion_servicio.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ExploracionPantalla extends StatefulWidget {
   const ExploracionPantalla({super.key});
@@ -16,6 +18,8 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   List<dynamic> lugaresRecomendados = [];
   bool estaCargando = true;
   int indiceActual = 0;
+  Map<String, int> perfilUsuario = {};
+  final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   final List<Map<String, dynamic>> ciudadesPopulares = [
     {'name': 'Ciudad de México', 'lat': 19.4326, 'lng': -99.1332},
@@ -33,14 +37,24 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
   // =========================
   // 🔵 DETECTAR USUARIO NUEVO
-  // =========================
   Future<bool> _esUsuarioNuevo() async {
-    // 🔴 AQUÍ LUEGO CONECTAS FIREBASE
-    // Ejemplo:
-    // final doc = await FirebaseFirestore.instance.collection('usuarios').doc(uid).get();
-    // return (doc.data()?['historial'] ?? []).isEmpty;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
 
-    return true; // <- CAMBIA ESTO CUANDO CONECTES FIREBASE
+      if (!doc.exists) return true;
+
+      final data = doc.data();
+
+      final historial = data?['historial'] ?? [];
+
+      return (historial as List).isEmpty;
+    } catch (e) {
+      debugPrint("Error verificando usuario nuevo: $e");
+      return true;
+    }
   }
 
   // =========================
@@ -53,6 +67,32 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       _cargarCiudadesPopulares();
     } else {
       _cargarLugaresPersonalizados();
+    }
+  }
+
+  Future<void> _actualizarPerfilUsuario() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+
+      if (!doc.exists) return;
+
+      final data = doc.data();
+
+      if (data == null) return;
+
+      // 👇 aquí asumimos que guardas etiquetas como mapa
+      final Map<String, dynamic> etiquetas = Map<String, dynamic>.from(
+        data['etiquetas'] ?? {},
+      );
+
+      perfilUsuario = etiquetas.map(
+        (key, value) => MapEntry(key, (value as num).toInt()),
+      );
+    } catch (e) {
+      debugPrint("Error cargando perfil: $e");
     }
   }
 
@@ -91,6 +131,8 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     setState(() => estaCargando = true);
 
     try {
+      await _actualizarPerfilUsuario();
+
       final posicion = await UbicacionServicio().obtenerUbicacionActual();
 
       if (posicion == null) {
@@ -108,7 +150,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
       if (mounted) {
         setState(() {
-          lugaresRecomendados = lugares;
+          lugaresRecomendados = ordenarRecomendaciones(lugares);
           estaCargando = false;
           indiceActual = 0;
         });
@@ -120,6 +162,37 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         setState(() => estaCargando = false);
       }
     }
+  }
+
+  // =========================
+  // 🔷 SISTEMA DE RECOMENDACIÓN (MEJORADO)
+  // =========================
+
+  double calcularScoreLugar(Map lugar) {
+    List<String> etiquetasLugar = (lugar['types'] ?? [])
+        .map<String>((e) => e.toString())
+        .toList();
+
+    double score = 0;
+
+    etiquetasLugar.forEach((etiqueta) {
+      if (perfilUsuario.containsKey(etiqueta)) {
+        score += perfilUsuario[etiqueta]!.toDouble();
+      }
+    });
+
+    return score;
+  }
+
+  List<dynamic> ordenarRecomendaciones(List<dynamic> lugares) {
+    lugares.sort((a, b) {
+      double scoreA = calcularScoreLugar(a);
+      double scoreB = calcularScoreLugar(b);
+
+      return scoreB.compareTo(scoreA); // descendente
+    });
+
+    return lugares;
   }
 
   // =========================
@@ -233,11 +306,13 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                                                                  builder: (_) => LugarDetallePantalla(
+                                    builder: (_) => LugarDetallePantalla(
                                       lugar: lugar,
-                        // 🔥 Le pasamos la foto de Natalia ('foto') a la variable que acabamos de crear
-                                      imagenUrl: lugar['foto'] ?? "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
-                                   ),
+                                      // 🔥 Le pasamos la foto de Natalia ('foto') a la variable que acabamos de crear
+                                      imagenUrl:
+                                          lugar['foto'] ??
+                                          "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
+                                    ),
                                   ),
                                 );
                               },

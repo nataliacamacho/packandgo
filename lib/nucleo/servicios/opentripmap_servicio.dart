@@ -35,7 +35,7 @@ class OpenTripMapServicio {
       '&kinds=foods,cultural,religion,natural,architecture,amusement_parks'
       '&rate=1'
       '&limit=100'
-      '&apikey=${_apiKey}',
+      '&apikey=$_apiKey',
     );
 
     try {

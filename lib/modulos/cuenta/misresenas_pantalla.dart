@@ -27,8 +27,8 @@ class _MisResenasPantallaState extends State<MisResenasPantalla> {
 
     docs.sort(
       (a, b) => _ranking(
-        b.data() as Map<String, dynamic>,
-      ).compareTo(_ranking(a.data() as Map<String, dynamic>)),
+        b.data(),
+      ).compareTo(_ranking(a.data())),
     );
 
     return docs;
