@@ -12,6 +12,7 @@ import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import 'package:proyecto/nucleo/servicios/opentripmap_servicio.dart';
 import 'package:proyecto/nucleo/servicios/ubicacion_servicio.dart';
+import 'package:proyecto/modulos/busqueda/filtros_etiquetas_servicio.dart';
 
 // ---------------------------------------------------------------------------
 // CIUDADES DE MÉXICO
@@ -188,6 +189,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   double _latActual = 20.6597;
   double _lngActual = -103.3496;
 
+  //para el algoritmo de filtros
+  final FiltrosEtiquetasServicio _servicioFiltros = FiltrosEtiquetasServicio();
   @override
   void initState() {
     super.initState();
@@ -248,16 +251,41 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   // BÚSQUEDA
   // -------------------------------------------------------------------------
-  Future<void> _buscar({String texto = ''}) async {
-    if (!mounted) return;
+  // -------------------------------------------------------------------------
+    // BÚSQUEDA
+    // -------------------------------------------------------------------------
+    Future<void> _buscar({String texto = ''}) async {
+      if (!mounted) return;
 
-    setState(() {
-      cargando = true;
-      error = null;
-    });
+      // 🔽 VALIDACIÓN DE DESTINO DENTRO DE MÉXICO (MÁSESTRICTA Y REFINADA)
+      // Tomamos lo que esté en la barra de texto o lo que esté seleccionado en el filtro
+      String destinoAValidar = texto.isNotEmpty ? texto : (destinoSeleccionado ?? '');
 
-    try {
-      await _resolverCoordenadas();
+      if (destinoAValidar.isNotEmpty) {
+        // Extraemos solo los nombres de tus ciudades en México
+        List<String> ciudadesValidas = _ciudadesMexico.map((c) => c['nombre'].toString()).toList();
+        
+        // Mandamos a comprobar al archivo de servicios externo
+        bool esEnMexico = await _servicioFiltros.validarDestinoEnMexico(destinoAValidar, ciudadesValidas);
+        
+        // Si no se encuentra en tu lista de ciudades mexicanas: ¡Bloqueamos!
+        if (!esEnMexico) {
+          setState(() {
+            error = "Por ahora, solo trabajamos con destinos dentro de México.";
+            lugares = []; // Vaciamos la lista para que no pinte nada viejo
+            cargando = false;
+          });
+          return; // Rompemos la función para que no consuma las APIs
+        }
+      }
+
+      setState(() {
+        cargando = true;
+        error = null;
+      });
+
+      try {
+          await _resolverCoordenadas();
 
       final google = await GooglePlacesServicio.buscarLugares(
         _latActual,
@@ -396,87 +424,29 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         }
         final types = l["tipos_raw"] as List<dynamic>? ?? [];
 
-        final datos =
-            (nombreMin +
-                    " " +
-                    categoria.toLowerCase() +
-                    " " +
-                    types.join(" ").toLowerCase())
-                .toLowerCase();
-
-        List<String> etiquetas = [];
-
-        // =====================================================
-        // AMIGOS
-        // =====================================================
-        if (datos.contains("bar") ||
-            datos.contains("night_club") ||
-            datos.contains("pub") ||
-            datos.contains("fiesta") ||
-            datos.contains("music") ||
-            datos.contains("social") ||
-            datos.contains("group") ||
-            categoria.toLowerCase() == "bar" ||
-            categoria.toLowerCase() == "actividades_extremas") {
-          etiquetas.add("Amigos");
-        }
-
-        // =====================================================
-        // EN PAREJA
-        // =====================================================
-        if (datos.contains("romantic") ||
-            datos.contains("romantico") ||
-            datos.contains("intimate") ||
-            datos.contains("spa") ||
-            datos.contains("viewpoint") ||
-            categoria.toLowerCase() == "mirador" ||
-            categoria.toLowerCase() == "playa") {
-          etiquetas.add("en pareja");
-        }
-
-        // =====================================================
-        // FAMILIAR
-        // =====================================================
-        if (datos.contains("family") ||
-            datos.contains("kids") ||
-            datos.contains("children") ||
-            datos.contains("museum") ||
-            datos.contains("park") ||
-            datos.contains("zoo") ||
-            datos.contains("aquarium") ||
-            categoria.toLowerCase() == "museo" ||
-            categoria.toLowerCase() == "parque" ||
-            categoria.toLowerCase() == "zona_arqueologica") {
-          etiquetas.add("Familiar");
-        }
-
-        // =====================================================
-        // SOLO
-        // =====================================================
-        if (datos.contains("cafe") ||
-            datos.contains("coffee") ||
-            datos.contains("study") ||
-            datos.contains("reading") ||
-            datos.contains("library") ||
-            categoria.toLowerCase() == "cafeteria") {
-          etiquetas.add("Solo");
-        }
-
-        // SI NO TIENE NADA
-        if (etiquetas.isEmpty) {
-          etiquetas.add("General");
-        }
-
         final latGoogle = l['geometry']?['location']?['lat'] ?? l['lat'];
         final lngGoogle = l['geometry']?['location']?['lng'] ?? l['lng'];
+        String urlImagen = l['foto']?.toString() ?? l['imagen']?.toString() ?? "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
 
-        // ========================================================
-        // 🔥 FOTO FINAL
-        // ========================================================
-        String urlImagen =
-            l['foto']?.toString() ??
-            l['imagen']?.toString() ??
-            "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
+        // 🔽 SOLUCIÓN DE ERROR: Usamos la definición del objeto Lugar importada del servicio
+        Lugar lugarTemporal = Lugar(
+          id: (l['place_id'] ?? l['id'] ?? l['name']).toString(),
+          nombre: l['name'] ?? 'Sin nombre',
+          tipo: categoria,
+          precio: precioCalc,
+          rating: _toDouble(l['rating'], fb: 5),
+          numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(),
+          latitud: _toDouble(latGoogle),
+          longitud: _toDouble(lngGoogle),
+          resenasTexto: const ["lugar muy divertido para ir con niños familiar seguro"], // Simulación de reviews para NLP escolar
+          fotoUrl: urlImagen,
+          direccion: l['vicinity'] ?? 'Sin dirección',
+          horario: '',
+        );
+
+        // Invocación del algoritmo NLP externo
+        List<String> etiquetasNLP = _servicioFiltros.calcularEtiquetasExperiencia(lugarTemporal);
+
         String categoriaFinal = categoria
             .toLowerCase()
             .replaceAll(" ", "_")
@@ -488,7 +458,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           'name': l['name'] ?? 'Sin nombre',
           'direccion': l['vicinity'] ?? _obtenerDireccion(l),
           'categoriaPrincipal': categoriaFinal,
-          'experiencias': etiquetas,
+          'experiencias': etiquetasNLP, // Asignamos las etiquetas generadas por el modelo matemático
           'rating': _toDouble(l['rating'], fb: 5),
           'popularity': _toDouble(
             l['user_ratings_total'] ?? l['popularity'],
@@ -506,7 +476,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           'imagen': urlImagen,
         };
       }).toList();
-
       // -------------------------------------------------------------------
       // FILTRAR BASURA
       // -------------------------------------------------------------------
@@ -559,7 +528,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       final ordenados = _quickSort(conPesos);
 
       // -------------------------------------------------------------------
-      // TOP
+      // TOP (Aquí termina tu código original del bloque try)
       // -------------------------------------------------------------------
       final finales =
           (texto.isEmpty &&
@@ -569,11 +538,40 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           ? _top5(ordenados)
           : ordenados;
 
+      // 🔽 CORRECCIÓN: ESTO VA AQUÍ (FUERA Y ARRIBA DEL CATCH)
+
+      // 1. Guardar en caché inteligente usando la variable 'finales' que es el Top definitivo
+      String hashQuery = _servicioFiltros.generarHashConsulta(
+        destinoSeleccionado ?? 'gps',
+        estiloSeleccionado ?? 'general',
+        precioSeleccionado ?? 'libre',
+      );
+      await _servicioFiltros.guardarEnCache(hashQuery, finales);
+
+      // 2. Filtro Cosine Similarity para sugerencias de viajeros
+      if (_intereses.isNotEmpty) {
+        List<double> vectorUsuario = [
+          _toDouble(_intereses['Restaurante']),
+          _toDouble(_intereses['Cafetería']),
+          _toDouble(_intereses['Bar']),
+          _toDouble(_intereses['Parque']),
+        ];
+        List<String> sugerencias = await _servicioFiltros.obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
+        if (sugerencias.isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Otros viajeros como tú también consultaron este destino")),
+          );
+        }
+      }
+
+      // 3. Actualizamos el estado con la lista 'finales'
       setState(() {
-        lugares = finales;
+        lugares = finales; 
         cargando = false;
       });
+
     } catch (e) {
+      // 🛑 El catch se queda solo para atrapar errores, así limpito como lo tenías:
       print("❌ ERROR BUSQUEDA: $e");
       setState(() {
         error = 'Error al buscar lugares';
@@ -983,7 +981,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return scoreB.compareTo(scoreA);
     });
 
-    return filtrados;
+    return filtrados.take(5).toList();
   }
 
   // -------------------------------------------------------------------------
