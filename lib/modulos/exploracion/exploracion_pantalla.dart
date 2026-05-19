@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
@@ -18,8 +20,21 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   List<dynamic> lugaresRecomendados = [];
   bool estaCargando = true;
   int indiceActual = 0;
+
   Map<String, int> perfilUsuario = {};
   final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  double bonusKNNGlobal = 0;
+
+  final Map<String, List<String>> mapeoTags = {
+    'parque': ['park'],
+    'parques': ['park'],
+    'restaurante': ['restaurant'],
+    'cafeteria': ['cafe'],
+    'museo': ['museum'],
+    'playa': ['beach'],
+    'bar': ['bar'],
+  };
 
   final List<Map<String, dynamic>> ciudadesPopulares = [
     {'name': 'Ciudad de México', 'lat': 19.4326, 'lng': -99.1332},
@@ -36,167 +51,227 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   }
 
   // =========================
-  // 🔵 DETECTAR USUARIO NUEVO
   Future<bool> _esUsuarioNuevo() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(uid)
-          .get();
+    final doc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(uid)
+        .get();
 
-      if (!doc.exists) return true;
+    if (!doc.exists) return true;
 
-      final data = doc.data();
+    final data = doc.data();
+    final historial = data?['historialEtiquetas'];
 
-      final historial = data?['historial'] ?? [];
+    if (historial == null || (historial as Map).isEmpty) return true;
 
-      return (historial as List).isEmpty;
-    } catch (e) {
-      debugPrint("Error verificando usuario nuevo: $e");
-      return true;
-    }
+    // ✅ Usuario nuevo si no tiene NINGUNA etiqueta con valor mayor a 0
+    return !(historial as Map).values.any((v) => (v as num) > 0);
   }
 
-  // =========================
-  // CONTROLADOR PRINCIPAL
   // =========================
   Future<void> _inicializarExploracion() async {
     final esNuevo = await _esUsuarioNuevo();
 
     if (esNuevo) {
-      _cargarCiudadesPopulares();
+      await _cargarCiudadesPopulares();
     } else {
-      _cargarLugaresPersonalizados();
-    }
-  }
-
-  Future<void> _actualizarPerfilUsuario() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(uid)
-          .get();
-
-      if (!doc.exists) return;
-
-      final data = doc.data();
-
-      if (data == null) return;
-
-      // 👇 aquí asumimos que guardas etiquetas como mapa
-      final Map<String, dynamic> etiquetas = Map<String, dynamic>.from(
-        data['etiquetas'] ?? {},
-      );
-
-      perfilUsuario = etiquetas.map(
-        (key, value) => MapEntry(key, (value as num).toInt()),
-      );
-    } catch (e) {
-      debugPrint("Error cargando perfil: $e");
+      await _cargarLugaresPersonalizados();
     }
   }
 
   // =========================
-  // 🔵 COLD START (NUEVO USUARIO)
+  Future<void> _actualizarPerfilUsuario() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(uid)
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data();
+
+    final etiquetas = Map<String, dynamic>.from(
+      data?['historialEtiquetas'] ?? {},
+    );
+
+    perfilUsuario = etiquetas.map(
+      (key, value) => MapEntry(key.toLowerCase(), (value as num).toInt()),
+    );
+  }
+
   // =========================
   Future<void> _cargarCiudadesPopulares() async {
     setState(() => estaCargando = true);
 
-    List<dynamic> adaptadas = [];
+    List<dynamic> lista = [];
 
-    for (var c in ciudadesPopulares) {
+    for (final c in ciudadesPopulares) {
       final lugares = await GooglePlacesServicio.buscarLugares(
         c['lat'],
         c['lng'],
-        query: c['name'],
-        radio: 5000,
+        radio: 8000,
       );
 
-      if (lugares.isNotEmpty) {
-        adaptadas.add(lugares.first);
-      }
+      lista.addAll(lugares);
     }
 
-    setState(() {
-      lugaresRecomendados = adaptadas;
-      estaCargando = false;
-      indiceActual = 0;
-    });
+    lista = _procesar(lista);
+
+    _set(lista);
   }
 
-  // =========================
-  // 🟡 USUARIO CON HISTORIAL
   // =========================
   Future<void> _cargarLugaresPersonalizados() async {
     setState(() => estaCargando = true);
 
     try {
       await _actualizarPerfilUsuario();
+      bonusKNNGlobal = await obtenerBonusKNN();
 
-      final posicion = await UbicacionServicio().obtenerUbicacionActual();
-
-      if (posicion == null) {
-        throw Exception('No se pudo obtener la ubicación del usuario.');
+      final pos = await UbicacionServicio().obtenerUbicacionActual();
+      if (pos == null) {
+        _set([]);
+        return;
       }
 
-      final latUsuario = posicion.latitude;
-      final lngUsuario = posicion.longitude;
+      List<Map<String, dynamic>> lugares;
 
-      final lugares = await GooglePlacesServicio.buscarLugares(
-        latUsuario,
-        lngUsuario,
-        radio: 15000,
-      );
+      if (perfilUsuario.isNotEmpty) {
+        // ✅ Busca específicamente las categorías que le interesan al usuario
+        // Toma las top 4 categorías con más interacciones
+        final topCategorias = perfilUsuario.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
-      if (mounted) {
-        setState(() {
-          lugaresRecomendados = ordenarRecomendaciones(lugares);
-          estaCargando = false;
-          indiceActual = 0;
-        });
+        final categorias = topCategorias.take(4).map((e) => e.key).toList();
+
+        debugPrint("🎯 Buscando categorías del perfil: $categorias");
+
+        lugares = await GooglePlacesServicio.buscarPorCategorias(
+          pos.latitude,
+          pos.longitude,
+          categorias: categorias,
+          radio: 15000,
+        );
+      } else {
+        // Sin perfil: búsqueda genérica de turismo
+        lugares = await GooglePlacesServicio.buscarLugares(
+          pos.latitude,
+          pos.longitude,
+          tipo: 'monumento', // tourist_attraction, mucho mejor que sin tipo
+          radio: 15000,
+        );
       }
+
+      List<dynamic> lista = _procesar(lugares);
+      _set(lista);
     } catch (e) {
-      debugPrint('Error: $e');
-
-      if (mounted) {
-        setState(() => estaCargando = false);
-      }
+      debugPrint("ERROR: $e");
+      _set([]);
     }
   }
 
   // =========================
-  // 🔷 SISTEMA DE RECOMENDACIÓN (MEJORADO)
-  // =========================
+  List<dynamic> _procesar(List<dynamic> input) {
+    // Solo excluir categorías que no son turísticas
+    const categoriasExcluidas = {'otro'};
 
-  double calcularScoreLugar(Map lugar) {
-    List<String> etiquetasLugar = (lugar['types'] ?? [])
-        .map<String>((e) => e.toString())
-        .toList();
+    final filtrados = input.where((l) {
+      final cat = (l['categoriaPrincipal'] ?? 'otro').toString();
+      return !categoriasExcluidas.contains(cat);
+    }).toList();
+
+    for (final l in filtrados) {
+      l['score'] = _score(l);
+    }
+
+    filtrados.sort((a, b) => (b['score'] ?? 0).compareTo(a['score'] ?? 0));
+    return filtrados;
+  }
+
+  // =========================
+  double _score(Map l) {
+    final rating = (l['rating'] ?? 0).toDouble();
+    final pop = (l['user_ratings_total'] ?? 0).toDouble();
+
+    // ✅ Usar categoriaPrincipal (ya en español) en vez de types (en inglés)
+    final categoria = (l['categoriaPrincipal'] ?? '').toString().toLowerCase();
 
     double score = 0;
+    score += rating * 3;
+    score += log(pop + 1);
 
-    etiquetasLugar.forEach((etiqueta) {
-      if (perfilUsuario.containsKey(etiqueta)) {
-        score += perfilUsuario[etiqueta]!.toDouble();
+    if (perfilUsuario.isNotEmpty) {
+      // Match directo con la categoría del lugar
+      if (perfilUsuario.containsKey(categoria)) {
+        score += perfilUsuario[categoria]! * 4.0;
+        debugPrint(
+          "✅ Match directo: $categoria +${perfilUsuario[categoria]! * 4.0}",
+        );
       }
-    });
+
+      // Bonus KNN
+      score *= (1 + bonusKNNGlobal);
+    }
 
     return score;
   }
 
-  List<dynamic> ordenarRecomendaciones(List<dynamic> lugares) {
-    lugares.sort((a, b) {
-      double scoreA = calcularScoreLugar(a);
-      double scoreB = calcularScoreLugar(b);
+  // =========================
+  Future<double> obtenerBonusKNN() async {
+    final snap = await FirebaseFirestore.instance.collection('usuarios').get();
 
-      return scoreB.compareTo(scoreA); // descendente
-    });
+    double best = 0;
 
-    return lugares;
+    for (final d in snap.docs) {
+      if (d.id == uid) continue;
+
+      final data = d.data();
+      final etiquetasRaw = Map<String, dynamic>.from(
+        data['historialEtiquetas'] ?? {},
+      );
+
+      final other = etiquetasRaw.map(
+        (k, v) => MapEntry(k.toLowerCase(), (v as num).toInt()),
+      );
+
+      final sim = _cosine(perfilUsuario, other);
+
+      if (sim > best) best = sim;
+    }
+
+    return best;
+  }
+
+  double _cosine(Map<String, int> a, Map<String, int> b) {
+    double dot = 0, ma = 0, mb = 0;
+
+    final keys = {...a.keys, ...b.keys};
+
+    for (final k in keys) {
+      final va = (a[k] ?? 0).toDouble();
+      final vb = (b[k] ?? 0).toDouble();
+
+      dot += va * vb;
+      ma += va * va;
+      mb += vb * vb;
+    }
+
+    if (ma == 0 || mb == 0) return 0;
+
+    return dot / (sqrt(ma) * sqrt(mb));
   }
 
   // =========================
-  // NAVEGACIÓN
+  void _set(List<dynamic> lista) {
+    if (!mounted) return;
+
+    setState(() {
+      lugaresRecomendados = lista.take(6).toList();
+      estaCargando = false;
+      indiceActual = 0;
+    });
+  }
+
   // =========================
   void _siguienteLugar() {
     if (indiceActual < lugaresRecomendados.length - 1) {
