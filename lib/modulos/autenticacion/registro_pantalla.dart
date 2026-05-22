@@ -11,7 +11,6 @@ class RegistroPantalla extends StatefulWidget {
 }
 
 class _RegistroPantallaState extends State<RegistroPantalla> {
-
   final TextEditingController correoController = TextEditingController();
   final TextEditingController usuarioController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -37,7 +36,10 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
       appBar: AppBar(
         title: Text(
           "Pack&Go",
-          style: GoogleFonts.poppins(fontSize: 36, color: const Color.fromARGB(255, 255, 255, 255)),
+          style: GoogleFonts.poppins(
+            fontSize: 36,
+            color: const Color.fromARGB(255, 255, 255, 255),
+          ),
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF0066D2),
@@ -48,7 +50,6 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const SizedBox(height: 40),
 
             Padding(
@@ -58,7 +59,7 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                 style: GoogleFonts.poppins(
                   fontSize: 25,
                   color: const Color.fromARGB(255, 255, 255, 255),
-            ),
+                ),
               ),
             ),
 
@@ -86,7 +87,6 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
                             TextField(
                               controller: correoController,
                               onChanged: (_) {
@@ -107,7 +107,10 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
 
                             if (errorCorreo != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  left: 10,
+                                ),
                                 child: Text(
                                   errorCorreo!,
                                   style: const TextStyle(
@@ -139,7 +142,10 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
 
                             if (errorUsuario != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  left: 10,
+                                ),
                                 child: Text(
                                   errorUsuario!,
                                   style: const TextStyle(
@@ -172,7 +178,10 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
 
                             if (errorPassword != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 5, left: 10),
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  left: 10,
+                                ),
                                 child: Text(
                                   errorPassword!,
                                   style: const TextStyle(
@@ -190,64 +199,87 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                                 height: 50,
                                 child: ElevatedButton(
                                   onPressed: () async {
-
                                     setState(() {
                                       errorCorreo = null;
                                       errorUsuario = null;
                                       errorPassword = null;
                                     });
 
-                                    if (correoController.text.isEmpty) {
-                                      setState(() {
-                                        errorCorreo = "El correo es obligatorio";
-                                      });
+                                    final correo = correoController.text.trim();
+                                    final usuario = usuarioController.text
+                                        .trim();
+                                    final password = passwordController.text
+                                        .trim();
+
+                                    if (correo.isEmpty) {
+                                      setState(
+                                        () => errorCorreo =
+                                            "El correo es obligatorio",
+                                      );
                                       return;
                                     }
 
-                                    if (usuarioController.text.isEmpty) {
-                                      setState(() {
-                                        errorUsuario = "El usuario es obligatorio";
-                                      });
+                                    if (usuario.isEmpty) {
+                                      setState(
+                                        () => errorUsuario =
+                                            "El usuario es obligatorio",
+                                      );
                                       return;
                                     }
 
-                                    if (passwordController.text.length < 6) {
+                                    if (password.isEmpty) {
+                                      setState(
+                                        () => errorPassword =
+                                            "La contraseña es obligatoria",
+                                      );
+                                      return;
+                                    }
+                                    final query = await FirebaseFirestore
+                                        .instance
+                                        .collection("usuarios")
+                                        .where(
+                                          "nombreUsuario",
+                                          isEqualTo: usuario,
+                                        )
+                                        .get();
+
+                                    if (query.docs.isNotEmpty) {
                                       setState(() {
-                                        errorPassword =
-                                            "Debe tener mínimo 6 caracteres";
+                                        errorUsuario =
+                                            "Este nombre de usuario ya existe";
                                       });
                                       return;
                                     }
 
                                     try {
-
                                       UserCredential credencial =
                                           await FirebaseAuth.instance
                                               .createUserWithEmailAndPassword(
-                                        email: correoController.text.trim(),
-                                        password:
-                                            passwordController.text.trim(),
-                                      );
+                                                email: correoController.text
+                                                    .trim(),
+                                                password: passwordController
+                                                    .text
+                                                    .trim(),
+                                              );
 
                                       await FirebaseFirestore.instance
                                           .collection("usuarios")
                                           .doc(credencial.user!.uid)
                                           .set({
-                                        "uid": credencial.user!.uid,
-                                        "correo":
-                                            correoController.text.trim(),
-                                        "nombreUsuario":
-                                            usuarioController.text.trim(),
-                                        "fechaRegistro": DateTime.now(),
-                                      });
+                                            "uid": credencial.user!.uid,
+                                            "correo": correo,
+                                            "nombreUsuario": usuario,
+                                            "fechaRegistro":
+                                                FieldValue.serverTimestamp(),
+                                          });
 
                                       if (!context.mounted) return;
 
                                       Navigator.pushReplacementNamed(
-                                          context, '/inicio');
-
+                                        context,
+                                        '/inicio',
+                                      );
                                     } on FirebaseAuthException catch (e) {
-
                                       if (e.code == 'email-already-in-use') {
                                         setState(() {
                                           errorCorreo =
@@ -296,7 +328,9 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.pushReplacementNamed(
-                                        context, '/inicio');
+                                      context,
+                                      '/inicio',
+                                    );
                                   },
                                   child: Text(
                                     "Iniciar sesión",

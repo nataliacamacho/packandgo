@@ -89,7 +89,7 @@ class CuentaPantalla extends StatelessWidget {
 
                         const SizedBox(height: 5),
 
-                        Text(datos['contraseña'] ?? "*******"),
+                        const Text("********"),
 
                         const SizedBox(height: 30),
 
@@ -259,7 +259,7 @@ class CuentaPantalla extends StatelessWidget {
             ),
           ],
         ),
-        child: const Text("Reseñas realizadas", style: TextStyle(fontSize: 16)),
+        child: const Text("Reseñas", style: TextStyle(fontSize: 16)),
       ),
     );
   }

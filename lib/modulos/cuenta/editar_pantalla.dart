@@ -52,17 +52,48 @@ class _EditarPerfilState extends State<EditarPerfil> {
     });
 
     try {
-      if (nuevaPasswordController.text.trim().isNotEmpty) {
+      final quiereCambiarPassword = nuevaPasswordController.text
+          .trim()
+          .isNotEmpty;
+
+      final quiereCambiarCorreo = correoController.text.trim() != user!.email;
+
+      if (quiereCambiarPassword || quiereCambiarCorreo) {
         final cred = EmailAuthProvider.credential(
           email: user!.email!,
           password: passwordActualController.text.trim(),
         );
+        if ((quiereCambiarCorreo || quiereCambiarPassword) &&
+            passwordActualController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ingresa tu contraseña actual')),
+          );
 
-        await user!.reauthenticateWithCredential(cred);
+          setState(() {
+            cargando = false;
+          });
 
-        await user!.updatePassword(
-          nuevaPasswordController.text.trim(),
+          return;
+        }
+        if (quiereCambiarPassword) {
+          await user!.updatePassword(nuevaPasswordController.text.trim());
+        }
+      }
+
+      final metodos = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
+        correoController.text.trim(),
+      );
+
+      if (metodos.isNotEmpty && correoController.text.trim() != user!.email) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ese correo ya está registrado')),
         );
+
+        setState(() {
+          cargando = false;
+        });
+
+        return;
       }
 
       await usuarioServicio.actualizarUsuario(
@@ -76,15 +107,14 @@ class _EditarPerfilState extends State<EditarPerfil> {
 
       passwordActualController.clear();
       nuevaPasswordController.clear();
-
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error de autenticación: ${e.message}')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar datos: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al actualizar datos: $e')));
     } finally {
       setState(() {
         cargando = false;
@@ -127,84 +157,78 @@ class _EditarPerfilState extends State<EditarPerfil> {
                             style: GoogleFonts.poppins(fontSize: 24),
                           ),
                           const SizedBox(height: 30),
-                          FutureBuilder(
-                            future: usuarioServicio.obtenerDatosUsuario(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const CircularProgressIndicator();
-                              }
-                              if (snapshot.hasError) {
-                                return const Text("Error al cargar datos");
-                              }
-                              if (!snapshot.hasData || !snapshot.data!.exists) {
-                                return const Text(
-                                  "No se encontraron datos del usuario",
-                                );
-                              }
-                              return Column(
-                                children: [
-                                  TextField(
-                                    controller: correoController,
-                                    enabled: false,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Correo',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
 
-                                  TextField(
-                                    controller: passwordActualController,
-                                    obscureText: true,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Contraseña actual',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
+                          Column(
+                            children: [
+                              TextField(
+                                controller: correoController,
+                                enabled: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Correo',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
 
-                                  TextField(
-                                    controller: nuevaPasswordController,
-                                    obscureText: true,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Nueva contraseña',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
+                              TextField(
+                                controller: passwordActualController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Contraseña actual',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
 
-                                  TextField(
-                                    controller: usuarioController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Usuario',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 30),
+                              TextField(
+                                controller: nuevaPasswordController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Nueva contraseña',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
 
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFF6A230),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                    ),
-                                    onPressed: cargando
-                                        ? null
-                                        : _guardarCambios,
-                                    child: cargando
-                                        ? const CircularProgressIndicator(
-                                            color: Color.fromARGB(255, 255, 255, 255),
-                                          )
-                                        : const Text(
-                                            'Guardar cambios',
-                                            style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                              TextField(
+                                controller: usuarioController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Usuario',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 30),
+
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF6A230),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                                onPressed: cargando ? null : _guardarCambios,
+                                child: cargando
+                                    ? const CircularProgressIndicator(
+                                        color: Color.fromARGB(
+                                          255,
+                                          255,
+                                          255,
+                                          255,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Guardar cambios',
+                                        style: TextStyle(
+                                          color: Color.fromARGB(
+                                            255,
+                                            255,
+                                            255,
+                                            255,
                                           ),
-                                  ),
-                                ],
-                              );
-                            },
+                                        ),
+                                      ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

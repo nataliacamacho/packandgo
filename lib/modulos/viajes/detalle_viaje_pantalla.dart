@@ -87,6 +87,20 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
     }
   }
 
+  bool viajeIniciado() {
+    final hoy = DateTime.now();
+
+    final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
+
+    final inicio = DateTime(
+      widget.fechaInicio.year,
+      widget.fechaInicio.month,
+      widget.fechaInicio.day,
+    );
+
+    return hoySinHora.isAtSameMomentAs(inicio) || hoySinHora.isAfter(inicio);
+  }
+
   bool yaTerminoViaje() {
     final hoy = DateTime.now();
     final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
@@ -176,6 +190,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
         "${widget.fechaFin.day}/${widget.fechaFin.month}/${widget.fechaFin.year}";
 
     final viajeTerminado = yaTerminoViaje();
+    final puedeUsarFunciones = viajeIniciado();
 
     return Scaffold(
       extendBodyBehindAppBar: false,
@@ -309,6 +324,17 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Transporte",
               "Opciones para llegar al destino",
               onTap: () {
+                if (!puedeUsarFunciones) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                      ),
+                    ),
+                  );
+
+                  return;
+                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -329,6 +355,17 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Hospedaje",
               "Hoteles disponibles en la zona",
               onTap: () {
+                if (!puedeUsarFunciones) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                      ),
+                    ),
+                  );
+
+                  return;
+                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -350,6 +387,18 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Maleta",
               "Lista recomendada para tu viaje",
               onTap: () {
+                if (!puedeUsarFunciones) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                      ),
+                    ),
+                  );
+
+                  return;
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -368,6 +417,18 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Itinerario",
               "Planea tus actividades por día",
               onTap: () {
+                if (!puedeUsarFunciones) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                      ),
+                    ),
+                  );
+
+                  return;
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -387,6 +448,18 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Diario Personal",
               "Registra tus recuerdos",
               onTap: () {
+                if (!puedeUsarFunciones) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                      ),
+                    ),
+                  );
+
+                  return;
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(

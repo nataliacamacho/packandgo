@@ -12,12 +12,12 @@ class LoginPantalla extends StatefulWidget {
 }
 
 class _LoginPantallaState extends State<LoginPantalla> {
-  final TextEditingController correoController = TextEditingController();
+  final TextEditingController UsuarioController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   final UbicacionServicio ubicacionServicio = UbicacionServicio();
 
-  String? errorCorreo;
+  String? errorUsuario;
   String? errorPassword;
 
   @override
@@ -27,7 +27,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
   @override
   void dispose() {
-    correoController.dispose();
+    UsuarioController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -104,12 +104,12 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
   Future<void> iniciarSesion() async {
     setState(() {
-      errorCorreo = null;
+      errorUsuario = null;
       errorPassword = null;
     });
 
-    if (correoController.text.isEmpty) {
-      setState(() => errorCorreo = "El correo es obligatorio");
+    if (UsuarioController.text.isEmpty) {
+      setState(() => errorUsuario = "El nombre de usuario es obligatorio");
       return;
     }
 
@@ -119,32 +119,50 @@ class _LoginPantallaState extends State<LoginPantalla> {
     }
 
     try {
-      // 👇 Si hay sesión anónima activa, cerrarla primero
+      final username = UsuarioController.text.trim();
+
+      // 🔍 1. buscar email asociado al username
+      final email = await obtenerEmailPorUsername(username);
+
+      if (email == null) {
+        setState(() => errorUsuario = "No existe ese nombre de usuario");
+        return;
+      }
+
+      // 🔐 2. login con email real
       final usuarioActual = FirebaseAuth.instance.currentUser;
       if (usuarioActual != null && usuarioActual.isAnonymous) {
         await FirebaseAuth.instance.signOut();
       }
 
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: correoController.text.trim(),
+        email: email,
         password: passwordController.text.trim(),
       );
 
       await obtenerUbicacion();
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        setState(() => errorCorreo = "No existe una cuenta con este correo");
-      } else if (e.code == 'invalid-email') {
-        setState(() => errorCorreo = "El formato del correo es incorrecto");
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         setState(() => errorPassword = "La contraseña es incorrecta");
       } else {
-        setState(() => errorCorreo = "Error: ${e.code}");
+        setState(() => errorUsuario = "Error: ${e.code}");
       }
     } catch (e) {
-      setState(() => errorCorreo = "Error inesperado: $e");
+      setState(() => errorUsuario = "Error inesperado: $e");
       debugPrint("❌ ERROR LOGIN: $e");
     }
+  }
+
+  Future<String?> obtenerEmailPorUsername(String username) async {
+    final query = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .where('nombreUsuario', isEqualTo: username.trim().toLowerCase())
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+
+    return query.docs.first['correo'];
   }
 
   Future<void> entrarComoInvitado() async {
@@ -156,7 +174,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
       // Navigator.pushReplacementNamed(context, '/exploracion');
     } on FirebaseAuthException {
       setState(() {
-        errorCorreo = "Error al ingresar como invitado";
+        errorUsuario = "Error al ingresar como invitado";
       });
     }
   }
@@ -217,14 +235,14 @@ class _LoginPantallaState extends State<LoginPantalla> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             TextField(
-                              controller: correoController,
+                              controller: UsuarioController,
                               onChanged: (_) {
                                 setState(() {
-                                  errorCorreo = null;
+                                  errorUsuario = null;
                                 });
                               },
                               decoration: InputDecoration(
-                                hintText: "Correo electrónico",
+                                hintText: "Nombre de Usuario",
                                 filled: true,
                                 fillColor: Colors.grey[200],
                                 border: OutlineInputBorder(
@@ -234,14 +252,14 @@ class _LoginPantallaState extends State<LoginPantalla> {
                               ),
                             ),
 
-                            if (errorCorreo != null)
+                            if (errorUsuario != null)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 5,
                                   left: 10,
                                 ),
                                 child: Text(
-                                  errorCorreo!,
+                                  errorUsuario!,
                                   style: const TextStyle(
                                     color: Colors.red,
                                     fontSize: 12,
@@ -339,10 +357,7 @@ class _LoginPantallaState extends State<LoginPantalla> {
 
                                 TextButton(
                                   onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/registro',
-                                    );
+                                    Navigator.pushNamed(context, '/registro');
                                   },
                                   child: Text(
                                     "Crear cuenta",
