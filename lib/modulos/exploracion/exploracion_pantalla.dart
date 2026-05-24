@@ -179,8 +179,8 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   }
 
   // =========================
+  // RQF10: Ordenar resultados de mayor a menor puntaje
   List<dynamic> _procesar(List<dynamic> input) {
-    // Solo excluir categorías que no son turísticas
     const categoriasExcluidas = {'otro'};
 
     final filtrados = input.where((l) {
@@ -188,71 +188,122 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       return !categoriasExcluidas.contains(cat);
     }).toList();
 
+    // Calculamos el score de similitud para cada lugar
     for (final l in filtrados) {
       l['score'] = _score(l);
     }
 
+    // RQF10: Método sort() para ordenar de MAYOR a MENOR (descendente)
     filtrados.sort((a, b) => (b['score'] ?? 0).compareTo(a['score'] ?? 0));
+    for(var lugar in filtrados){
+  debugPrint("Lugar: ${lugar['name']} - Score Final: ${lugar['score']}");
+  }
     return filtrados;
   }
 
   // =========================
+  // RQF8 y RQF9: Cálculo de puntaje de similitud y asignación de 1 punto
   double _score(Map l) {
     final rating = (l['rating'] ?? 0).toDouble();
     final pop = (l['user_ratings_total'] ?? 0).toDouble();
-
-    // ✅ Usar categoriaPrincipal (ya en español) en vez de types (en inglés)
     final categoria = (l['categoriaPrincipal'] ?? '').toString().toLowerCase();
 
-    double score = 0;
-    score += rating * 3;
-    score += log(pop + 1);
+    double scoreBase = (rating * 3) + log(pop + 1); // Lo que ya tenías de popularidad
+    double puntajeSimilitud = 0.0; // RQF8: Inicializamos el puntaje de similitud
 
     if (perfilUsuario.isNotEmpty) {
-      // Match directo con la categoría del lugar
+      // Comparamos las etiquetas del destino con las del perfil
       if (perfilUsuario.containsKey(categoria)) {
-        score += 1; // coincidencia base requerida
-        score += perfilUsuario[categoria]! * 0.5; // peso adicional
-        debugPrint("✅ Match directo: $categoria +1");
+        // RQF9: Asignar 1 punto por cada coincidencia
+        puntajeSimilitud += 1.0; 
+        
+        // (Opcional) Le sumamos un peso extra basado en la frecuencia para mejor precisión
+        puntajeSimilitud += (perfilUsuario[categoria]! * 0.5); 
+        debugPrint("✅ Match directo: $categoria -> +1 punto de similitud (RQF9)");
       }
 
-      // Bonus KNN
-      score *= (1 + bonusKNNGlobal);
+      // Bonus KNN que tenías
+      puntajeSimilitud *= (1 + bonusKNNGlobal);
     }
 
-    return score;
+    // El score total es la suma de la base + la similitud
+    return scoreBase + puntajeSimilitud;
   }
 
+  // =========================
+  // RQF11: Registro de interacciones con Filtro Inteligente de Ciudades
   Future<void> registrarInteraccion(Map lugar) async {
     if (uid.isEmpty) return;
 
-    final categoria = (lugar['categoriaPrincipal'] ?? 'otro')
-        .toString()
-        .toLowerCase();
-
+    final categoria = (lugar['categoriaPrincipal'] ?? 'otro').toString().toLowerCase();
     final nombreLugar = (lugar['name'] ?? 'desconocido').toString();
+    
+    // 🔥 LÍNEA DE ORO: Te imprimirá en la consola de tu editor todo el objeto 
+    // para que veas qué datos trae el lugar cuando le das clic.
+    debugPrint("🔍 Click en: $nombreLugar | Datos del mapa: $lugar");
 
-    final ref = FirebaseFirestore.instance.collection('usuarios').doc(uid);
-
-    final doc = await ref.get();
-
-    Map<String, dynamic> historial = {};
-
-    if (doc.exists) {
-      historial = Map<String, dynamic>.from(
-        doc.data()?['historialEtiquetas'] ?? {},
-      );
+    // 1. Buscamos la dirección en cualquier formato que use la API
+    String direccionDeAPI = 'Desconocido';
+    if (lugar['vicinity'] != null) {
+      direccionDeAPI = lugar['vicinity'].toString();
+    } else if (lugar['formatted_address'] != null) {
+      direccionDeAPI = lugar['formatted_address'].toString();
+    } else if (lugar['formattedAddress'] != null) {
+      direccionDeAPI = lugar['formattedAddress'].toString();
+    } else if (lugar['address'] != null) {
+      direccionDeAPI = lugar['address'].toString();
+    } else if (lugar['location'] != null && lugar['location']['city'] != null) {
+      direccionDeAPI = lugar['location']['city'].toString();
     }
 
-    // aumentar frecuencia
-    historial[categoria] = (historial[categoria] ?? 0) + 1;
+    // 2. Filtro inteligente: Analizamos el texto para guardar la ciudad limpia
+    String destino = 'Guadalajara'; // Ciudad por defecto si todo lo demás falla
+    String direccionMinusculas = direccionDeAPI.toLowerCase();
+
+    if (direccionMinusculas.contains('acapulco')) {
+      destino = 'Acapulco';
+    } else if (direccionMinusculas.contains('guadalajara') || 
+               direccionMinusculas.contains('tlaquepaque') || 
+               direccionMinusculas.contains('zapopan')) {
+      destino = 'Guadalajara';
+    } else if (direccionMinusculas.contains('méxico') || 
+               direccionMinusculas.contains('cdmx') || 
+               direccionMinusculas.contains('df')) {
+      destino = 'Ciudad de México';
+    } else if (direccionMinusculas.contains('monterrey')) {
+      destino = 'Monterrey';
+    } else if (direccionMinusculas.contains('cancún') || 
+               direccionMinusculas.contains('cancun')) {
+      destino = 'Cancún';
+    } else if (direccionMinusculas.contains('oaxaca')) {
+      destino = 'Oaxaca';
+    } else if (direccionDeAPI != 'Desconocido') {
+      // Si es otra ciudad diferente a las anteriores, guarda lo que mande la API
+      destino = direccionDeAPI; 
+    }
+
+    final ref = FirebaseFirestore.instance.collection('usuarios').doc(uid);
+    final doc = await ref.get();
+
+    Map<String, dynamic> historialEtiquetas = {};
+    Map<String, dynamic> historialDestinos = {};
+
+    if (doc.exists) {
+      final data = doc.data();
+      historialEtiquetas = Map<String, dynamic>.from(data?['historialEtiquetas'] ?? {});
+      historialDestinos = Map<String, dynamic>.from(data?['historialDestinos'] ?? {});
+    }
+
+    historialEtiquetas[categoria] = (historialEtiquetas[categoria] ?? 0) + 1;
+    historialDestinos[destino] = (historialDestinos[destino] ?? 0) + 1;
 
     await ref.set({
-      'historialEtiquetas': historial,
-
+      'historialEtiquetas': historialEtiquetas,
+      'historialDestinos': historialDestinos, 
       'ultimaInteraccion': {
         'lugar': nombreLugar,
         'categoria': categoria,
+        'destino': destino, 
         'fecha': DateTime.now(),
       },
     }, SetOptions(merge: true));
@@ -310,7 +361,11 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     setState(() {
       lugaresRecomendados = lista.take(6).toList();
       estaCargando = false;
-      indiceActual = 0;
+      if (lugaresRecomendados.length >= 3) {
+        indiceActual = 2; 
+      } else {
+        indiceActual = 0;
+      }
     });
   }
 

@@ -10,6 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto/nucleo/servicios/resena_servicio.dart';
 import 'package:proyecto/nucleo/utilidades/normalizador_lugares.dart';
+import 'package:proyecto/nucleo/utilidades/constantes_ciudades.dart';
 
 class LugarDetallePantalla extends StatefulWidget {
   final Map<String, dynamic>? lugar;
@@ -427,25 +428,59 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   }
 
   Future<void> _registrarVisita() async {
-    if (uid == null) return;
+  if (uid == null) return;
 
-    final categoria = (widget.lugar?['categoriaPrincipal'] ?? '')
-        .toString()
-        .trim()
-        .toLowerCase();
+  final categoria = (widget.lugar?['categoriaPrincipal'] ?? '').toString().trim().toLowerCase();
+  
+  // 🔥 AQUÍ USAMOS LA MISMA LÓGICA QUE EN TU BUILD PARA OBTENER LA UBICACIÓN LIMPIA
+  final ubicacionLimpia = widget.lugar?['direccion'] ?? 
+                          widget.ubicacion ?? 
+                          NormalizadorLugares.obtenerDireccion(widget.lugar) ?? 
+                          'Guadalajara';
 
-    if (categoria.isEmpty || categoria == 'otro') return;
+  if (categoria.isEmpty || categoria == 'otro') return;
 
-    try {
-      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
-        'historialEtiquetas': {categoria: FieldValue.increment(1)},
-      }, SetOptions(merge: true));
+  try {
+    // Usamos el mismo filtro inteligente que ya probamos, pero aplicado a la variable limpia
+    String destino = _extraerCiudadDeDireccion(ubicacionLimpia);
 
-      debugPrint("✅ Etiqueta registrada: $categoria");
-    } catch (e) {
-      debugPrint("❌ Error registrando visita: $e");
+    await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
+      'historialEtiquetas': {categoria: FieldValue.increment(1)},
+      'historialDestinos': {destino: FieldValue.increment(1)},
+      'ultimaInteraccion': {
+        'lugar': widget.lugar?['name'] ?? 'desconocido',
+        'categoria': categoria,
+        'destino': destino,
+        'fecha': DateTime.now(),
+      },
+    }, SetOptions(merge: true));
+
+    debugPrint("✅ Registro exitoso: $categoria en $destino");
+  } catch (e) {
+    debugPrint("❌ Error: $e");
+  }
+}
+
+String _extraerCiudadDeDireccion(String direccionRaw) {
+  // Convertimos a minúsculas una sola vez al principio
+  String dir = direccionRaw.toLowerCase();
+  
+  // 1. Buscamos primero en tu lista oficial
+  for (var ciudad in ciudadesMexico) {
+    // 🔥 USAMOS 'dir' (que ya es minúsculas) para comparar
+    if (dir.contains(ciudad['nombre'].toString().toLowerCase())) {
+       return ciudad['nombre'];
     }
   }
+
+  // 2. Casos especiales (Si la lista no los atrapó)
+  if (dir.contains('cdmx') || dir.contains('df') || dir.contains('ciudad de méxico')) return 'Ciudad de México';
+  if (dir.contains('q.r.') || dir.contains('quintana roo')) return 'Cancún';
+  
+  // 3. Fallback seguro
+  List<String> partes = direccionRaw.split(',');
+  return partes.length > 1 ? partes[partes.length - 2].trim() : "Otros";
+}
 
   @override
   Widget build(BuildContext context) {
