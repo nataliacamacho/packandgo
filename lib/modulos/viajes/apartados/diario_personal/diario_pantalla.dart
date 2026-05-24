@@ -27,6 +27,8 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
   List<File> fotosLocales = [];
   TextEditingController diarioController = TextEditingController();
 
+  List<TextEditingController> captionsControllers = [];
+
   // Función para tomar o elegir foto y guardarla localmente
   Future<void> _obtenerFoto(ImageSource fuente) async {
     try {
@@ -49,6 +51,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
         setState(() {
           fotosLocales.add(fotoGuardada);
+          captionsControllers.add(TextEditingController());
         });
       }
     } catch (e) {
@@ -58,10 +61,14 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
   Future<void> guardarDiario() async {
     try {
-      List<String> rutasDeFotos = fotosLocales
-          .map((foto) => foto.path)
-          .toList();
+      List<Map<String, dynamic>> fotosConDescripcion = [];
 
+      for (int i = 0; i < fotosLocales.length; i++) {
+        fotosConDescripcion.add({
+          'ruta': fotosLocales[i].path,
+          'descripcion': captionsControllers[i].text,
+        });
+      }
       // 🔥 Obtenemos el ID de tu usuario que inició sesión
       String uid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -75,7 +82,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
           .set({
             'texto': diarioController.text,
             'fecha': widget.dia,
-            'fotos_locales': rutasDeFotos,
+            'fotos_locales': fotosConDescripcion,
           }, SetOptions(merge: true));
 
       if (mounted) {
@@ -116,16 +123,18 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
         // Verificamos si hay fotos guardadas
         if (data['fotos_locales'] != null) {
-          List<dynamic> rutas = data['fotos_locales'];
+          List<dynamic> fotosGuardadas = data['fotos_locales'];
 
-          for (var ruta in rutas) {
-            File archivo = File(ruta.toString());
-            // Validamos que el archivo siga existiendo en la memoria de tu celular
+          for (var item in fotosGuardadas) {
+            final ruta = item['ruta'];
+
+            File archivo = File(ruta);
+
             if (await archivo.exists()) {
               fotosRecuperadas.add(archivo);
-            } else {
-              debugPrint(
-                "La foto en la ruta $ruta ya no existe en el celular.",
+
+              captionsControllers.add(
+                TextEditingController(text: item['descripcion'] ?? ''),
               );
             }
           }
@@ -157,61 +166,57 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
     return Scaffold(
       extendBodyBehindAppBar: false,
-      
+
       appBar: AppBar(
-  toolbarHeight: 180,
-  backgroundColor: const Color(0xFFF6A230),
-  elevation: 0,
-  automaticallyImplyLeading: false,
+        toolbarHeight: 180,
+        backgroundColor: const Color(0xFFF6A230),
+        elevation: 0,
+        automaticallyImplyLeading: false,
 
-  flexibleSpace: SafeArea(
-    child: Stack(
-      children: [
-
-        /// CONTENIDO CENTRADO
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        flexibleSpace: SafeArea(
+          child: Stack(
             children: [
-              Text(
-                "Día $numeroDia",
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              /// CONTENIDO CENTRADO
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Día $numeroDia",
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Text(
+                      fechaStr,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 6),
-
-              Text(
-                fechaStr,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              /// BOTÓN REGRESO
+              Positioned(
+                top: 0,
+                left: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
             ],
           ),
         ),
-
-        /// BOTÓN REGRESO
-        Positioned(
-          top: 0,
-          left: 0,
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+      ),
 
       /// 🔥 CONTENIDO TIPO ITINERARIO (CARDS)
       body: ListView(
@@ -285,115 +290,133 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                             itemCount: fotosLocales.length,
                             itemBuilder: (context, index) {
                               return Padding(
-                                padding: const EdgeInsets.only(right: 10),
-                                child: Stack(
-                                  children: [
-                                    /// FOTO
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.file(
-                                        fotosLocales[index],
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
+                                padding: const EdgeInsets.only(right: 12),
 
-                                    /// BOTÓN ELIMINAR
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: GestureDetector(
-                                        onTap: () async {
-                                          final confirmar = await showDialog<bool>(
-                                            context: context,
-                                            builder: (context) {
-                                              return AlertDialog(
-                                                backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-                                                title: const Text(
-                                                  "Eliminar foto",
+                                child: SizedBox(
+                                  width: 120,
+
+                                  child: Column(
+                                    children: [
+                                      Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+
+                                            child: Image.file(
+                                              fotosLocales[index],
+                                              width: 120,
+                                              height: 100,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+
+                                          Positioned(
+                                            top: 4,
+                                            right: 4,
+
+                                            child: GestureDetector(
+                                              onTap: () async {
+                                                final confirmar =
+                                                    await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (context) {
+                                                        return AlertDialog(
+                                                          title: const Text(
+                                                            "Eliminar foto",
+                                                          ),
+
+                                                          content: const Text(
+                                                            "¿Deseas eliminar esta foto?",
+                                                          ),
+
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed: () {
+                                                                Navigator.pop(
+                                                                  context,
+                                                                  false,
+                                                                );
+                                                              },
+
+                                                              child: const Text(
+                                                                "Cancelar",
+                                                              ),
+                                                            ),
+
+                                                            ElevatedButton(
+                                                              onPressed: () {
+                                                                Navigator.pop(
+                                                                  context,
+                                                                  true,
+                                                                );
+                                                              },
+
+                                                              child: const Text(
+                                                                "Eliminar",
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      },
+                                                    );
+
+                                                if (confirmar != true) return;
+
+                                                final foto =
+                                                    fotosLocales[index];
+
+                                                if (await foto.exists()) {
+                                                  await foto.delete();
+                                                }
+
+                                                captionsControllers[index]
+                                                    .dispose();
+
+                                                setState(() {
+                                                  fotosLocales.removeAt(index);
+
+                                                  captionsControllers.removeAt(
+                                                    index,
+                                                  );
+                                                });
+                                              },
+
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  4,
                                                 ),
-                                                content: const Text(
-                                                  "¿Estás seguro de que deseas eliminar esta foto?",
+
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.black54,
+                                                  shape: BoxShape.circle,
                                                 ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () {
-                                                      Navigator.pop(
-                                                        context,
-                                                        false,
-                                                      );
-                                                    },
-                                                    child: const Text(
-                                                      "Cancelar", style: TextStyle(color: Color.fromARGB(255, 126, 126, 126)),
-                                                    ),
-                                                  ),
 
-                                                  ElevatedButton(
-                                                    style:
-                                                        ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              Colors.red.shade400,
-                                                        ),
-                                                    onPressed: () {
-                                                      Navigator.pop(
-                                                        context,
-                                                        true,
-                                                      );
-                                                    },
-                                                    child: const Text(
-                                                      "Eliminar",
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            },
-                                          );
-
-                                          // Si canceló
-                                          if (confirmar != true) return;
-
-                                          final foto = fotosLocales[index];
-
-                                          // Eliminar archivo físico
-                                          if (await foto.exists()) {
-                                            await foto.delete();
-                                          }
-
-                                          // Eliminar de la lista
-                                          setState(() {
-                                            fotosLocales.removeAt(index);
-                                          });
-
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text("Foto eliminada"),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  size: 18,
+                                                  color: Colors.white,
+                                                ),
                                               ),
-                                            );
-                                          }
-                                        },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
 
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.black54,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close,
-                                            color: Colors.white,
-                                            size: 18,
-                                          ),
+                                      const SizedBox(height: 8),
+
+                                      TextField(
+                                        controller: captionsControllers[index],
+
+                                        decoration: const InputDecoration(
+                                          hintText: "Pie de foto",
+                                          border: OutlineInputBorder(),
+                                          isDense: true,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               );
                             },

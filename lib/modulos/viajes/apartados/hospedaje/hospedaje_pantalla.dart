@@ -276,7 +276,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
     }
 
     return RefreshIndicator(
-      color: const Color(0xFFF6A230),
+      color: const Color(0xFF0066D2),
       onRefresh: cargar,
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
@@ -336,30 +336,14 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
                     color: Colors.orange,
                   ),
                   const SizedBox(height: 6),
-
                   GestureDetector(
                     onTap: () async {
-                      final destino = Uri.encodeComponent(
-                        normalizarDestino(
-                          FormateadorDestino.formatear(widget.destino),
-                        ),
+                      // ✅ Link directo al hotel exacto usando placeId de Google
+                      final uri = Uri.parse(
+                        "https://www.google.com/maps/search/?api=1"
+                        "&query=${Uri.encodeComponent(h.nombre)}"
+                        "&query_place_id=${h.placeId}",
                       );
-
-                      final nombreHotel = Uri.encodeComponent(h.nombre);
-
-                      final checkin =
-                          "${widget.fechaInicio.year}-${widget.fechaInicio.month.toString().padLeft(2, '0')}-${widget.fechaInicio.day.toString().padLeft(2, '0')}";
-
-                      final checkout =
-                          "${widget.fechaFin.year}-${widget.fechaFin.month.toString().padLeft(2, '0')}-${widget.fechaFin.day.toString().padLeft(2, '0')}";
-
-                      final bookingUrl =
-                          "https://www.booking.com/searchresults.html"
-                          "?ss=$destino+$nombreHotel"
-                          "&checkin=$checkin"
-                          "&checkout=$checkout";
-
-                      final uri = Uri.parse(bookingUrl);
 
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(
@@ -368,13 +352,12 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
                         );
                       }
                     },
-
                     child: Row(
                       children: const [
                         Icon(Icons.open_in_new, size: 13, color: Colors.blue),
                         SizedBox(width: 3),
                         Text(
-                          'Reservar en Booking',
+                          'Ver en Google Maps',
                           style: TextStyle(fontSize: 12, color: Colors.blue),
                         ),
                       ],

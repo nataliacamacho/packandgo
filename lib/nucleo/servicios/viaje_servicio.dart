@@ -13,19 +13,45 @@ class ViajeServicio {
     required String origen,
     required String usuarioId,
   }) async {
-    final doc = await _firestore.collection("viajes").add({
+
+    final viajeData = {
       "usuarioId": usuarioId,
-      "destino": destino,
-      "descripcion": descripcion,
-      "fechaInicio": fechaInicio,
-      "fechaFin": fechaFin,
+      "destino": destino.trim(),
+      "descripcion": descripcion.trim(),
+      "fechaInicio": Timestamp.fromDate(fechaInicio),
+      "fechaFin": Timestamp.fromDate(fechaFin),
       "lat": lat,
       "lng": lng,
-      "origen": origen,
+      "origen": origen.trim(),
+
       "cancelado": false,
       "realizado": null,
       "eliminado": false,
-    });
+
+      "fechaCreacion": FieldValue.serverTimestamp(),
+
+      // NUEVO
+      "estado": "proximo",
+      "cantidadDias":
+          fechaFin.difference(fechaInicio).inDays + 1,
+    };
+
+    // =========================
+    // VIAJE GLOBAL
+    // =========================
+    final doc = await _firestore
+        .collection("viajes")
+        .add(viajeData);
+
+    // =========================
+    // VIAJE DENTRO DEL USUARIO
+    // =========================
+    await _firestore
+        .collection("usuarios")
+        .doc(usuarioId)
+        .collection("viajes")
+        .doc(doc.id)
+        .set(viajeData);
 
     return doc.id;
   }

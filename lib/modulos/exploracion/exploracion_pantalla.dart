@@ -138,7 +138,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
       final pos = await UbicacionServicio().obtenerUbicacionActual();
       if (pos == null) {
-        _set([]);
+        await _cargarCiudadesPopulares();
         return;
       }
 
@@ -211,10 +211,9 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     if (perfilUsuario.isNotEmpty) {
       // Match directo con la categoría del lugar
       if (perfilUsuario.containsKey(categoria)) {
-        score += perfilUsuario[categoria]! * 4.0;
-        debugPrint(
-          "✅ Match directo: $categoria +${perfilUsuario[categoria]! * 4.0}",
-        );
+        score += 1; // coincidencia base requerida
+        score += perfilUsuario[categoria]! * 0.5; // peso adicional
+        debugPrint("✅ Match directo: $categoria +1");
       }
 
       // Bonus KNN
@@ -222,6 +221,41 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     }
 
     return score;
+  }
+
+  Future<void> registrarInteraccion(Map lugar) async {
+    if (uid.isEmpty) return;
+
+    final categoria = (lugar['categoriaPrincipal'] ?? 'otro')
+        .toString()
+        .toLowerCase();
+
+    final nombreLugar = (lugar['name'] ?? 'desconocido').toString();
+
+    final ref = FirebaseFirestore.instance.collection('usuarios').doc(uid);
+
+    final doc = await ref.get();
+
+    Map<String, dynamic> historial = {};
+
+    if (doc.exists) {
+      historial = Map<String, dynamic>.from(
+        doc.data()?['historialEtiquetas'] ?? {},
+      );
+    }
+
+    // aumentar frecuencia
+    historial[categoria] = (historial[categoria] ?? 0) + 1;
+
+    await ref.set({
+      'historialEtiquetas': historial,
+
+      'ultimaInteraccion': {
+        'lugar': nombreLugar,
+        'categoria': categoria,
+        'fecha': DateTime.now(),
+      },
+    }, SetOptions(merge: true));
   }
 
   // =========================
@@ -332,179 +366,192 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              const Text(
-                "¡Tu app favorita de viajes!",
-                style: TextStyle(fontSize: 18),
-              ),
-              const SizedBox(height: 25),
+      body: RefreshIndicator(
+        color: const Color(0xFF0066D2),
+        onRefresh: () async {
+          await _inicializarExploracion();
+        },
 
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Recomendaciones",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  "¡Tu app favorita de viajes!",
+                  style: TextStyle(fontSize: 18),
                 ),
-              ),
+                const SizedBox(height: 25),
 
-              const SizedBox(height: 15),
-
-              SizedBox(
-                height: 250,
-                child: estaCargando
-                    ? const Center(child: CircularProgressIndicator())
-                    : lugaresRecomendados.isEmpty
-                    ? const Center(child: Text("No hay recomendaciones"))
-                    : Row(
-                        children: [
-                          GestureDetector(
-                            onTap: indiceActual > 0 ? _anteriorLugar : null,
-                            child: Container(
-                              width: 40,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: indiceActual > 0
-                                    ? const Color(0xFF0066D2)
-                                    : Colors.grey,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(width: 15),
-
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                final lugar = lugaresRecomendados[indiceActual];
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => LugarDetallePantalla(
-                                      lugar: lugar,
-                                      // 🔥 Le pasamos la foto de Natalia ('foto') a la variable que acabamos de crear
-                                      imagenUrl:
-                                          lugar['foto'] ??
-                                          "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0066D2),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Expanded(
-                                      child: ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              top: Radius.circular(15),
-                                            ),
-                                        child: lugar?['foto'] != null
-                                            ? Image.network(
-                                                lugar?['foto'],
-                                                width: double.infinity,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) {
-                                                  return Container(
-                                                    color: Colors.blueAccent,
-                                                    child: const Icon(
-                                                      Icons.landscape,
-                                                      color: Colors.white,
-                                                      size: 70,
-                                                    ),
-                                                  );
-                                                },
-                                              )
-                                            : Container(
-                                                color: Colors.blueAccent,
-                                                child: const Icon(
-                                                  Icons.landscape,
-                                                  color: Colors.white,
-                                                  size: 70,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(15),
-                                      child: Text(
-                                        nombre,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(width: 15),
-
-                          GestureDetector(
-                            onTap: indiceActual < lugaresRecomendados.length - 1
-                                ? _siguienteLugar
-                                : null,
-                            child: Container(
-                              width: 40,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color:
-                                    indiceActual <
-                                        lugaresRecomendados.length - 1
-                                    ? const Color(0xFF0066D2)
-                                    : Colors.grey,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-
-              const SizedBox(height: 40),
-
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CrearViajePantalla(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: Text(
-                  "Crear Viaje",
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Recomendaciones",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF6A230),
+
+                const SizedBox(height: 15),
+
+                SizedBox(
+                  height: 250,
+                  child: estaCargando
+                      ? const Center(child: CircularProgressIndicator())
+                      : lugaresRecomendados.isEmpty
+                      ? const Center(child: Text("No hay recomendaciones"))
+                      : Row(
+                          children: [
+                            GestureDetector(
+                              onTap: indiceActual > 0 ? _anteriorLugar : null,
+                              child: Container(
+                                width: 40,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: indiceActual > 0
+                                      ? const Color(0xFF0066D2)
+                                      : Colors.grey,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 15),
+
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () async {
+                                  final lugar =
+                                      lugaresRecomendados[indiceActual];
+
+                                  // 🔥 registrar interacción
+                                  await registrarInteraccion(lugar);
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => LugarDetallePantalla(
+                                        lugar: lugar,
+                                        // 🔥 Le pasamos la foto de Natalia ('foto') a la variable que acabamos de crear
+                                        imagenUrl:
+                                            lugar['foto'] ??
+                                            "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0066D2),
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Expanded(
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                top: Radius.circular(15),
+                                              ),
+                                          child: lugar?['foto'] != null
+                                              ? Image.network(
+                                                  lugar?['foto'],
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) {
+                                                    return Container(
+                                                      color: Colors.blueAccent,
+                                                      child: const Icon(
+                                                        Icons.landscape,
+                                                        color: Colors.white,
+                                                        size: 70,
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              : Container(
+                                                  color: Colors.blueAccent,
+                                                  child: const Icon(
+                                                    Icons.landscape,
+                                                    color: Colors.white,
+                                                    size: 70,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(15),
+                                        child: Text(
+                                          nombre,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 15),
+
+                            GestureDetector(
+                              onTap:
+                                  indiceActual < lugaresRecomendados.length - 1
+                                  ? _siguienteLugar
+                                  : null,
+                              child: Container(
+                                width: 40,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color:
+                                      indiceActual <
+                                          lugaresRecomendados.length - 1
+                                      ? const Color(0xFF0066D2)
+                                      : Colors.grey,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_forward_ios,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 110),
+
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CrearViajePantalla(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: Text(
+                    "Crear Viaje",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF6A230),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

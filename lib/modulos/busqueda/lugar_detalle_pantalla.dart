@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart' as picker;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -30,6 +34,8 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   final TextEditingController resenaController = TextEditingController();
   int estrellas = 0;
   final uid = FirebaseAuth.instance.currentUser?.uid;
+  File? imagenResena;
+  bool subiendoFoto = false;
 
   // ===================================================================
   // 📸 FUNCIÓN UNIVERSAL CON DETECTOR DE IMPOSTORES
@@ -63,6 +69,49 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
     // 3. Si de plano no tiene (ej. un Oxxo), ahora sí dejamos pasar al impostor (Unsplash)
     return impostor;
+  }
+
+  Future<void> _seleccionarImagen() async {
+    final imagePicker = picker.ImagePicker();
+
+    final imagen = await imagePicker.pickImage(
+      source: picker.ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (imagen != null) {
+      setState(() {
+        imagenResena = File(imagen.path);
+      });
+    }
+  }
+
+  Future<String?> _subirImagenResena() async {
+    if (imagenResena == null) return null;
+
+    try {
+      setState(() {
+        subiendoFoto = true;
+      });
+
+      final nombreArchivo =
+          "resenas/${DateTime.now().millisecondsSinceEpoch}.jpg";
+
+      final ref = FirebaseStorage.instance.ref().child(nombreArchivo);
+
+      await ref.putFile(imagenResena!);
+
+      final url = await ref.getDownloadURL();
+
+      return url;
+    } catch (e) {
+      debugPrint("Error subiendo imagen: $e");
+      return null;
+    } finally {
+      setState(() {
+        subiendoFoto = false;
+      });
+    }
   }
 
   // =========================
@@ -159,6 +208,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
   Widget _card(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
     return Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(10),
@@ -169,28 +219,205 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (data['foto'] != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                data['foto'],
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+          if (data['foto'] != null) const SizedBox(height: 10),
+
           _buildEstrellasView(data['estrellas'] ?? 0),
+
           const SizedBox(height: 5),
-          Text(data['texto'] ?? ""),
+
+          Text(
+            data['texto'] ?? "",
+            style: const TextStyle(fontSize: 15, height: 1.4),
+          ),
+          if (data['id_usuario'] == uid) const SizedBox(height: 10),
+
+          Row(
+            children: [
+              // ❤️ ME ENCANTA
+              IconButton(
+                onPressed: () async {
+                  try {
+                    await ResenaServicio.reaccionarResena(
+                      idResena: doc.id,
+                      tipo: 'love',
+                      autorId: data['id_usuario'],
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text("$e")));
+                  }
+                },
+                icon: Icon(
+                  Icons.favorite,
+                  color: Colors.red.shade300,
+                  size: 20,
+                ),
+              ),
+
+              Text("${data['me_encanta'] ?? 0}"),
+
+              const SizedBox(width: 10),
+
+              // 👍 LIKE
+              IconButton(
+                onPressed: () async {
+                  try {
+                    await ResenaServicio.reaccionarResena(
+                      idResena: doc.id,
+                      tipo: 'like',
+                      autorId: data['id_usuario'],
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text("$e")));
+                  }
+                },
+                icon: Icon(
+                  Icons.thumb_up,
+                  color: Colors.blue.shade300,
+                  size: 20,
+                ),
+              ),
+
+              Text("${data['likes'] ?? 0}"),
+
+              StreamBuilder<bool>(
+                stream: ResenaServicio.esFavorita(doc.id),
+                builder: (context, snapshot) {
+                  final esFavorita = snapshot.data ?? false;
+
+                  return IconButton(
+                    onPressed: () async {
+                      await ResenaServicio.toggleFavorita(idResena: doc.id);
+                    },
+                    icon: Icon(
+                      esFavorita ? Icons.bookmark : Icons.bookmark_border,
+                      color: Colors.amber,
+                    ),
+                  );
+                },
+              ),
+
+              // 🔥 EMPUJA EL BOTÓN ELIMINAR HASTA LA DERECHA
+              const Spacer(),
+
+              // 🗑️ ELIMINAR SOLO SI ES TU RESEÑA
+              if (data['id_usuario'] == uid)
+                TextButton.icon(
+                  onPressed: () async {
+                    final confirmar = await showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        backgroundColor: Color.fromARGB(255, 255, 255, 255),
+                        title: const Text("Eliminar reseña"),
+                        content: const Text(
+                          "¿Seguro que deseas eliminar esta reseña?",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text(
+                              "Cancelar",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              "Eliminar",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 255, 255, 255),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmar == true) {
+                      await ResenaServicio.eliminarResena(doc.id);
+                    }
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: const Text("Eliminar"),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Future<void> _publicar(String nombreLugar) async {
-    final texto = resenaController.text;
-    if (texto.isEmpty || estrellas == 0) return;
-    await FirebaseFirestore.instance.collection('resenas').add({
-      'id_usuario': uid,
-      'id_lugar': nombreLugar,
-      'nombre_lugar': nombreLugar,
-      'texto': texto,
-      'estrellas': estrellas,
-      'ranking': estrellas * 10,
-      'fecha': FieldValue.serverTimestamp(),
-    });
-    resenaController.clear();
-    setState(() => estrellas = 0);
+    final texto = resenaController.text.trim();
+
+    if (texto.isEmpty || estrellas == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Completa la reseña y las estrellas")),
+      );
+      return;
+    }
+
+    final error = await ResenaServicio.validarTextoResena(texto);
+
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+
+    try {
+      String? fotoUrl;
+
+      // 🔥 SUBIR FOTO SI EL USUARIO SELECCIONÓ UNA
+      if (imagenResena != null) {
+        fotoUrl = await _subirImagenResena();
+      }
+
+      await ResenaServicio.guardarResena(
+        idLugar: nombreLugar,
+        nombreLugar: nombreLugar,
+        texto: texto,
+        estrellas: estrellas,
+        fotoUrl: fotoUrl,
+      );
+
+      resenaController.clear();
+
+      setState(() {
+        estrellas = 0;
+        imagenResena = null;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Reseña publicada")));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error al publicar: $e")));
+    }
   }
 
   @override
@@ -212,7 +439,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
     try {
       await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
         'historialEtiquetas': {categoria: FieldValue.increment(1)},
-      }, SetOptions(merge: true)); // ✅ merge para no borrar otros campos
+      }, SetOptions(merge: true));
 
       debugPrint("✅ Etiqueta registrada: $categoria");
     } catch (e) {
@@ -326,6 +553,8 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                     stream: FirebaseFirestore.instance
                         .collection('resenas')
                         .where('id_lugar', isEqualTo: nombre)
+                        .orderBy('ranking', descending: true)
+                        .orderBy('fecha', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData)
@@ -335,39 +564,156 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _promedio(docs),
-                          const SizedBox(height: 10),
+
+                          const SizedBox(height: 20),
+
+                          // ⭐ Selección de estrellas
+                          const Text(
+                            "Califica este lugar",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+
+                          const SizedBox(height: 6),
+
                           _buildEstrellas(),
+
+                          const SizedBox(height: 18),
+
+                          // ✍️ Caja de reseña
+                          TextField(
+                            controller: resenaController,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              hintText: "Cuéntanos tu experiencia...",
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              contentPadding: const EdgeInsets.all(14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // 📸 BOTÓN FOTO
                           Row(
                             children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: resenaController,
-                                  decoration: InputDecoration(
-                                    hintText: "Escribe tu reseña",
-                                    filled: true,
-                                    fillColor: Colors.grey[200],
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
+                              ElevatedButton.icon(
+                                onPressed: _seleccionarImagen,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0066D2),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.photo),
+                                label: const Text("Agregar foto"),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              if (imagenResena != null)
+                                const Expanded(
+                                  child: Text(
+                                    "Foto seleccionada",
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF6A230),
-                                ),
-                                onPressed: () => _publicar(nombre),
-                                child: const Text(
-                                  "Publicar",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          if (docs.isEmpty) const Text("Sin reseñas aún"),
+
+                          // 👀 Preview de imagen
+                          if (imagenResena != null) ...[
+                            const SizedBox(height: 14),
+
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.file(
+                                imagenResena!,
+                                height: 180,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 20),
+
+                          // 🚀 BOTÓN PUBLICAR
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF6A230),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 15,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              onPressed: subiendoFoto
+                                  ? null
+                                  : () => _publicar(nombre),
+                              child: subiendoFoto
+                                  ? const SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2.5,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "Publicar reseña",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // 📝 LISTA DE RESEÑAS
+                          if (docs.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                "Aún no hay reseñas para este lugar.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+
                           ...docs.map(_card),
                         ],
                       );
