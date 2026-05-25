@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class DiarioPantalla extends StatefulWidget {
   final String idViaje;
@@ -28,6 +29,32 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
   TextEditingController diarioController = TextEditingController();
 
   List<TextEditingController> captionsControllers = [];
+
+  Future<bool> _solicitarPermisoGaleria() async {
+    PermissionStatus estado;
+
+    if (Platform.isAndroid) {
+      estado = await Permission.storage.request();
+    } else {
+      estado = await Permission.photos.request();
+    }
+
+    if (estado.isGranted) {
+      return true;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Puedes seguir usando el diario aunque no otorgues permisos.",
+          ),
+        ),
+      );
+    }
+
+    return false;
+  }
 
   // Función para tomar o elegir foto y guardarla localmente
   Future<void> _obtenerFoto(ImageSource fuente) async {
@@ -261,7 +288,13 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
-                        onPressed: () => _obtenerFoto(ImageSource.gallery),
+                        onPressed: () async {
+                          final permitido = await _solicitarPermisoGaleria();
+
+                          if (permitido) {
+                            _obtenerFoto(ImageSource.gallery);
+                          }
+                        },
                         icon: const Icon(
                           Icons.photo_library,
                           color: Color.fromARGB(255, 255, 255, 255),
@@ -282,141 +315,158 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                   const SizedBox(height: 14),
 
                   SizedBox(
-                    height: 120,
+                    height: 280,
                     child: fotosLocales.isEmpty
                         ? const Center(child: Text("Aún no hay fotos"))
-                        : ListView.builder(
-                            scrollDirection: Axis.horizontal,
+                        : PageView.builder(
+                            controller: PageController(viewportFraction: 0.82),
                             itemCount: fotosLocales.length,
                             itemBuilder: (context, index) {
                               return Padding(
-                                padding: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
 
-                                child: SizedBox(
-                                  width: 120,
-
-                                  child: Column(
-                                    children: [
-                                      Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-
-                                            child: Image.file(
-                                              fotosLocales[index],
-                                              width: 120,
-                                              height: 100,
-                                              fit: BoxFit.cover,
-                                            ),
+                                child: Column(
+                                  children: [
+                                    // 📸 FOTO
+                                    Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            18,
                                           ),
 
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
+                                          child: Image.file(
+                                            fotosLocales[index],
+                                            width: double.infinity,
+                                            height: 180,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
 
-                                            child: GestureDetector(
-                                              onTap: () async {
-                                                final confirmar =
-                                                    await showDialog<bool>(
-                                                      context: context,
-                                                      builder: (context) {
-                                                        return AlertDialog(
-                                                          title: const Text(
-                                                            "Eliminar foto",
+                                        // ❌ ELIMINAR
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              final confirmar =
+                                                  await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (context) {
+                                                      return AlertDialog(
+                                                        title: const Text(
+                                                          "Eliminar foto",
+                                                        ),
+
+                                                        content: const Text(
+                                                          "¿Deseas eliminar esta foto?",
+                                                        ),
+
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () {
+                                                              Navigator.pop(
+                                                                context,
+                                                                false,
+                                                              );
+                                                            },
+
+                                                            child: const Text(
+                                                              "Cancelar",
+                                                            ),
                                                           ),
 
-                                                          content: const Text(
-                                                            "¿Deseas eliminar esta foto?",
+                                                          ElevatedButton(
+                                                            onPressed: () {
+                                                              Navigator.pop(
+                                                                context,
+                                                                true,
+                                                              );
+                                                            },
+
+                                                            child: const Text(
+                                                              "Eliminar",
+                                                            ),
                                                           ),
-
-                                                          actions: [
-                                                            TextButton(
-                                                              onPressed: () {
-                                                                Navigator.pop(
-                                                                  context,
-                                                                  false,
-                                                                );
-                                                              },
-
-                                                              child: const Text(
-                                                                "Cancelar",
-                                                              ),
-                                                            ),
-
-                                                            ElevatedButton(
-                                                              onPressed: () {
-                                                                Navigator.pop(
-                                                                  context,
-                                                                  true,
-                                                                );
-                                                              },
-
-                                                              child: const Text(
-                                                                "Eliminar",
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      },
-                                                    );
-
-                                                if (confirmar != true) return;
-
-                                                final foto =
-                                                    fotosLocales[index];
-
-                                                if (await foto.exists()) {
-                                                  await foto.delete();
-                                                }
-
-                                                captionsControllers[index]
-                                                    .dispose();
-
-                                                setState(() {
-                                                  fotosLocales.removeAt(index);
-
-                                                  captionsControllers.removeAt(
-                                                    index,
+                                                        ],
+                                                      );
+                                                    },
                                                   );
-                                                });
-                                              },
 
-                                              child: Container(
-                                                padding: const EdgeInsets.all(
-                                                  4,
-                                                ),
+                                              if (confirmar != true) return;
 
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.black54,
-                                                  shape: BoxShape.circle,
-                                                ),
+                                              final foto = fotosLocales[index];
 
-                                                child: const Icon(
-                                                  Icons.close,
-                                                  size: 18,
-                                                  color: Colors.white,
-                                                ),
+                                              if (await foto.exists()) {
+                                                await foto.delete();
+                                              }
+
+                                              captionsControllers[index]
+                                                  .dispose();
+
+                                              setState(() {
+                                                fotosLocales.removeAt(index);
+
+                                                captionsControllers.removeAt(
+                                                  index,
+                                                );
+                                              });
+                                            },
+
+                                            child: Container(
+                                              padding: const EdgeInsets.all(5),
+
+                                              decoration: const BoxDecoration(
+                                                color: Colors.black54,
+                                                shape: BoxShape.circle,
+                                              ),
+
+                                              child: const Icon(
+                                                Icons.close,
+                                                color: Colors.white,
+                                                size: 18,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
+                                    ),
 
-                                      const SizedBox(height: 8),
+                                    const SizedBox(height: 12),
 
-                                      TextField(
+                                    // 📝 PIE DE FOTO
+                                    SizedBox(
+                                      width: 240,
+
+                                      child: TextField(
                                         controller: captionsControllers[index],
 
-                                        decoration: const InputDecoration(
+                                        textAlign: TextAlign.center,
+
+                                        maxLines: 2,
+
+                                        decoration: InputDecoration(
                                           hintText: "Pie de foto",
-                                          border: OutlineInputBorder(),
                                           isDense: true,
+
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },

@@ -35,10 +35,30 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
   bool cargando = false;
 
+  List<String> actividadesSeleccionadas = [];
+
   @override
   void dispose() {
     descripcionController.dispose();
     super.dispose();
+  }
+
+  void limpiarFormulario() {
+    setState(() {
+      destinoSeleccionado = null;
+
+      descripcionController.clear();
+
+      rangofechas = null;
+
+      fechaInicio = null;
+
+      fechaFin = null;
+
+      actividadesSeleccionadas.clear();
+
+      imagenSeleccionada = null;
+    });
   }
 
   static const Map<String, String> _aliases = {
@@ -53,6 +73,24 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     'oax': 'Oaxaca',
     'mid': 'Mérida',
   };
+
+  final List<String> actividadesDisponibles = [
+    'senderismo',
+    'natacion',
+    'camping',
+    'playa',
+    'esqui',
+    'negocios',
+    'fotografia',
+    'ciclismo',
+    'gym',
+    'pesca',
+    'moto',
+    'buceo',
+    'festival',
+    'excursion',
+    'aventura',
+  ];
 
   String normalizarDestino(String destino) {
     final lower = destino.toLowerCase().trim();
@@ -75,14 +113,15 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
       });
     }
   }
-  Future<void> seleccionarImagen() async {
-  final XFile? imagen = await picker.pickImage(source: ImageSource.gallery);
 
-  if (imagen != null) {
-    setState(() {
-      imagenSeleccionada = File(imagen.path);
-    });
-  }
+  Future<void> seleccionarImagen() async {
+    final XFile? imagen = await picker.pickImage(source: ImageSource.gallery);
+
+    if (imagen != null) {
+      setState(() {
+        imagenSeleccionada = File(imagen.path);
+      });
+    }
   }
 
   Future<void> crearViaje() async {
@@ -124,6 +163,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         fechaInicio: fechaInicio!,
         fechaFin: fechaFin!,
         descripcion: descripcionController.text,
+        actividades: actividadesSeleccionadas,
         lat: destinoLat,
         lng: destinoLng,
         origen: '',
@@ -132,30 +172,36 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
       String? imagenUrl;
 
-if (imagenSeleccionada != null) {
-  imagenUrl = await storageServicio.subirImagenViaje(
-    imagenSeleccionada!,
-    idViaje,
-  );
+      if (imagenSeleccionada != null) {
+        imagenUrl = await storageServicio.subirImagenViaje(
+          imagenSeleccionada!,
+          idViaje,
+        );
 
-  await FirebaseFirestore.instance
-      .collection('viajes')
-      .doc(idViaje)
-      .update({'imagen': imagenUrl});
-}
+        await FirebaseFirestore.instance
+            .collection('viajes')
+            .doc(idViaje)
+            .update({'imagen': imagenUrl});
+      }
 
       if (!mounted) return;
+
+      final inicioTemp = fechaInicio!;
+      final finTemp = fechaFin!;
+      final descripcionTemp = descripcionController.text;
+
+      limpiarFormulario();
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => DetalleViajePantalla(
             nombre: destinoNormalizado,
-            fechaInicio: fechaInicio!,
-            fechaFin: fechaFin!,
-            descripcion: descripcionController.text,
+            fechaInicio: inicioTemp,
+            fechaFin: finTemp,
+            descripcion: descripcionTemp,
             idViaje: idViaje,
-            destino: destinoNormalizado, // 🔥 RAW
+            destino: destinoNormalizado,
             destinoLat: destinoLat,
             destinoLng: destinoLng,
             origen: '',
@@ -181,7 +227,7 @@ if (imagenSeleccionada != null) {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 0,
         centerTitle: true,
         title: Text("Pack&Go", style: GoogleFonts.poppins(fontSize: 32)),
@@ -194,6 +240,10 @@ if (imagenSeleccionada != null) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 15),
+
+              Text("Elegir Destino", style: GoogleFonts.poppins(fontSize: 16)),
+
+              const SizedBox(height: 10),
 
               FiltrosBusqueda(
                 destinoSeleccionado: destinoSeleccionado,
@@ -245,6 +295,48 @@ if (imagenSeleccionada != null) {
                 ),
               ),
 
+              const SizedBox(height: 25),
+
+              Text(
+                "Actividades",
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: actividadesDisponibles.map((actividad) {
+                  final seleccionada = actividadesSeleccionadas.contains(
+                    actividad,
+                  );
+
+                  return FilterChip(
+                    label: Text(actividad),
+                    selected: seleccionada,
+
+                    onSelected: (valor) {
+                      setState(() {
+                        if (valor) {
+                          actividadesSeleccionadas.add(actividad);
+                        } else {
+                          actividadesSeleccionadas.remove(actividad);
+                        }
+                      });
+                    },
+                    backgroundColor: Colors.white,
+
+                    selectedColor: const Color(0xFFF6A230),
+
+                    checkmarkColor: Colors.white,
+                  );
+                }).toList(),
+              ),
+
               const SizedBox(height: 40),
 
               Center(
@@ -265,6 +357,8 @@ if (imagenSeleccionada != null) {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 40),
             ],
           ),
         ),
