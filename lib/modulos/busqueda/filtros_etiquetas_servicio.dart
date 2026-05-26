@@ -265,79 +265,93 @@ class FiltrosEtiquetasServicio {
   
   /// 🏷️ REPARACIÓN RADICAL DE FILTROS (Tipo de lugar)
   /// Traduce las entradas dinámicas de Google y OpenTripMap a tus variables del buscador
-  static String normalizarTipoParaBuscador(List<dynamic> categoriesFromApi, String placeName) {
-    final nameLower = placeName.toLowerCase().trim();
+ static String normalizarTipoParaBuscador(List<dynamic> categoriesFromApi, String placeName) {
+  final nameLower = placeName.toLowerCase().trim();
+  final todoElTexto = categoriesFromApi.map((e) => e.toString().toLowerCase()).join(",");
 
-    // 🕵️‍♂️ REGLA DE EMERGENCIA 1: Prioridad absoluta por Palabras Clave en el Nombre Real
-    if (nameLower.contains("restaurante") || nameLower.contains("tacos") || nameLower.contains("mariscos") || nameLower.contains("cocina") || nameLower.contains("grill") || nameLower.contains("comida") || nameLower.contains("antojitos") || nameLower.contains("taquería") || nameLower.contains("burger") || nameLower.contains("pizza")) {
-      return "Restaurante";
-    }
-    if (nameLower.contains("café") || nameLower.contains("cafetería") || nameLower.contains("starbucks") || nameLower.contains("coffee") || nameLower.contains("bakery")) {
-      return "Cafetería";
-    }
-    if (nameLower.contains("bar") || nameLower.contains("cantina") || nameLower.contains("pub") || nameLower.contains("mezcalería") || nameLower.contains("club") || nameLower.contains("cantina")) {
-      return "Bar";
-    }
-    if (nameLower.contains("parque") || nameLower.contains("bosque") || nameLower.contains("jardín") || nameLower.contains("garden")) {
-      return "Parque";
-    }
-    if (nameLower.contains("museo") || nameLower.contains("museum")) {
-      return "Museo";
-    }
-    if (nameLower.contains("playa") || nameLower.contains("beach") || nameLower.contains("costera") || nameLower.contains("mar")) {
-      return "Playa";
-    }
-    if (nameLower.contains("mirador") || nameLower.contains("vista") || nameLower.contains("viewpoint")) {
-      return "Mirador";
-    }
-    if (nameLower.contains("mall") || nameLower.contains("plaza") || nameLower.contains("centro comercial")) {
-      return "centro_comercial";
-    }
-    if (nameLower.contains("pirámide") || nameLower.contains("arqueológica") || nameLower.contains("ruinas") || nameLower.contains("zona")) {
-      return "zona_arqueologica";
-    }
+  // 1. PRIORIDAD ABSOLUTA: Cafeterías
+  if (nameLower.contains("café") || nameLower.contains("cafetería") || 
+      nameLower.contains("coffee") || nameLower.contains("bakery") || 
+      todoElTexto.contains("cafe") || todoElTexto.contains("coffee")) {
+    return "Cafetería";
+  }
 
-    // 🕵️‍♂️ REGLA 2: Inspección profunda de etiquetas crudas unificadas en un solo bloque de texto
-    // Esto evita que si la API manda un mapa anidado o un string plano, Dart lo ignore.
+  // 2. PRIORIDAD ABSOLUTA: Religión / Museos
+  if (nameLower.contains("museo") || nameLower.contains("museum") || 
+      todoElTexto.contains("museum")) {
+    return "Museo";
+  }
+  
+  if (nameLower.contains("templo") || nameLower.contains("iglesia") || 
+      nameLower.contains("church") || todoElTexto.contains("religion") || 
+      todoElTexto.contains("church")) {
+    return "Monumento"; 
+  }
+
+  // 🕵️‍♂️ REGLA 2: Inspección profunda de etiquetas
     final todoElTextoDeCategorias = categoriesFromApi.map((e) {
       if (e is Map) return (e['name'] ?? '').toString().toLowerCase();
       return e.toString().toLowerCase();
     }).join(",");
 
-    if (todoElTextoDeCategorias.contains("restaurant") || todoElTextoDeCategorias.contains("food") || todoElTextoDeCategorias.contains("meal") || todoElTextoDeCategorias.contains("dining")) {
-      return "Restaurante";
-    }
-    if (todoElTextoDeCategorias.contains("cafe") || todoElTextoDeCategorias.contains("bakery") || todoElTextoDeCategorias.contains("coffee")) {
+    // 1. CAFETERÍAS (Prioridade máxima)
+    if (nameLower.contains("café") || nameLower.contains("cafetería") || 
+        nameLower.contains("coffee") || nameLower.contains("bakery") || 
+        todoElTextoDeCategorias.contains("cafe") || todoElTextoDeCategorias.contains("coffee")) {
       return "Cafetería";
     }
-    if (todoElTextoDeCategorias.contains("beach") || todoElTextoDeCategorias.contains("sea") || todoElTextoDeCategorias.contains("coast") || todoElTextoDeCategorias.contains("playa")) {
-      return "Playa";
-    }
-    if (todoElTextoDeCategorias.contains("bar") || todoElTextoDeCategorias.contains("night_club") || todoElTextoDeCategorias.contains("pub") || todoElTextoDeCategorias.contains("disco")) {
-      return "Bar";
-    }
-    if (todoElTextoDeCategorias.contains("museum") || todoElTextoDeCategorias.contains("art") || todoElTextoDeCategorias.contains("cultural")) {
-      return "Museo";
-    }
-    if (todoElTextoDeCategorias.contains("park") || todoElTextoDeCategorias.contains("nature") || todoElTextoDeCategorias.contains("garden")) {
-      return "Parque";
-    }
-    if (todoElTextoDeCategorias.contains("shopping") || todoElTextoDeCategorias.contains("mall") || todoElTextoDeCategorias.contains("store")) {
-      return "centro_comercial";
-    }
-    if (todoElTextoDeCategorias.contains("monument") || todoElTextoDeCategorias.contains("historic") || todoElTextoDeCategorias.contains("landmark") || todoElTextoDeCategorias.contains("church")) {
+
+    // 2. MONUMENTOS Y RELIGIÓN (Esto captura iglesias y templos)
+    if (nameLower.contains("iglesia") || nameLower.contains("templo") || 
+        nameLower.contains("parroquia") || nameLower.contains("cathedral") || 
+        todoElTextoDeCategorias.contains("religion") || todoElTextoDeCategorias.contains("church")) {
       return "Monumento";
     }
-    if (todoElTextoDeCategorias.contains("archaeolog") || todoElTextoDeCategorias.contains("ruins")) {
+
+    // 3. RESTAURANTES
+    if (nameLower.contains("restaurante") || nameLower.contains("tacos") || 
+        todoElTextoDeCategorias.contains("restaurant") || todoElTextoDeCategorias.contains("food")) {
+      return "Restaurante";
+    }
+
+    // 4. PLAYAS
+    if (nameLower.contains("playa") || todoElTextoDeCategorias.contains("beach") || todoElTextoDeCategorias.contains("sea")) {
+      return "Playa";
+    }
+
+    // 5. BARES
+    if (nameLower.contains("bar") || todoElTextoDeCategorias.contains("bar") || todoElTextoDeCategorias.contains("night_club")) {
+      return "Bar";
+    }
+
+    // 6. MUSEOS
+    if (nameLower.contains("museo") || todoElTextoDeCategorias.contains("museum")) {
+      return "Museo";
+    }
+
+    // 7. PARQUES
+    if (nameLower.contains("parque") || nameLower.contains("jardín") || todoElTextoDeCategorias.contains("park")) {
+      return "Parque";
+    }
+
+    // 8. CENTROS COMERCIALES
+    if (nameLower.contains("plaza") || nameLower.contains("mall") || todoElTextoDeCategorias.contains("shopping")) {
+      return "centro_comercial";
+    }
+
+    // 9. ZONAS ARQUEOLÓGICAS
+    if (nameLower.contains("pirámide") || nameLower.contains("zona arqueológica") || todoElTextoDeCategorias.contains("archaeolog")) {
       return "zona_arqueologica";
     }
-    if (todoElTextoDeCategorias.contains("amusement") || todoElTextoDeCategorias.contains("extreme") || todoElTextoDeCategorias.contains("sports") || todoElTextoDeCategorias.contains("stadium")) {
+
+    // 10. ACTIVIDADES EXTREMAS
+    if (todoElTextoDeCategorias.contains("amusement") || todoElTextoDeCategorias.contains("extreme")) {
       return "actividades_extremas";
     }
 
-    // Regla de respaldo inteligente: si el nombre del lugar es muy largo, asumimos Restaurante (para no perder datos en la demo)
-    return placeName.length % 2 == 0 ? "Restaurante" : "Otro";
-  }
+    // 🔥 BACKUP LIMPIO: Si nada hace match, devolvemos "Otro" en lugar de adivinar
+    return "Otro";
+ }
 
   /// ASIGNADOR INTELIGENTE DE PRECIO SIMULADO (Para que los filtros de precio tengan datos variados)
   static String calcularPrecioSimulado(dynamic apiPrice, String placeName) {
@@ -356,9 +370,6 @@ class FiltrosEtiquetasServicio {
     return "\$\$\$";
   }
 
-  /// 🔥 EL CEREBRO DE CONTROL CENTRAL DE FILTROS Y TOP 5 (CON FILTRO DE SEGURIDAD GEOGRÁFICA)
-  /// Aplica las reglas del negocio, elimina basura internacional (Miami/Houston) 
-  /// y regresa el Top 5 exacto que necesita la demo de la escuela.
   static List<Map<String, dynamic>> filtrarYObtenerTop5({
     required List<Map<String, dynamic>> listaCompleta,
     required String? tipo,
@@ -366,58 +377,53 @@ class FiltrosEtiquetasServicio {
     required String? experiencia,
     required String queryTexto,
   }) {
-    // 1. Si el usuario escribe texto directo en la barra, filtramos por coincidencia de letras
-    if (queryTexto.trim().length >= 3) {
-      return listaCompleta.where((lugar) {
-        final nombre = (lugar["name"] ?? "").toString().toLowerCase();
-        return nombre.contains(queryTexto.toLowerCase().trim());
-      }).take(5).toList();
-    }
+    final textoBusqueda = queryTexto.toLowerCase().trim();
 
-    // 2. Aplicamos el filtrado masivo sobre la base de datos local en memoria
+    // Aplicamos el filtrado inteligente
     final procesados = listaCompleta.where((lugar) {
       final nombre = (lugar["name"] ?? "").toString().toLowerCase();
       final direccion = (lugar["direccion"] ?? lugar["vicinity"] ?? "").toString().toLowerCase();
       
-      // 🚫 CONTROL DE FRONTERAS (Cura radical para Miami y Houston)
-      // Si la dirección menciona explícitamente ciudades de Estados Unidos, se descarta en el acto
+      // 🚫 CONTROL DE FRONTERAS
       if (direccion.contains("miami") || 
           direccion.contains("houston") || 
           direccion.contains("fl ") || 
-          direccion.contains("tx ") || 
-          direccion.contains("united states") || 
-          direccion.contains("usa")) {
+          direccion.contains("usa") || 
+          direccion.contains("united states")) {
         return false; 
       }
 
-      // Evitamos que entren lugares con distancias corrompidas (más de 1,000 km de tu búsqueda no es turismo local)
+      // Relajamos a 3000 km para que no bloquee Cancún ni Tijuana
       final distanciaKM = double.tryParse(lugar["distancia"].toString()) ?? 0.0;
-      if (distanciaKM > 1000.0) {
+      if (distanciaKM > 3000.0) {
         return false;
       }
 
-      // Filtro de Búsqueda básica interna
-      final coincideBusqueda = nombre.contains(queryTexto.toLowerCase().trim());
+      // 🔥 FILTRO DE TEXTO INTELIGENTE REPARADO
+      // Si escribió algo, buscamos en el nombre O en la dirección
+      final coincideBusqueda = textoBusqueda.isEmpty || 
+                               nombre.contains(textoBusqueda) || 
+                               direccion.contains(textoBusqueda);
 
-      // Filtro Determinante: TIPO DE LUGAR (Coincidencia exacta con tus botones)
+      // Filtro Determinante: TIPO DE LUGAR
       final tipoLugar = (lugar["categoriaPrincipal"] ?? "").toString().toLowerCase().trim();
       final tipoFiltro = tipo != null ? tipo.toLowerCase().trim() : null;
       final coincideTipo = tipo == null || tipoLugar == tipoFiltro;
 
-      // Filtro Secundario 1: PRECIO ($, $$, $$$)
+      // Filtro Secundario 1: PRECIO
       final precioLugar = (lugar["precio"] ?? "").toString().trim();
       final precioFiltro = precio != null ? precio.trim() : null;
       final coincidePrecio = precio == null || precioLugar == precioFiltro;
 
-      // Filtro Secundario 2: EXPERIENCIA (NLP de Fase 3)
+      // Filtro Secundario 2: EXPERIENCIA
       final listadoExperiencias = lugar["experiencias"] as List<dynamic>? ?? [];
       final experienciasLimpias = listadoExperiencias.map((e) => e.toString().toLowerCase().trim()).toList();
       final coincideExperiencia = experiencia == null || experienciasLimpias.contains(experiencia.toLowerCase().trim());
 
+      // Solo sobreviven los lugares que cumplan TODOS los filtros activos
       return coincideBusqueda && coincideTipo && coincidePrecio && coincideExperiencia;
     }).toList();
 
-    // 3. RETORNAMOS EL TOP 5 DE LO QUE SOBREVIVIÓ
     return procesados.take(5).toList();
   }
 
