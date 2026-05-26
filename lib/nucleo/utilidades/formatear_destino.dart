@@ -25,9 +25,16 @@ class FormateadorDestino {
         .map((palabra) {
           if (palabra.isEmpty) return palabra;
 
-          return palabra[0].toUpperCase() +
-              palabra.substring(1);
+          return palabra[0].toUpperCase() + palabra.substring(1);
         })
         .join(" ");
   }
 }
+
+String limpiarTexto(String input) {
+    return input
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[^\w\s]'), '') // quita acentos raros / símbolos
+        .replaceAll(RegExp(r'\s+'), ' '); // espacios dobles
+  }

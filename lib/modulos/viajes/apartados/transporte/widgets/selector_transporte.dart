@@ -25,13 +25,15 @@ class SelectorTransporte extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final destinoFormateado = FormateadorDestino.formatear(destinoNombre);
+    final destinoFormateado =
+        FormateadorDestino.formatear(destinoNombre);
 
     double latCorregida = destinoLat;
     double lngCorregida = destinoLng;
     String nombreCorregido = destinoFormateado;
 
-    final correccion = DestinosCorregidos.obtener(destinoFormateado);
+    final correccion =
+        DestinosCorregidos.obtener(destinoFormateado);
 
     if (correccion != null) {
       latCorregida = correccion["lat"];
@@ -43,24 +45,23 @@ class SelectorTransporte extends StatelessWidget {
       debugPrint("NUEVA LNG: $lngCorregida");
     }
 
-    // ================= LÓGICA INTELIGENTE =================
-
+    // ================= DISTANCIA BASE =================
     final distanciaAprox = _calcularDistanciaSimple(
-      20.6597, // Guadalajara aprox origen demo
+      20.6597,
       -103.3496,
       latCorregida,
       lngCorregida,
     );
 
-    final mostrarAvion = distanciaAprox > 350;
+    // ================= LÓGICA ÚNICA =================
+    final bool mostrarAvion = distanciaAprox > 350;
+    final bool mostrarRutaMixta = distanciaAprox > 500;
 
-    final mostrarRutaMixta = distanciaAprox > 500;
+    String recomendado;
 
-    String? recomendado;
-
-    if (distanciaAprox < 250) {
+    if (distanciaAprox <= 250) {
       recomendado = "Carro";
-    } else if (distanciaAprox < 500) {
+    } else if (distanciaAprox <= 500) {
       recomendado = "Autobús";
     } else {
       recomendado = "Ruta mixta";
@@ -118,7 +119,7 @@ class SelectorTransporte extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          if (mostrarAvion)
+          if (mostrarAvion && recomendado != "Carro")
             _cardTransporte(
               context,
               titulo: "Avión",
@@ -179,7 +180,10 @@ class SelectorTransporte extends StatelessWidget {
     final a =
         0.5 -
         cos((lat2 - lat1) * p) / 2 +
-        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+        cos(lat1 * p) *
+            cos(lat2 * p) *
+            (1 - cos((lon2 - lon1) * p)) /
+            2;
 
     return 12742 * asin(sqrt(a));
   }
@@ -209,7 +213,6 @@ class SelectorTransporte extends StatelessWidget {
         ),
         child: ListTile(
           leading: Icon(icono, color: color),
-
           title: Row(
             children: [
               Expanded(
@@ -221,7 +224,6 @@ class SelectorTransporte extends StatelessWidget {
                   ),
                 ),
               ),
-
               if (recomendado)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -243,9 +245,10 @@ class SelectorTransporte extends StatelessWidget {
                 ),
             ],
           ),
-
-          subtitle: Text(subtitulo, style: GoogleFonts.poppins(fontSize: 14)),
-
+          subtitle: Text(
+            subtitulo,
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
           onTap: onTap,
         ),
       ),

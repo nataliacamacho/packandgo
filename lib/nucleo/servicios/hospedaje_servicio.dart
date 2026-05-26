@@ -4,61 +4,78 @@ import 'package:http/http.dart' as http;
 import 'package:proyecto/modulos/viajes/apartados/hospedaje/modelo_hospedaje.dart';
 
 class HospedajeServicio {
-  Future<List<Hospedaje>> obtenerHospedajes({
-    required double lat,
-    required double lng,
-    int radius = 5000,
-  }) async {
-    final apiKey = dotenv.env['GOOGLE_API_KEY'];
+  final String _base = "https://maps.googleapis.com/maps/api";
 
-    if (apiKey == null || apiKey.isEmpty) {
-      print("❌ API KEY no encontrada");
-      return [];
-    }
+  Future<Map<String, dynamic>?> _geocodificar(String destino) async {
+    final apiKey = dotenv.env['GOOGLE_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) return null;
 
     final url = Uri.parse(
-      "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-      "?location=$lat,$lng"
+      "$_base/geocode/json?address=${Uri.encodeComponent('$destino, México')}&region=mx&key=$apiKey",
+    );
+
+    final res = await http.get(url);
+    final data = json.decode(res.body);
+
+    if (data['results'] == null || data['results'].isEmpty) return null;
+
+    final result = data['results'][0];
+
+    return {
+      "lat": result['geometry']['location']['lat'],
+      "lng": result['geometry']['location']['lng'],
+      "address": result['formatted_address'],
+    };
+  }
+
+  Future<List<Hospedaje>> obtenerHospedajes({
+    required String destino,
+    int radius = 12000,
+  }) async {
+    final apiKey = dotenv.env['GOOGLE_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) return [];
+
+    final geo = await _geocodificar(destino);
+    if (geo == null) return [];
+
+    final lat = geo['lat'];
+    final lng = geo['lng'];
+
+    final url = Uri.parse(
+      "$_base/place/textsearch/json"
+      "?query=${Uri.encodeComponent('hoteles en $destino México')}"
+      "&location=$lat,$lng"
       "&radius=$radius"
-      "&type=lodging"
+      "&region=mx"
       "&language=es"
       "&key=$apiKey",
     );
 
-    try {
-      final response = await http.get(url);
+    final res = await http.get(url);
+    final data = json.decode(res.body);
 
-      if (response.statusCode != 200) {
-        print("❌ Error API Google Places");
-        return [];
-      }
+    if (data['results'] == null) return [];
 
-      final data = json.decode(response.body);
+    final results = data['results'] as List;
 
-      print("🏨 RESPUESTA GOOGLE:");
-      print(data);
+    final list = results
+        .map((e) => Hospedaje.fromGoogle(e, apiKey))
+        .where((h) => _filtrar(h.ubicacion, destino))
+        .toList();
 
-      if (data['results'] == null) {
-        return [];
-      }
+    list.sort((a, b) => b.rating.compareTo(a.rating));
 
-      final results = data['results'] as List;
+    return list.take(10).toList();
+  }
 
-      List<Hospedaje> hospedajes = results
-          .map((e) => Hospedaje.fromGoogle(e, apiKey))
-          .where((h) {
-            return h.nombre.isNotEmpty &&
-                h.lat != 0.0 &&
-                h.lng != 0.0;
-          })
-          .toList();
+  bool _filtrar(String ubicacion, String destino) {
+    final u = ubicacion.toLowerCase();
+    final d = destino.toLowerCase();
 
-      hospedajes.sort((a, b) => b.rating.compareTo(a.rating));
-
-      return hospedajes.take(10).toList();
-    } catch (e) {
-      print("❌ Error obtenerHospedajes: $e");
-      return [];
-    }
+    return u.contains(d.split(' ').first) ||
+        u.contains('méxico') ||
+        u.contains('quintana roo') ||
+        u.contains('jalisco') ||
+        u.contains('baja california');
   }
 }
