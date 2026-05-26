@@ -245,24 +245,35 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   }
 
 Future<void> _resolverCoordenadas() async {
-    // DESTINO
-    if (destinoSeleccionado != null) {
-      // Pasamos a minúsculas para que haga match perfecto con los id del catálogo ("acapulco", "cancun")
-      final destinoLimpio = destinoSeleccionado!.toLowerCase().trim();
+    // 1. Intentamos sacar las coordenadas del destino seleccionado o del texto escrito
+    String posibleDestino = destinoSeleccionado ?? query;
+    
+    if (posibleDestino.isNotEmpty) {
+      // Quitamos mayúsculas y acentos
+      final destinoLimpio = posibleDestino.toLowerCase().trim()
+          .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
+          .replaceAll('ó', 'o').replaceAll('ú', 'u');
 
       final ciudad = _ciudadesMexico.firstWhere(
-        (c) => c['id'] == destinoLimpio || c['nombre'].toString().toLowerCase().trim() == destinoLimpio,
+        (c) {
+          String nombreNorm = c['nombre'].toString().toLowerCase()
+              .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
+              .replaceAll('ó', 'o').replaceAll('ú', 'u');
+              
+          return c['id'] == destinoLimpio || nombreNorm.contains(destinoLimpio) || destinoLimpio.contains(nombreNorm);
+        },
         orElse: () => {},
       );
 
       if (ciudad.isNotEmpty) {
+        // ¡Encontró la ciudad! Centramos la búsqueda aquí
         _latActual = (ciudad['lat'] as num).toDouble();
         _lngActual = (ciudad['lng'] as num).toDouble();
         return;
       }
     }
 
-    // GPS REAL (Si no hay destino, regresa a tus coordenadas locales)
+    // 2. Si no es ninguna ciudad de la lista (ej. buscó "tacos"), usamos GPS real
     try {
       final pos = await UbicacionServicio().obtenerUbicacionActual();
       if (pos != null) {
@@ -270,7 +281,7 @@ Future<void> _resolverCoordenadas() async {
         _lngActual = pos.longitude;
       }
     } catch (_) {
-      // Fallback por si el emulador no responde el GPS, regresa a Guadalajara por defecto
+      // Fallback a Guadalajara si falla el GPS
       _latActual = 20.6597;
       _lngActual = -103.3496;
     }
@@ -377,6 +388,9 @@ Future<void> _resolverCoordenadas() async {
         final kinds = (l["kinds"] ?? properties?["kinds"] ?? "").toString().toLowerCase();
 
         List<dynamic> categoriasCombinadasCrudas = [...types, kinds];
+
+        print("DEBUG: Lugar: ${l['name']} | Categorias Crudas: $categoriasCombinadasCrudas");
+
         String categoriaHomologada = FiltrosEtiquetasServicio.normalizarTipoParaBuscador(
           categoriasCombinadasCrudas, 
           l['name'] ?? ''
@@ -468,11 +482,17 @@ Future<void> _resolverCoordenadas() async {
 
         final nombreMin = (l['name'] ?? 'lugar').toString().toLowerCase();
 
-        // 🚫 AJUSTE CHAPALA/AJIJIC: Si el lugar está a más de 35 km de la coordenada buscada,
-        // significa que es un intruso de Guadalajara metiéndose en Chapala. Lo botamos.
+        // 🚫 AJUSTE DINÁMICO DE DISTANCIA
         final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
-        if (distanciaKM > 35.0) {
+        
+        // Solo aplicamos la regla estricta de 35km si buscamos Chapala o Ajijic
+        bool esZonaEstricta = destinoAValidar.contains('chapala') || destinoAValidar.contains('ajijic');
+        
+        if (esZonaEstricta && distanciaKM > 35.0) {
           return false; 
+        } else if (distanciaKM > 3000.0) { 
+          // Relajamos a 3000km para el resto del país (así Cancún sobrevive)
+          return false;
         }
 
         final esBasura =
@@ -873,15 +893,21 @@ Future<void> _resolverCoordenadas() async {
   
   
   List<Map<String, dynamic>> get _lugaresFiltrados {
-  // Invocamos el cerebro central de tu archivo de servicio mandándole las variables visuales
-  return FiltrosEtiquetasServicio.filtrarYObtenerTop5(
-    listaCompleta: lugares,
-    tipo: tipoSeleccionado,
-    precio: precioSeleccionado,
-    experiencia: estiloSeleccionado,
-    queryTexto: query,
-  );
-}
+    // Si la palabra escrita coincide con alguna de nuestras ciudades, 
+    // vaciamos el texto para no asfixiar el filtro por nombre.
+    bool esCiudad = _ciudadesMexico.any((c) => 
+        c['nombre'].toString().toLowerCase() == query.toLowerCase().trim() ||
+        c['id'].toString().toLowerCase() == query.toLowerCase().trim()
+    );
+
+    return FiltrosEtiquetasServicio.filtrarYObtenerTop5(
+      listaCompleta: lugares,
+      tipo: tipoSeleccionado,
+      precio: precioSeleccionado,
+      experiencia: estiloSeleccionado,
+      queryTexto: esCiudad ? '' : query, // 🔥 EL TRUCO MÁGICO
+    );
+  }
 
   // -------------------------------------------------------------------------
   // HELPERS
@@ -962,10 +988,12 @@ Future<void> _resolverCoordenadas() async {
 
                             onEstiloChanged: (v) {
                               setState(() => estiloSeleccionado = v);
+                              _buscar(texto: query);
                             },
 
                             onPrecioChanged: (v) {
                               setState(() => precioSeleccionado = v);
+                              _buscar(texto: query);
                             },
                           ),
                         ),
