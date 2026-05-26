@@ -190,7 +190,20 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
         "${widget.fechaFin.day}/${widget.fechaFin.month}/${widget.fechaFin.year}";
 
     final viajeTerminado = yaTerminoViaje();
-    final puedeUsarFunciones = viajeIniciado();
+    bool puedePlanear() {
+      final hoy = DateTime.now();
+      return hoy.isBefore(widget.fechaFin);
+    }
+
+    bool puedeEjecutarViaje() {
+      final hoy = DateTime.now();
+      final inicio = DateTime(
+        widget.fechaInicio.year,
+        widget.fechaInicio.month,
+        widget.fechaInicio.day,
+      );
+      return hoy.isAfter(inicio) || hoy.isAtSameMomentAs(inicio);
+    }
 
     return Scaffold(
       extendBodyBehindAppBar: false,
@@ -324,15 +337,14 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Transporte",
               "Opciones para llegar al destino",
               onTap: () {
-                if (!puedeUsarFunciones) {
+                if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                        "El viaje ya terminó, no se puede modificar planificación.",
                       ),
                     ),
                   );
-
                   return;
                 }
                 Navigator.push(
@@ -355,7 +367,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Hospedaje",
               "Hoteles disponibles en la zona",
               onTap: () {
-                if (!puedeUsarFunciones) {
+                if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -387,7 +399,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Maleta",
               "Lista recomendada para tu viaje",
               onTap: () {
-                if (!puedeUsarFunciones) {
+                if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -417,7 +429,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Itinerario",
               "Planea tus actividades por día",
               onTap: () {
-                if (!puedeUsarFunciones) {
+                if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -448,7 +460,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Diario Personal",
               "Registra tus recuerdos",
               onTap: () {
-                if (!puedeUsarFunciones) {
+                if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(

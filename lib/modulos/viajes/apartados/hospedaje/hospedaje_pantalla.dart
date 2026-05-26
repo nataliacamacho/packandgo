@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:proyecto/modulos/viajes/apartados/hospedaje/modelo_hospedaje.dart';
 import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:proyecto/nucleo/servicios/hospedaje_servicio.dart';
 
 class HospedajePantalla extends StatefulWidget {
@@ -26,6 +26,7 @@ class HospedajePantalla extends StatefulWidget {
 
 class _HospedajePantallaState extends State<HospedajePantalla> {
   final servicio = HospedajeServicio();
+
   bool cargando = true;
   String? error;
   List<Hospedaje> hospedajes = [];
@@ -33,28 +34,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   @override
   void initState() {
     super.initState();
-    print(
-      '🏨 lat=${widget.lat}, lng=${widget.lng}, destino=${normalizarDestino(FormateadorDestino.formatear(widget.destino))}',
-    );
     cargar();
-  }
-
-  static const Map<String, String> _aliases = {
-    'gdl': 'Guadalajara',
-    'mty': 'Monterrey',
-    'cdmx': 'Ciudad de México',
-    'mex': 'Ciudad de México',
-    'cun': 'Cancún',
-    'tij': 'Tijuana',
-    'pue': 'Puebla',
-    'qro': 'Querétaro',
-    'oax': 'Oaxaca',
-    'mid': 'Mérida',
-  };
-
-  String normalizarDestino(String destino) {
-    final lower = destino.toLowerCase().trim();
-    return _aliases[lower] ?? destino;
   }
 
   Future<void> cargar() async {
@@ -62,18 +42,17 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
       cargando = true;
       error = null;
     });
+
     try {
-      final data = await servicio.obtenerHospedajes(
-        lat: widget.lat,
-        lng: widget.lng,
-      );
+      final data = await servicio.obtenerHospedajes(destino: widget.destino);
+
       setState(() {
         hospedajes = data;
         cargando = false;
       });
     } catch (e) {
       setState(() {
-        error = 'No se pudieron cargar los hospedajes';
+        error = "No se pudieron cargar los hospedajes";
         cargando = false;
       });
     }
@@ -95,29 +74,16 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
       'nov',
       'dic',
     ];
+
     return '${fecha.day} ${meses[fecha.month]} ${fecha.year}';
   }
 
-  Future<void> _abrirLink(String urlBase) async {
-    final destino = normalizarDestino(
-      FormateadorDestino.formatear(widget.destino),
-    );
+  Future<void> _abrirBooking(String hotel, String destino) async {
+    final query = Uri.encodeComponent("$hotel $destino México");
 
-    final checkin =
-        "${widget.fechaInicio.year}-${widget.fechaInicio.month.toString().padLeft(2, '0')}-${widget.fechaInicio.day.toString().padLeft(2, '0')}";
+    final url = "https://www.booking.com/searchresults.html?ss=$query";
 
-    final checkout =
-        "${widget.fechaFin.year}-${widget.fechaFin.month.toString().padLeft(2, '0')}-${widget.fechaFin.day.toString().padLeft(2, '0')}";
-
-    final urlFinal =
-        "$urlBase&ss=${Uri.encodeComponent(destino)}"
-        "&checkin=$checkin"
-        "&checkout=$checkout"
-        "&group_adults=2"
-        "&no_rooms=1"
-        "&group_children=0";
-
-    final uri = Uri.parse(urlFinal);
+    final uri = Uri.parse(url);
 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -128,6 +94,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: false,
+
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -175,7 +142,6 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
                 ],
               ),
             ),
-
             Positioned(
               top: 0,
               left: 0,
@@ -192,205 +158,88 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
           ],
         ),
       ),
+
       body: Column(
         children: [
-          _buildFechas(),
-          Expanded(child: _buildContenido()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFechas() {
-    return Container(
-      color: const Color(0xFFFFF3E0),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.calendar_today, size: 16, color: Color(0xFFF6A230)),
-          const SizedBox(width: 6),
-          Text(
-            '${_formatearFecha(widget.fechaInicio)}  →  ${_formatearFecha(widget.fechaFin)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF555555),
+          Container(
+            color: const Color(0xFFFFF3E0),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            child: Text(
+              '${_formatearFecha(widget.fechaInicio)} → ${_formatearFecha(widget.fechaFin)}',
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildContenido() {
-    if (cargando) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Color(0xFFF6A230)),
-            SizedBox(height: 12),
-            Text('Buscando hospedajes...'),
-          ],
-        ),
-      );
-    }
+          Expanded(
+            child: cargando
+                ? const Center(child: CircularProgressIndicator())
+                : error != null
+                ? Center(child: Text(error!))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: hospedajes.length,
+                    itemBuilder: (context, i) {
+                      final h = hospedajes[i];
 
-    if (error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 50, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(error!, style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: cargar,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF6A230),
-              ),
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (hospedajes.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.hotel, size: 60, color: Colors.grey),
-            SizedBox(height: 12),
-            Text(
-              'No hay hospedajes disponibles\nen esta zona',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      color: const Color(0xFF0066D2),
-      onRefresh: cargar,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: hospedajes.length,
-        itemBuilder: (context, index) => _buildCard(hospedajes[index]),
-      ),
-    );
-  }
-
-  Widget _buildCard(Hospedaje h) {
-    return Card(
-      color: Color.fromARGB(255, 255, 255, 255),
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🖼 Imagen con ícono de hotel de respaldo
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                h.imagen,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.hotel),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Nombre
-                  Text(
-                    h.nombre,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Disponibilidad
-                  _buildInfoRow(
-                    Icons.check_circle_outline,
-                    'Buscar este hospedaje en Booking (puede variar ligeramente)',
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: () async {
-                      // ✅ Link directo al hotel exacto usando placeId de Google
-                      final uri = Uri.parse(
-                        "https://www.google.com/maps/search/?api=1"
-                        "&query=${Uri.encodeComponent(h.nombre)}"
-                        "&query_place_id=${h.placeId}",
-                      );
-
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    child: Row(
-                      children: const [
-                        Icon(Icons.open_in_new, size: 13, color: Colors.blue),
-                        SizedBox(width: 3),
-                        Text(
-                          'Ver en Google Maps',
-                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                      return Card(
+                        color: Colors.white,
+                        elevation: 5,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  h.imagen,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.hotel),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      h.nombre,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(h.ubicacion),
+                                    const SizedBox(height: 6),
+                                    GestureDetector(
+                                      onTap: () => _abrirBooking(
+                                        h.nombre,
+                                        widget.destino,
+                                      ),
+                                      child: const Text(
+                                        "Reservar en Booking",
+                                        style: TextStyle(
+                                          color: Colors.blue,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String texto, {Color? color}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Icon(icon, size: 13, color: color ?? Colors.grey),
-        ),
-
-        const SizedBox(width: 5),
-
-        Expanded(
-          child: Text(
-            texto,
-            style: TextStyle(fontSize: 11.5, color: color ?? Colors.grey),
-            softWrap: true,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

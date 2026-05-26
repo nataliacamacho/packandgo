@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -10,36 +9,6 @@ class ItinerarioServicio {
       dias.add(inicio.add(Duration(days: i)));
     }
     return dias;
-  }
-
-  // Verifica disponibilidad según el DER (Foursquare/OpenTripMap)
-  static bool verificarApertura(DateTime fecha, Map<String, dynamic>? horas) {
-    if (horas == null) return true; // Si no hay info, permitimos agregar
-
-    int diaBuscado = fecha.weekday; // 1=Lunes, 7=Domingo
-    List<dynamic> periodos = horas['regular'] ?? [];
-
-    // Buscamos si el día de la semana está en los periodos de apertura
-    return periodos.any((p) => p['day'] == diaBuscado);
-  }
-
-  // Mensaje de error exacto de la propuesta
-  static void mostrarAlertaCerrado(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Lugar no disponible"),
-        content: const Text(
-          "Este lugar no estará disponible el día seleccionado. ¿Deseas elegir otro día o lugar?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cerrar"),
-          ),
-        ],
-      ),
-    );
   }
 
   //  FASE 4: Guardar el itinerario en Firebase

@@ -62,18 +62,26 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
     }
 
     /// 🔥 CAMBIO CLAVE: si no hay hours, lo dejamos pasar
-    bool estaAbierto = true;
+    debugPrint("HORARIOS DEL LUGAR: ${lugar['hours']}");
 
-    if (lugar['hours'] != null) {
-      estaAbierto = ItinerarioServicio.verificarApertura(dia, lugar['hours']);
-    }
+    bool horariosDisponibles =
+        lugar['hours'] != null && lugar['hours'].toString().trim().isNotEmpty;
 
-    if (estaAbierto) {
-      setState(() {
-        itinerarioPorDia[fechaKey]!.add(lugarNormalizado);
-      });
-    } else {
-      ItinerarioServicio.mostrarAlertaCerrado(context);
+    /// Agregar siempre el lugar
+    setState(() {
+      itinerarioPorDia[fechaKey]!.add(lugarNormalizado);
+    });
+
+    /// Mostrar aviso informativo si no hay horarios confiables
+    if (!horariosDisponibles) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "El horario de este lugar puede variar según el día seleccionado.",
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
 
     debugPrint("LUGAR SELECCIONADO: $lugar");
