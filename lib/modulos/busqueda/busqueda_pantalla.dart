@@ -329,40 +329,70 @@ Future<void> _resolverCoordenadas() async {
       error = null;
     });
 
-    try {
+   try {
       await _resolverCoordenadas();
       
-      // 🔥 REPARACIÓN HISTÓRICA: Si no hay texto en la barra, le decimos a la API 
-      // qué buscar en ese destino para que traiga 5 cosas variadas en vez del nombre de la ciudad
+      // 1. Traducimos el ID de la ciudad al nombre real (Para que no busque "gdl" o "puertovallarta")
+      String nombreCiudad = destinoSeleccionado ?? '';
+      try {
+        if (destinoSeleccionado != null) {
+          final ciudadBuscada = _ciudadesMexico.firstWhere((c) => c['id'] == destinoSeleccionado);
+          nombreCiudad = ciudadBuscada['nombre'];
+        }
+      } catch (_) {}
+
+      // 2. Preparamos el texto para Google
       String textoConsultaApi = texto.trim();
       if (textoConsultaApi.isEmpty && destinoSeleccionado != null) {
-        textoConsultaApi = "turismo atracciones restaurantes monumentos"; 
+        if (tipoSeleccionado != null) {
+          // 🔥 EL TRUCO DEFINITIVO: Solo le mandamos "Cafetería" o "Museo".
+          // Como ya le estamos enviando las coordenadas (lat y lng) de la ciudad a Google,
+          // buscará allí automáticamente sin asfixiarse exigiendo que la 
+          // dirección diga el nombre literal de la ciudad.
+          textoConsultaApi = tipoSeleccionado!;
+        } else {
+          textoConsultaApi = "turismo atracciones restaurantes";
+           }
       }
 
-      // Excepción especial para La Paz de BCS para que Google no se vaya a Sudamérica
+      // Excepción especial para La Paz de BCS
       if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'lapaz') {
         textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
       }
 
-      // A partir de aquí tus llamadas a GooglePlacesServicio y OpenTripMapServicio se quedan EXACTAMENTE IGUAL...
+      // 🔥 3. TRADUCTOR DE ETIQUETAS A CÓDIGOS DE API INTERNACIONALES (EL CÓDIGO QUE FALTABA)
+      String? tipoParaApi;
+      if (tipoSeleccionado != null) {
+        String t = tipoSeleccionado!.toLowerCase();
+        if (t.contains('cafe') || t.contains('panaderia')) tipoParaApi = 'cafe';
+        else if (t.contains('rest') || t.contains('taco')) tipoParaApi = 'restaurant';
+        else if (t.contains('bar')) tipoParaApi = 'bar';
+        else if (t.contains('parq')) tipoParaApi = 'park';
+        else if (t.contains('muse')) tipoParaApi = 'museum';
+        else if (t.contains('cent')) tipoParaApi = 'shopping_mall';
+        else if (t.contains('play')) tipoParaApi = 'tourist_attraction'; 
+        else if (t.contains('arq') || t.contains('monu') || t.contains('mira')) tipoParaApi = 'tourist_attraction';
+        else if (t.contains('extre')) tipoParaApi = 'amusement_park';
+      }
 
+      // 4. LLAMAMOS A LAS APIS CON EL TIPO TRADUCIDO (Ej. 'cafe')
       final google = await GooglePlacesServicio.buscarLugares(
         _latActual,
         _lngActual,
         query: textoConsultaApi,
-        tipo: tipoSeleccionado,
+        tipo: tipoParaApi, 
       );
+      
       for (var lugar in google.take(3)) {
         print("==========");
         print(lugar['name']);
-        print(lugar['photos']);
       }
 
       final open = await OpenTripMapServicio.buscarLugaresCulturales(
         _latActual,
         _lngActual,
-        query: texto,
-        tipo: tipoSeleccionado,
+        query: textoConsultaApi,
+        tipo: tipoParaApi, 
       );
 
       print("🟦 Google: ${google.length}");
@@ -395,6 +425,14 @@ Future<void> _resolverCoordenadas() async {
           categoriasCombinadasCrudas, 
           l['name'] ?? ''
         );
+
+        // 🔥 BLINDAJE DEFINITIVO (El antídoto para Guadalajara y ciudades grandes)
+        // Si tú le pediste "Cafetería", forzamos a que conserven esa etiqueta. 
+        // Así evitamos que la palabra genérica "food" de la API nos la robe 
+        // y la convierta accidentalmente en "Restaurante".
+        if (tipoSeleccionado != null && tipoSeleccionado!.isNotEmpty) {
+          categoriaHomologada = tipoSeleccionado!;
+        }
 
         final priceLevel = l["price_level"] ?? l["price"] ?? l["precio"] ?? -1;
         
@@ -543,15 +581,20 @@ Future<void> _resolverCoordenadas() async {
       // -------------------------------------------------------------------
       final ordenados = _quickSort(conPesos);
 
-      // -------------------------------------------------------------------
-      // TOP DEFINITIVO (Guardamos la lista completa ordenada en memoria para que los filtros visuales tengan de dónde escoger)
-      // -------------------------------------------------------------------
-      final finales = (texto.isEmpty &&
-              destinoSeleccionado == null &&
-              tipoSeleccionado == null &&
-              _intereses.isEmpty)
-          ? _top5(ordenados)
-          : ordenados;
+     List<Map<String, dynamic>> listaFinal = List.from(ordenados);
+    if (listaFinal.length < 5 && tipoSeleccionado != null) {
+      final extra = await GooglePlacesServicio.buscarLugares(_latActual, _lngActual, query: "turismo");
+      for (var l in extra) {
+        if (listaFinal.length >= 5) break;
+        if (!listaFinal.any((e) => e['name'] == l['name'])) {
+          l['categoriaPrincipal'] = 'Otro';
+          listaFinal.add(l);
+        }
+      }
+    }
+
+    // 6. Caché y Sugerencias
+    final finales = (texto.isEmpty && destinoSeleccionado == null) ? _top5(listaFinal) : listaFinal;
 
       // Guardar en caché inteligente con el total de opciones
       String hashQuery = _servicioFiltros.generarHashConsulta(
@@ -893,19 +936,22 @@ Future<void> _resolverCoordenadas() async {
   
   
   List<Map<String, dynamic>> get _lugaresFiltrados {
-    // Si la palabra escrita coincide con alguna de nuestras ciudades, 
-    // vaciamos el texto para no asfixiar el filtro por nombre.
+    // 1. Validamos si escribió una ciudad
     bool esCiudad = _ciudadesMexico.any((c) => 
         c['nombre'].toString().toLowerCase() == query.toLowerCase().trim() ||
         c['id'].toString().toLowerCase() == query.toLowerCase().trim()
     );
+
+    // 2. Validamos si escribió exactamente lo mismo que el botón (ej. "cafeteria")
+    bool esCategoria = query.toLowerCase().trim() == (tipoSeleccionado ?? '').toLowerCase().trim();
 
     return FiltrosEtiquetasServicio.filtrarYObtenerTop5(
       listaCompleta: lugares,
       tipo: tipoSeleccionado,
       precio: precioSeleccionado,
       experiencia: estiloSeleccionado,
-      queryTexto: esCiudad ? '' : query, // 🔥 EL TRUCO MÁGICO
+      // 🔥 Si escribió la ciudad o la categoría, vaciamos el texto para no asfixiar el filtro
+      queryTexto: (esCiudad || esCategoria) ? '' : query, 
     );
   }
 
