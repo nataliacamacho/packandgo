@@ -1,49 +1,58 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:proyecto/modelos/maleta.dart';
+import 'package:proyecto/modelos/item_maleta.dart';
 
 class MaletaFirebaseServicio {
-  final _db = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db =
+      FirebaseFirestore.instance;
 
-  String get uid => _auth.currentUser!.uid;
+  final FirebaseAuth _auth =
+      FirebaseAuth.instance;
 
-  // ============================
-  // 🔹 STREAM
-  // ============================
-  Stream<List<ItemMaleta>> obtenerMaleta(String idViaje) {
+  String get uid =>
+      _auth.currentUser!.uid;
+
+  CollectionReference<Map<String, dynamic>>
+      _maletaRef(String idViaje) {
     return _db
-        .collection("usuarios")
+        .collection('usuarios')
         .doc(uid)
-        .collection("viajes")
+        .collection('viajes')
         .doc(idViaje)
-        .collection("maleta")
+        .collection('maleta');
+  }
+
+  Stream<List<ItemMaleta>> obtenerMaleta(
+    String idViaje,
+  ) {
+    return _maletaRef(idViaje)
+        .orderBy('categoria')
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => ItemMaleta.fromMap(doc.data(), doc.id))
+              .map(
+                (doc) => ItemMaleta.fromMap(
+                  doc.data(),
+                  doc.id,
+                ),
+              )
               .toList(),
         );
   }
 
-  // ============================
-  // 🔹 GUARDAR LISTA
-  // ============================
-  Future<void> guardarMaleta(String idViaje, List<ItemMaleta> lista) async {
-    final ref = _db
-        .collection("usuarios")
-        .doc(uid)
-        .collection("viajes")
-        .doc(idViaje)
-        .collection("maleta");
-
+  Future<void> guardarMaleta(
+    String idViaje,
+    List<ItemMaleta> lista,
+  ) async {
     final batch = _db.batch();
 
-    for (var item in lista) {
-      // 🔥 ID FIJO
-      final id = item.nombre.toLowerCase().replaceAll(" ", "_");
+    for (final item in lista) {
+      final id = item.nombre
+          .toLowerCase()
+          .replaceAll(' ', '_');
 
-      final doc = ref.doc(id);
+      final doc =
+          _maletaRef(idViaje).doc(id);
 
       batch.set(doc, item.toMap());
     }
@@ -51,54 +60,52 @@ class MaletaFirebaseServicio {
     await batch.commit();
   }
 
-  // ============================
-  // 🔹 AGREGAR
-  // ============================
-  Future<void> agregarItem(String idViaje, ItemMaleta item) async {
-    final ref = _db
-        .collection("usuarios")
-        .doc(uid)
-        .collection("viajes")
-        .doc(idViaje)
-        .collection("maleta");
+  Future<void> agregarItem(
+    String idViaje,
+    ItemMaleta item,
+  ) async {
+    final id = item.nombre
+        .toLowerCase()
+        .replaceAll(' ', '_');
 
-    // 🔥 ID FIJO
-    final id = item.nombre.toLowerCase().replaceAll(" ", "_");
-
-    await ref.doc(id).set(item.toMap());
+    await _maletaRef(idViaje)
+        .doc(id)
+        .set(item.toMap());
   }
 
-  // ============================
-  // 🔹 CHECK
-  // ============================
   Future<void> actualizarEstado(
     String idViaje,
     String idItem,
     bool estado,
   ) async {
-    final ref = _db
-        .collection("usuarios")
-        .doc(uid)
-        .collection("viajes")
-        .doc(idViaje)
-        .collection("maleta")
-        .doc(idItem);
-
-    await ref.update({"completado": estado});
+    await _maletaRef(idViaje)
+        .doc(idItem)
+        .update({
+      'completado': estado,
+    });
   }
 
-  // ============================
-  // 🔹 ELIMINAR
-  // ============================
-  Future<void> eliminarItem(String idViaje, String idItem) async {
-    final ref = _db
-        .collection("usuarios")
-        .doc(uid)
-        .collection("viajes")
-        .doc(idViaje)
-        .collection("maleta")
-        .doc(idItem);
+  Future<void> eliminarItem(
+    String idViaje,
+    String idItem,
+  ) async {
+    await _maletaRef(idViaje)
+        .doc(idItem)
+        .delete();
+  }
 
-    await ref.delete();
+  Future<void> eliminarMaleta(
+    String idViaje,
+  ) async {
+    final docs =
+        await _maletaRef(idViaje).get();
+
+    final batch = _db.batch();
+
+    for (final doc in docs.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
   }
 }

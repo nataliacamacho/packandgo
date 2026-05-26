@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:proyecto/modelos/maleta.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:proyecto/modelos/item_maleta.dart';
 import 'package:proyecto/nucleo/servicios/generador_maleta_servicio.dart';
 import 'package:proyecto/nucleo/servicios/maleta_firebase_servicio.dart';
 import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
@@ -21,20 +22,31 @@ class MaletaPantalla extends StatefulWidget {
 
 class _MaletaPantallaState extends State<MaletaPantalla> {
   final servicio = MaletaFirebaseServicio();
+
   final generador = GeneradorMaletaServicio();
 
-  DateTime? inicio;
-  DateTime? fin;
+  bool cargando = true;
+
+  String? climaManual;
 
   @override
   void initState() {
     super.initState();
-    cargarViajeYGenerar();
+
+    generar();
   }
 
-  Future<void> cargarViajeYGenerar() async {
+  Future<void> generar() async {
+    setState(() {
+      cargando = true;
+    });
+
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
     final viajeRef = FirebaseFirestore.instance
-        .collection("viajes")
+        .collection('usuarios')
+        .doc(uid)
+        .collection('viajes')
         .doc(widget.idViaje);
 
     final doc = await viajeRef.get();
@@ -43,51 +55,45 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
 
     final data = doc.data()!;
 
-    final inicioRaw = data["fechaInicio"];
-    final finRaw = data["fechaFin"];
+    final inicio = (data['fechaInicio'] as Timestamp).toDate();
 
-    if (inicioRaw == null || finRaw == null) return;
+    final fin = (data['fechaFin'] as Timestamp).toDate();
 
-    inicio = (inicioRaw as Timestamp).toDate();
-    fin = (finRaw as Timestamp).toDate();
-
-    // 🔥 VALIDAR SI YA SE GENERÓ
-    final maletaGenerada = data["maletaGenerada"] ?? false;
-
-    if (maletaGenerada) return;
-
-    final dias = fin!.difference(inicio!).inDays;
+    final actividades = List<String>.from(data['actividades'] ?? []);
 
     final lista = await generador.generarMaleta(
       destino: widget.destino,
-      inicio: inicio!,
-      fin: fin!,
-      actividades: ["senderismo"],
-      dias: dias,
+      inicio: inicio,
+      fin: fin,
+      actividades: actividades,
+      climaManual: climaManual,
     );
+
+    await servicio.eliminarMaleta(widget.idViaje);
 
     await servicio.guardarMaleta(widget.idViaje, lista);
 
-    // 🔥 MARCAR COMO GENERADA
-    await viajeRef.update({"maletaGenerada": true});
+    setState(() {
+      cargando = false;
+    });
   }
 
   void mostrarDialogo() {
-    String texto = "";
+    String texto = '';
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          "Agregar artículo",
+          'Agregar artículo',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: TextField(
           onChanged: (value) => texto = value,
           decoration: InputDecoration(
-            hintText: "Ej: Bloqueador solar",
+            hintText: 'Ej: Bloqueador solar',
             filled: true,
             fillColor: const Color.fromARGB(255, 235, 235, 235),
             border: OutlineInputBorder(
@@ -99,41 +105,74 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "Cancelar",
-              style: TextStyle(color: Color(0xFF0066D2)),
-            ),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066D2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () {
-              if (texto.isNotEmpty) {
-                servicio.agregarItem(
+            onPressed: () async {
+              if (texto.trim().isNotEmpty) {
+                await servicio.agregarItem(
                   widget.idViaje,
-                  ItemMaleta(nombre: texto, esPersonalizado: true),
+                  ItemMaleta(
+                    nombre: texto.trim(),
+                    esPersonalizado: true,
+                    categoria: 'personalizado',
+                  ),
                 );
               }
+
+              if (!mounted) return;
+
               Navigator.pop(context);
             },
-            child: const Text("Agregar", style: TextStyle(color: Colors.white)),
+            child: const Text('Agregar'),
           ),
         ],
       ),
     );
   }
 
+  Widget botonClima(String texto) {
+    final seleccionado = climaManual == texto;
+
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: seleccionado ? const Color(0xFF0066D2) : Colors.white,
+
+        foregroundColor: seleccionado ? Colors.white : Colors.black,
+
+        side: BorderSide(
+          color: seleccionado ? const Color(0xFF0066D2) : Colors.grey.shade300,
+        ),
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+
+      onPressed: () async {
+        setState(() {
+          if (climaManual == texto) {
+            // 🔥 Deseleccionar
+            climaManual = null;
+          } else {
+            // 🔥 Seleccionar nuevo
+            climaManual = texto;
+          }
+        });
+
+        await generar();
+      },
+
+      child: Text(texto),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final destinoFormateado = FormateadorDestino.formatear(widget.destino);
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
 
-      extendBodyBehindAppBar: false,
+    return Scaffold(
+      backgroundColor: Colors.white,
+
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -152,7 +191,7 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
                 children: [
                   const Center(
                     child: Text(
-                      "Mi Maleta",
+                      'Mi Maleta',
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
@@ -160,9 +199,10 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
                       ),
                     ),
                   ),
+
                   const Center(
                     child: Text(
-                      "Lista de artículos para tu viaje",
+                      'Lista recomendada para tu viaje',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -170,7 +210,9 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 10),
+
                   Text(
                     destinoFormateado,
                     style: TextStyle(
@@ -199,79 +241,83 @@ class _MaletaPantallaState extends State<MaletaPantalla> {
         ),
       ),
 
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Text(
-              "Lista de artículos",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
+      body: cargando
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                const SizedBox(height: 10),
 
-          Expanded(
-            child: StreamBuilder<List<ItemMaleta>>(
-              stream: servicio.obtenerMaleta(widget.idViaje),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    botonClima('frio'),
+                    botonClima('calor'),
+                    botonClima('lluvia'),
+                    botonClima('templado'),
+                  ],
+                ),
 
-                final lista = snapshot.data!;
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Lista de artículos',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: lista.length,
-                  itemBuilder: (_, i) {
-                    final item = lista[i];
+                Expanded(
+                  child: StreamBuilder<List<ItemMaleta>>(
+                    stream: servicio.obtenerMaleta(widget.idViaje),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                    return Card(
-                      color: const Color.fromARGB(255, 255, 255, 255),
-                      elevation: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Checkbox(
-                              activeColor: const Color(0xFF0066D2),
-                              value: item.completado,
-                              onChanged: (v) {
-                                servicio.actualizarEstado(
-                                  widget.idViaje,
-                                  item.id!,
-                                  v!,
-                                );
-                              },
+                      final lista = snapshot.data!;
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: lista.length,
+                        itemBuilder: (_, i) {
+                          final item = lista[i];
+
+                          return Card(
+                            color: Colors.white,
+                            child: ListTile(
+                              leading: Checkbox(
+                                value: item.completado,
+                                onChanged: (v) {
+                                  servicio.actualizarEstado(
+                                    widget.idViaje,
+                                    item.id!,
+                                    v!,
+                                  );
+                                },
+                              ),
+                              title: Text(
+                                item.cantidad > 1
+                                    ? '${item.nombre} (${item.cantidad})'
+                                    : item.nombre,
+                              ),
+                              subtitle: Text(item.categoria),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () {
+                                  servicio.eliminarItem(
+                                    widget.idViaje,
+                                    item.id!,
+                                  );
+                                },
+                              ),
                             ),
-                          ],
-                        ),
-                        title: Text(
-                          item.nombre,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.grey,
-                          ),
-                          onPressed: () {
-                            servicio.eliminarItem(widget.idViaje, item.id!);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
 
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF0066D2),

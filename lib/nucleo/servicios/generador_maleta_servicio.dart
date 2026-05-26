@@ -1,127 +1,250 @@
-import 'package:proyecto/modelos/maleta.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto/modelos/item_maleta.dart';
+import 'package:proyecto/nucleo/servicios/mapbox_maleta_servicio.dart';
 
 class GeneradorMaletaServicio {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final mapbox = MapboxMaletaServicio();
 
   Future<List<ItemMaleta>> generarMaleta({
     required String destino,
     required DateTime inicio,
     required DateTime fin,
     required List<String> actividades,
-    required int dias, // ✔ viene desde MaletaPantalla
+    String? climaManual,
   }) async {
+    final List<ItemMaleta> lista = [];
 
-    final List<ItemMaleta> items = [];
+    final dias = fin.difference(inicio).inDays + 1;
 
-    // 🌡️ CLIMA (simulado por ahora)
-    final clima = _obtenerClima(destino);
+    // =========================
+    // DESTINO
+    // =========================
 
-    // 📦 ROPA BASE SEGÚN CLIMA + DIAS
-    items.addAll(_generarRopa(clima, dias));
+    final ciudadDoc = await _db
+        .collection('ciudades')
+        .doc(destino.toLowerCase())
+        .get();
 
-    // 🎯 ACTIVIDADES
-    for (final act in actividades) {
-      items.addAll(_itemsActividad(act));
-    }
+    String tipo = 'ciudad';
+    String clima = 'templado';
 
-    // 🧠 AGREGAR BÁSICOS SIEMPRE
-    items.addAll(_itemsBasicos());
+    if (ciudadDoc.exists) {
+  final data = ciudadDoc.data()!;
 
-    // ♻️ ELIMINAR DUPLICADOS
-    final Map<String, ItemMaleta> unico = {};
+  tipo = data['tipo'] ?? 'ciudad';
 
-    for (final item in items) {
-      unico[item.nombre] = item;
-    }
+  final mes = inicio.month;
 
-    return unico.values.toList();
+  if (mes == 12 || mes == 1 || mes == 2) {
+    clima = data['climaInvierno'] ?? 'frio';
+  } else if (mes >= 3 && mes <= 5) {
+    clima = data['climaPrimavera'] ?? 'templado';
+  } else if (mes >= 6 && mes <= 8) {
+    clima = data['climaVerano'] ?? 'calor';
+  } else {
+    clima = data['climaOtono'] ?? 'templado';
   }
+} else {
+  tipo = await mapbox.detectarTipoDestino(
+    destino,
+  );
 
-  // -------------------------
-  String _obtenerClima(String destino) {
-    final d = destino.toLowerCase();
-
-    if (d.contains("vallarta") || d.contains("cancun") || d.contains("mazatlan")) {
-      return "calor";
-    }
-
-    if (d.contains("cdmx") || d.contains("puebla") || d.contains("queretaro")) {
-      return "templado";
-    }
-
-    return "frio";
+  if (tipo == 'playa') {
+    clima = 'calor';
+  } else if (tipo == 'montaña') {
+    clima = 'frio';
+  } else {
+    clima = 'templado';
   }
+}
 
-  // -------------------------
-  List<ItemMaleta> _generarRopa(String clima, int dias) {
-    switch (clima) {
-
-      case "calor":
-        return [
-          ItemMaleta(nombre: "$dias camisetas ligeras"),
-          ItemMaleta(nombre: "$dias shorts"),
-          ItemMaleta(nombre: "1 traje de baño"),
-          ItemMaleta(nombre: "protector solar"),
-          ItemMaleta(nombre: "sandalias"),
-        ];
-
-      case "templado":
-        return [
-          ItemMaleta(nombre: "$dias camisetas"),
-          ItemMaleta(nombre: "${(dias / 2).ceil()} pantalones"),
-          ItemMaleta(nombre: "suéter ligero"),
-        ];
-
-      case "frio":
-        return [
-          ItemMaleta(nombre: "$dias camisetas térmicas"),
-          ItemMaleta(nombre: "${(dias / 2).ceil()} pantalones"),
-          ItemMaleta(nombre: "abrigo"),
-          ItemMaleta(nombre: "bufanda"),
-        ];
-
-      default:
-        return [
-          ItemMaleta(nombre: "$dias camisetas"),
-        ];
+    if (climaManual != null) {
+      clima = climaManual;
     }
-  }
 
-  // -------------------------
-  List<ItemMaleta> _itemsActividad(String act) {
-    switch (act) {
+    // =========================
+    // CLIMA MANUAL
+    // =========================
 
-      case "senderismo":
-        return [
-          ItemMaleta(nombre: "botas de senderismo"),
-          ItemMaleta(nombre: "mochila"),
-          ItemMaleta(nombre: "linterna"),
-          ItemMaleta(nombre: "botella de agua"),
-        ];
+    // =========================
+    // BASE
+    // =========================
 
-      case "playa":
-        return [
-          ItemMaleta(nombre: "toalla"),
-          ItemMaleta(nombre: "lentes de sol"),
-          ItemMaleta(nombre: "ropa de baño extra"),
-        ];
+    lista.add(ItemMaleta(nombre: 'Documentos', categoria: 'basicos'));
 
-      case "trabajo":
-        return [
-          ItemMaleta(nombre: "ropa formal"),
-          ItemMaleta(nombre: "laptop"),
-        ];
+    lista.add(ItemMaleta(nombre: 'Cepillo dental', categoria: 'higiene'));
 
-      default:
-        return [];
+    lista.add(ItemMaleta(nombre: 'Cargador', categoria: 'electronica'));
+
+    // =========================
+    // TIPO DESTINO
+    // =========================
+
+    switch (tipo) {
+      case 'playa':
+        lista.add(ItemMaleta(nombre: 'Traje de baño', categoria: 'ropa'));
+
+        lista.add(ItemMaleta(nombre: 'Sandalias', categoria: 'calzado'));
+
+        lista.add(ItemMaleta(nombre: 'Bloqueador solar', categoria: 'cuidado'));
+        break;
+
+      case 'montaña':
+        lista.add(ItemMaleta(nombre: 'Abrigo', categoria: 'ropa'));
+
+        lista.add(ItemMaleta(nombre: 'Botas', categoria: 'calzado'));
+
+        lista.add(ItemMaleta(nombre: 'Bufanda', categoria: 'ropa'));
+        break;
+
+      case 'bosque':
+        lista.add(ItemMaleta(nombre: 'Repelente', categoria: 'cuidado'));
+
+        lista.add(ItemMaleta(nombre: 'Linterna', categoria: 'herramientas'));
+        break;
+
+      case 'desierto':
+        lista.add(ItemMaleta(nombre: 'Sombrero', categoria: 'ropa'));
+
+        lista.add(ItemMaleta(nombre: 'Lentes de sol', categoria: 'accesorios'));
+        break;
+
+      case 'pueblo':
+        lista.add(ItemMaleta(nombre: 'Ropa cómoda', categoria: 'ropa'));
+        break;
     }
-  }
 
-  // -------------------------
-  List<ItemMaleta> _itemsBasicos() {
-    return [
-      ItemMaleta(nombre: "cepillo de dientes"),
-      ItemMaleta(nombre: "cargador"),
-      ItemMaleta(nombre: "ropa interior"),
-    ];
+    // =========================
+    // CLIMA
+    // =========================
+
+    if (clima == 'frio') {
+      lista.add(ItemMaleta(nombre: 'Ropa térmica', categoria: 'ropa'));
+
+      lista.add(ItemMaleta(nombre: 'Guantes', categoria: 'ropa'));
+
+      lista.add(ItemMaleta(nombre: 'Sudaderas', categoria: 'ropa'));
+    }
+
+    if (clima == 'lluvia') {
+      lista.add(ItemMaleta(nombre: 'Impermeable', categoria: 'ropa'));
+
+      lista.add(ItemMaleta(nombre: 'Paraguas', categoria: 'accesorios'));
+    }
+
+    if (clima == 'calor') {
+      lista.add(ItemMaleta(nombre: 'Ropa ligera', categoria: 'ropa'));
+    }
+
+    // =========================
+    // MUDAS
+    // =========================
+
+    int mudas = dias;
+
+    if (actividades.contains('natacion')) {
+      mudas += 1;
+    }
+
+    if (dias > 20) {
+      mudas = 14;
+
+      lista.add(ItemMaleta(nombre: 'Lavar ropa', categoria: 'recomendacion'));
+    }
+
+    if (dias > 7) {
+      lista.add(
+        ItemMaleta(
+          nombre: 'Recomendación de lavado',
+          categoria: 'recomendacion',
+        ),
+      );
+    }
+
+    lista.add(
+      ItemMaleta(nombre: 'Mudas de ropa', cantidad: mudas, categoria: 'ropa'),
+    );
+
+    // =========================
+    // ACTIVIDADES
+    // =========================
+
+    for (final actividad in actividades) {
+      final actividadDoc = await _db
+          .collection('actividades')
+          .doc(actividad)
+          .get();
+
+      if (actividadDoc.exists) {
+        final data = actividadDoc.data()!;
+
+        final items = List<String>.from(data['items'] ?? []);
+
+        for (final item in items) {
+          lista.add(ItemMaleta(nombre: item, categoria: 'actividad'));
+        }
+      }
+    }
+
+    // =========================
+    // HISTORIAL
+    // =========================
+
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final viajes = await _db
+        .collection('usuarios')
+        .doc(uid)
+        .collection('viajes')
+        .get();
+
+    final totalViajes = viajes.docs.length;
+
+    final Map<String, int> frecuencia = {};
+
+    for (final viaje in viajes.docs.take(3)) {
+      final maleta = await viaje.reference.collection('maleta').get();
+
+      for (final item in maleta.docs) {
+        final nombre = item['nombre'];
+
+        frecuencia[nombre] = (frecuencia[nombre] ?? 0) + 1;
+      }
+    }
+
+    frecuencia.forEach((item, usos) {
+      final porcentaje = (usos / totalViajes) * 100;
+
+      if (porcentaje >= 50) {
+        lista.add(
+          ItemMaleta(
+            nombre: item,
+            categoria: 'personalizado',
+            esPersonalizado: true,
+            vecesUsado: usos,
+          ),
+        );
+      }
+    });
+
+    // =========================
+    // ELIMINAR DUPLICADOS
+    // =========================
+
+    final nombres = <String>{};
+
+    lista.removeWhere((item) {
+      if (nombres.contains(item.nombre)) {
+        return true;
+      }
+
+      nombres.add(item.nombre);
+
+      return false;
+    });
+
+    return lista;
   }
 }
