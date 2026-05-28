@@ -482,7 +482,24 @@ String _extraerCiudadDeDireccion(String direccionRaw) {
   return partes.length > 1 ? partes[partes.length - 2].trim() : "Otros";
 }
 
-  @override
+    // 1. Aquí pegas el helper, justo arriba del build
+  String _formatearPrecioDinamico() {
+    // Le agregué un signo de interrogación a widget.lugar? por si acaso
+    final apiPriceLevel = widget.lugar?['price_level'] ?? widget.lugar?['price'];
+    
+    if (apiPriceLevel != null) {
+      int level = int.tryParse(apiPriceLevel.toString()) ?? -1;
+      if (level == 0 || level == 1) return "\$ - Económico";
+      if (level == 2) return "\$\$ - Medio";
+      if (level == 3) return "\$\$\$ - Costoso";
+      if (level == 4) return "\$\$\$\$ - Muy Exclusivo";
+    }
+    
+    return widget.lugar?['precio'] ?? "\$";
+  }
+      
+
+ @override
   Widget build(BuildContext context) {
     final nombre =
         widget.lugar?['name'] ??
@@ -575,7 +592,87 @@ String _extraerCiudadDeDireccion(String direccionRaw) {
                   Expanded(child: Text(ubicacion)),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+
+              // ==============================================================
+              // 🔥 AQUÍ ESTÁ LO NUEVO: PRECIO Y HORARIOS (YA INTEGRADOS)
+              // ==============================================================
+              Row(
+                children: [
+                  const Icon(Icons.monetization_on_rounded, color: Color(0xFFF6A230), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Precio estimado: ${_formatearPrecioDinamico()}",
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                'Horarios de Atención',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+              ),
+              const SizedBox(height: 8),
+
+              if (widget.lugar?['opening_hours'] != null && widget.lugar?['opening_hours']['weekday_text'] != null) ...[
+                Card(
+                  elevation: 0,
+                  color: Colors.grey[50],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey[200]!),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: (widget.lugar?['opening_hours']['weekday_text'] as List<dynamic>).map((diaTexto) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  diaTexto.toString(),
+                                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Establecimiento sin horarios registrados. Te recomendamos consultar directamente antes de tu visita.',
+                          style: TextStyle(fontSize: 13, color: Colors.amber[900], fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // ==============================================================
+
+              const SizedBox(height: 20),
 
               ExpansionTile(
                 title: const Text(

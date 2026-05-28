@@ -55,7 +55,8 @@ class GooglePlacesServicio {
             '&location=$lat,$lng'
             '&radius=$radio'
             '&language=es'
-            '&fields=photos,name,geometry,rating,place_id,types,vicinity'
+            '&maxresults=5'
+            '&fields=photos,name,geometry,rating,place_id,types,vicinity,opening_hours,price_level'
             '&key=$_apiKey';
       }
       // ---------------------------------------------------------------------
