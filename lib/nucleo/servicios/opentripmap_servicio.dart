@@ -34,7 +34,7 @@ class OpenTripMapServicio {
       '&lat=$lat'
       '&kinds=foods,cultural,religion,natural,architecture,amusement_parks'
       '&rate=1'
-      '&limit=100'
+      '&limit=5'
       '&apikey=$_apiKey',
     );
 

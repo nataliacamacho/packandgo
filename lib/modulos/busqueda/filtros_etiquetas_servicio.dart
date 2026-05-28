@@ -154,14 +154,15 @@ class FiltrosEtiquetasServicio {
   }
 
   List<String> calcularEtiquetasExperiencia(Lugar lugar) {
-    String categoriaLimpia = lugar.tipo.toLowerCase().trim();
-
-    // 🎯 INTELIGENCIA ARTIFICIAL DE RESPALDO TOTAL:
-    // Forzamos que los comercios clave devuelvan todas las experiencias posibles.
-    // Así garantizamos que la UI jamás se quede vacía y siempre llene el Top 5 escolar.
-    if (categoriaLimpia == 'restaurante' || categoriaLimpia == 'cafeteria') {
-      return ['Familiar', 'Solo', 'Amigos', 'En pareja'];
-    }
+    // 🔥 SOLUCIÓN: Limpiamos acentos y cambiamos espacios por guiones bajos
+    // para que "Cafetería" -> "cafeteria" y "Zona arqueológica" -> "zona_arqueologica"
+    String categoriaLimpia = lugar.tipo.toLowerCase().trim()
+        .replaceAll(RegExp(r'[áäâà]'), 'a')
+        .replaceAll(RegExp(r'[éëêè]'), 'e')
+        .replaceAll(RegExp(r'[íïîì]'), 'i')
+        .replaceAll(RegExp(r'[óöôò]'), 'o')
+        .replaceAll(RegExp(r'[úüûù]'), 'u')
+        .replaceAll(' ', '_');
 
     // Respaldos automáticos para lugares que no están en la matriz de palabras clave
     if (!matrizPesosNLP.containsKey(categoriaLimpia)) {
@@ -259,99 +260,24 @@ class FiltrosEtiquetasServicio {
     return sugerencias.toSet().toList();
   }
 
-  // ==========================================
-  // 🔥 NUEVOS AGREGADOS COMPLEMENTARIOS SÓLO PARA ETIQUETAS TIPO Y PRECIO
-  // ==========================================
-  
-  /// 🏷️ REPARACIÓN RADICAL DE FILTROS (Tipo de lugar)
-  /// Traduce las entradas dinámicas de Google y OpenTripMap a tus variables del buscador
- static String normalizarTipoParaBuscador(List<dynamic> categoriesFromApi, String placeName) {
+  static String normalizarTipoParaBuscador(List<dynamic> categoriesFromApi, String placeName) {
   final nameLower = placeName.toLowerCase().trim();
   final todoElTexto = categoriesFromApi.map((e) => e.toString().toLowerCase()).join(",");
 
-  // 1. PRIORIDAD ABSOLUTA: Cafeterías
-  if (nameLower.contains("café") || nameLower.contains("cafetería") || 
-      nameLower.contains("coffee") || nameLower.contains("bakery") || 
-      todoElTexto.contains("cafe") || todoElTexto.contains("coffee")) {
-    return "Cafetería";
-  }
+  // Mapeo Estándar (Los nombres aquí DEBEN coincidir con los de tus botones de filtro)
+  if (nameLower.contains("café") || nameLower.contains("coffee") || nameLower.contains("panaderia") || todoElTexto.contains("cafe") || todoElTexto.contains("coffee") || todoElTexto.contains("bakery") || todoElTexto.contains("pastry")) return "Cafetería";  if (nameLower.contains("bar") || todoElTexto.contains("bar") || todoElTexto.contains("night_club")) return "Bar";
+  if (nameLower.contains("parque") || todoElTexto.contains("garden") || todoElTexto.contains("park")) return "Parque";
+  if (nameLower.contains("museo") || todoElTexto.contains("museum")) return "Museo";
+  if (nameLower.contains("playa") || todoElTexto.contains("beach") || todoElTexto.contains("sea")) return "Playa";
+  if (nameLower.contains("monumento") || nameLower.contains("iglesia") || todoElTexto.contains("monument") || todoElTexto.contains("church")) return "Monumento";
+  if (nameLower.contains("arqueológica") || todoElTexto.contains("ruins") || todoElTexto.contains("archaeolog")) return "Zona arqueológica";
+  if (nameLower.contains("mirador") || todoElTexto.contains("viewpoint")) return "Mirador";
+  if (nameLower.contains("mall") || nameLower.contains("plaza") || todoElTexto.contains("shopping")) return "Centro comercial";
+  if (nameLower.contains("extremo") || nameLower.contains("aventura") || todoElTexto.contains("extreme")) return "Actividades extremas";
+  if (nameLower.contains("restaurante") || nameLower.contains("tacos") || todoElTexto.contains("restaurant") || todoElTexto.contains("food")) return "Restaurante";
 
-  // 2. PRIORIDAD ABSOLUTA: Religión / Museos
-  if (nameLower.contains("museo") || nameLower.contains("museum") || 
-      todoElTexto.contains("museum")) {
-    return "Museo";
-  }
-  
-  if (nameLower.contains("templo") || nameLower.contains("iglesia") || 
-      nameLower.contains("church") || todoElTexto.contains("religion") || 
-      todoElTexto.contains("church")) {
-    return "Monumento"; 
-  }
-
-  // 🕵️‍♂️ REGLA 2: Inspección profunda de etiquetas
-    final todoElTextoDeCategorias = categoriesFromApi.map((e) {
-      if (e is Map) return (e['name'] ?? '').toString().toLowerCase();
-      return e.toString().toLowerCase();
-    }).join(",");
-
-    // 1. CAFETERÍAS (Prioridade máxima)
-    if (nameLower.contains("café") || nameLower.contains("cafetería") || 
-        nameLower.contains("coffee") || nameLower.contains("bakery") || 
-        todoElTextoDeCategorias.contains("cafe") || todoElTextoDeCategorias.contains("coffee")) {
-      return "Cafetería";
-    }
-
-    // 2. MONUMENTOS Y RELIGIÓN (Esto captura iglesias y templos)
-    if (nameLower.contains("iglesia") || nameLower.contains("templo") || 
-        nameLower.contains("parroquia") || nameLower.contains("cathedral") || 
-        todoElTextoDeCategorias.contains("religion") || todoElTextoDeCategorias.contains("church")) {
-      return "Monumento";
-    }
-
-    // 3. RESTAURANTES
-    if (nameLower.contains("restaurante") || nameLower.contains("tacos") || 
-        todoElTextoDeCategorias.contains("restaurant") || todoElTextoDeCategorias.contains("food")) {
-      return "Restaurante";
-    }
-
-    // 4. PLAYAS
-    if (nameLower.contains("playa") || todoElTextoDeCategorias.contains("beach") || todoElTextoDeCategorias.contains("sea")) {
-      return "Playa";
-    }
-
-    // 5. BARES
-    if (nameLower.contains("bar") || todoElTextoDeCategorias.contains("bar") || todoElTextoDeCategorias.contains("night_club")) {
-      return "Bar";
-    }
-
-    // 6. MUSEOS
-    if (nameLower.contains("museo") || todoElTextoDeCategorias.contains("museum")) {
-      return "Museo";
-    }
-
-    // 7. PARQUES
-    if (nameLower.contains("parque") || nameLower.contains("jardín") || todoElTextoDeCategorias.contains("park")) {
-      return "Parque";
-    }
-
-    // 8. CENTROS COMERCIALES
-    if (nameLower.contains("plaza") || nameLower.contains("mall") || todoElTextoDeCategorias.contains("shopping")) {
-      return "centro_comercial";
-    }
-
-    // 9. ZONAS ARQUEOLÓGICAS
-    if (nameLower.contains("pirámide") || nameLower.contains("zona arqueológica") || todoElTextoDeCategorias.contains("archaeolog")) {
-      return "zona_arqueologica";
-    }
-
-    // 10. ACTIVIDADES EXTREMAS
-    if (todoElTextoDeCategorias.contains("amusement") || todoElTextoDeCategorias.contains("extreme")) {
-      return "actividades_extremas";
-    }
-
-    // 🔥 BACKUP LIMPIO: Si nada hace match, devolvemos "Otro" en lugar de adivinar
-    return "Otro";
- }
+  return "Otro";
+}
 
   /// ASIGNADOR INTELIGENTE DE PRECIO SIMULADO (Para que los filtros de precio tengan datos variados)
   static String calcularPrecioSimulado(dynamic apiPrice, String placeName) {
@@ -405,9 +331,16 @@ class FiltrosEtiquetasServicio {
                                nombre.contains(textoBusqueda) || 
                                direccion.contains(textoBusqueda);
 
-      // Filtro Determinante: TIPO DE LUGAR
-      final tipoLugar = (lugar["categoriaPrincipal"] ?? "").toString().toLowerCase().trim();
-      final tipoFiltro = tipo != null ? tipo.toLowerCase().trim() : null;
+      // Función auxiliar rápida para quitar acentos
+      String quitarAcentos(String s) {
+        return s.toLowerCase().trim()
+          .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
+          .replaceAll('ó', 'o').replaceAll('ú', 'u');
+      }
+
+      // Filtro Determinante: TIPO DE LUGAR (A prueba de acentos)
+      final tipoLugar = quitarAcentos((lugar["categoriaPrincipal"] ?? "").toString());
+      final tipoFiltro = tipo != null ? quitarAcentos(tipo) : null;
       final coincideTipo = tipo == null || tipoLugar == tipoFiltro;
 
       // Filtro Secundario 1: PRECIO
