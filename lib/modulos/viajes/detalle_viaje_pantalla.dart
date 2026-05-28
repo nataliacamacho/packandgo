@@ -190,18 +190,28 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
         "${widget.fechaFin.day}/${widget.fechaFin.month}/${widget.fechaFin.year}";
 
     final viajeTerminado = yaTerminoViaje();
+
     bool puedePlanear() {
       final hoy = DateTime.now();
-      return hoy.isBefore(widget.fechaFin);
+
+      final fin = DateTime(
+        widget.fechaFin.year,
+        widget.fechaFin.month,
+        widget.fechaFin.day,
+      );
+
+      return hoy.isBefore(fin) || hoy.isAtSameMomentAs(fin);
     }
 
-    bool puedeEjecutarViaje() {
+    bool viajeIniciadoSistema() {
       final hoy = DateTime.now();
+
       final inicio = DateTime(
         widget.fechaInicio.year,
         widget.fechaInicio.month,
         widget.fechaInicio.day,
       );
+
       return hoy.isAfter(inicio) || hoy.isAtSameMomentAs(inicio);
     }
 
@@ -460,11 +470,11 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               "Diario Personal",
               "Registra tus recuerdos",
               onTap: () {
-                if (!puedePlanear()) {
+                if (!viajeIniciadoSistema()) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        "Las funciones del viaje estarán disponibles cuando inicie el viaje.",
+                        "El diario personal estará disponible cuando inicie el viaje.",
                       ),
                     ),
                   );

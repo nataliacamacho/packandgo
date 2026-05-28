@@ -6,6 +6,7 @@ class ItemMaleta {
   final String categoria;
   final int cantidad;
   final int vecesUsado;
+  String? destino;
 
   ItemMaleta({
     this.id,
@@ -15,6 +16,7 @@ class ItemMaleta {
     this.categoria = 'general',
     this.cantidad = 1,
     this.vecesUsado = 0,
+    this.destino,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +27,7 @@ class ItemMaleta {
       'categoria': categoria,
       'cantidad': cantidad,
       'vecesUsado': vecesUsado,
+      'destino': destino,
     };
   }
 
@@ -41,6 +44,7 @@ class ItemMaleta {
       categoria: map['categoria'] ?? 'general',
       cantidad: map['cantidad'] ?? 1,
       vecesUsado: map['vecesUsado'] ?? 0,
+      destino: map['destino'],
     );
   }
 }

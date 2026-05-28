@@ -258,6 +258,16 @@ class ListaViajesPantalla extends StatelessWidget {
             if (estado == EstadoViaje.actual) actuales.add(doc);
             if (estado == EstadoViaje.futuro) futuros.add(doc);
             if (estado == EstadoViaje.pasado) pasados.add(doc);
+
+            futuros.sort((a, b) {
+              final dataA = a.data() as Map<String, dynamic>;
+              final dataB = b.data() as Map<String, dynamic>;
+
+              final fechaA = _parseFecha(dataA['fechaInicio'])!;
+              final fechaB = _parseFecha(dataB['fechaInicio'])!;
+
+              return fechaA.compareTo(fechaB);
+            });
           }
 
           List<QueryDocumentSnapshot> lista;

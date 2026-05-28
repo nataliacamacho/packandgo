@@ -5,6 +5,7 @@ import 'package:proyecto/nucleo/servicios/mapbox_maleta_servicio.dart';
 
 class GeneradorMaletaServicio {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
   final mapbox = MapboxMaletaServicio();
 
   Future<List<ItemMaleta>> generarMaleta({
@@ -19,54 +20,261 @@ class GeneradorMaletaServicio {
     final dias = fin.difference(inicio).inDays + 1;
 
     // =========================
-    // DESTINO
+    // NORMALIZAR DESTINO
+    // =========================
+
+    final destinoNormalizado = destino
+        .toLowerCase()
+        .trim()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+
+    // =========================
+    // DETECTAR TIPO Y CLIMA
     // =========================
 
     final ciudadDoc = await _db
         .collection('ciudades')
-        .doc(destino.toLowerCase())
+        .doc(destinoNormalizado)
         .get();
 
     String tipo = 'ciudad';
+
     String clima = 'templado';
 
     if (ciudadDoc.exists) {
-  final data = ciudadDoc.data()!;
+      final data = ciudadDoc.data()!;
+      print("DESTINO ENCONTRADO EN FIRESTORE");
+      print("Destino: $destino");
+      print("Tipo BD: $tipo");
 
-  tipo = data['tipo'] ?? 'ciudad';
+      tipo = data['tipo'] ?? 'ciudad';
 
-  final mes = inicio.month;
+      final mes = inicio.month;
 
-  if (mes == 12 || mes == 1 || mes == 2) {
-    clima = data['climaInvierno'] ?? 'frio';
-  } else if (mes >= 3 && mes <= 5) {
-    clima = data['climaPrimavera'] ?? 'templado';
-  } else if (mes >= 6 && mes <= 8) {
-    clima = data['climaVerano'] ?? 'calor';
-  } else {
-    clima = data['climaOtono'] ?? 'templado';
-  }
-} else {
-  tipo = await mapbox.detectarTipoDestino(
-    destino,
-  );
+      if (mes == 12 || mes == 1 || mes == 2) {
+        clima = data['climaInvierno'] ?? 'frio';
+      } else if (mes >= 3 && mes <= 5) {
+        clima = data['climaPrimavera'] ?? 'templado';
+      } else if (mes >= 6 && mes <= 8) {
+        clima = data['climaVerano'] ?? 'calor';
+      } else {
+        clima = data['climaOtono'] ?? 'templado';
+      }
+    } else {
+      // =========================
+      // MAPBOX FALLBACK
+      // =========================
 
-  if (tipo == 'playa') {
-    clima = 'calor';
-  } else if (tipo == 'montaña') {
-    clima = 'frio';
-  } else {
-    clima = 'templado';
-  }
-}
+      tipo = await mapbox.detectarTipoDestino(destino);
+
+      print('MAPBOX ACTIVADO');
+      print('Destino: $destino');
+      print('Tipo detectado: $tipo');
+
+      final mes = inicio.month;
+
+      // =========================
+      // PATRONES CLIMÁTICOS
+      // =========================
+
+      if (tipo == 'playa') {
+        if (mes >= 6 && mes <= 9) {
+          clima = 'lluvia';
+        } else {
+          clima = 'calor';
+        }
+      } else if (tipo == 'montaña') {
+        if (mes == 12 || mes == 1 || mes == 2) {
+          clima = 'frio';
+        } else {
+          clima = 'templado';
+        }
+      } else if (tipo == 'bosque') {
+        if (mes >= 6 && mes <= 9) {
+          clima = 'lluvia';
+        } else {
+          clima = 'templado';
+        }
+      } else if (tipo == 'desierto') {
+        clima = 'calor';
+      } else {
+        if (mes == 12 || mes == 1 || mes == 2) {
+          clima = 'frio';
+        } else if (mes >= 6 && mes <= 9) {
+          clima = 'lluvia';
+        } else {
+          clima = 'templado';
+        }
+      }
+    }
+
+    // =========================
+    // CLIMA MANUAL
+    // =========================
 
     if (climaManual != null) {
       clima = climaManual;
     }
 
     // =========================
-    // CLIMA MANUAL
+    // FUNCIÓN PRENDAS
     // =========================
+
+    void agregarPrendas({
+      required List<ItemMaleta> lista,
+      required int dias,
+      required String clima,
+      required String tipo,
+      required List<String> actividades,
+    }) {
+      int camisetas = dias <= 5 ? dias : (dias * 0.7).ceil();
+      int pantalones = dias <= 5 ? (dias / 2).ceil() : (dias / 3).ceil();
+      int ropaInterior = dias;
+      int calcetines = dias;
+      bool actividadAcuatica =
+          actividades.contains('natacion') ||
+          actividades.contains('snorkel') ||
+          actividades.contains('playa') ||
+          actividades.contains('actividades acuaticas');
+
+      // =========================
+      // VIAJES LARGOS
+      // =========================
+
+      if (dias > 20) {
+        camisetas = 12;
+        pantalones = 5;
+        ropaInterior = 7;
+        calcetines = 7;
+      }
+
+      if (actividadAcuatica) {
+        camisetas += 1;
+        ropaInterior += 1;
+      }
+
+      // =========================
+      // FRÍO
+      // =========================
+
+      if (clima == 'frio') {
+        lista.add(
+          ItemMaleta(
+            nombre: 'Suéteres',
+            cantidad: dias <= 5 ? 2 : 3,
+            categoria: 'ropa',
+          ),
+        );
+
+        lista.add(
+          ItemMaleta(
+            nombre: 'Chamarra térmica',
+            cantidad: 1,
+            categoria: 'ropa',
+          ),
+        );
+      }
+
+      // =========================
+      // LLUVIA
+      // =========================
+
+      if (clima == 'lluvia') {
+        lista.add(
+          ItemMaleta(nombre: 'Impermeable', cantidad: 1, categoria: 'ropa'),
+        );
+      }
+
+      // =========================
+      // PLAYA
+      // =========================
+
+      if (tipo == 'playa') {
+        lista.add(
+          ItemMaleta(
+            nombre: 'Traje de baño',
+            cantidad: (dias / 3).ceil(),
+            categoria: 'ropa',
+          ),
+        );
+
+        lista.add(
+          ItemMaleta(
+            nombre: 'Shorts',
+            cantidad: (dias / 2).ceil(),
+            categoria: 'ropa',
+          ),
+        );
+      }
+
+      // =========================
+      // ACTIVIDADES
+      // =========================
+
+      if (actividades.contains('senderismo')) {
+        lista.add(
+          ItemMaleta(
+            nombre: 'Ropa deportiva',
+            cantidad: dias > 6 ? 3 : 2,
+            categoria: 'ropa',
+          ),
+        );
+
+        lista.add(
+          ItemMaleta(
+            nombre: 'Calcetines térmicos',
+            cantidad: clima == 'frio' ? (dias / 2).ceil() : 2,
+            categoria: 'calzado',
+          ),
+        );
+      }
+
+      if (actividades.contains('formal')) {
+        lista.add(
+          ItemMaleta(
+            nombre: 'Ropa formal',
+            cantidad: dias > 4 ? 2 : 1,
+            categoria: 'ropa',
+          ),
+        );
+      }
+
+      // =========================
+      // PRENDAS BASE
+      // =========================
+
+      lista.add(
+        ItemMaleta(nombre: 'Camisetas', cantidad: camisetas, categoria: 'ropa'),
+      );
+
+      lista.add(
+        ItemMaleta(
+          nombre: 'Pantalones',
+          cantidad: pantalones,
+          categoria: 'ropa',
+        ),
+      );
+
+      lista.add(
+        ItemMaleta(
+          nombre: 'Ropa interior',
+          cantidad: ropaInterior,
+          categoria: 'ropa',
+        ),
+      );
+
+      lista.add(
+        ItemMaleta(
+          nombre: 'Calcetines',
+          cantidad: calcetines,
+          categoria: 'calzado',
+        ),
+      );
+    }
 
     // =========================
     // BASE
@@ -84,35 +292,61 @@ class GeneradorMaletaServicio {
 
     switch (tipo) {
       case 'playa':
-        lista.add(ItemMaleta(nombre: 'Traje de baño', categoria: 'ropa'));
-
-        lista.add(ItemMaleta(nombre: 'Sandalias', categoria: 'calzado'));
+        lista.add(
+          ItemMaleta(nombre: 'Sandalias', cantidad: 1, categoria: 'calzado'),
+        );
 
         lista.add(ItemMaleta(nombre: 'Bloqueador solar', categoria: 'cuidado'));
         break;
 
       case 'montaña':
-        lista.add(ItemMaleta(nombre: 'Abrigo', categoria: 'ropa'));
+        lista.add(
+          ItemMaleta(
+            nombre: 'Abrigos',
+            cantidad: dias <= 5 ? 1 : 2,
+            categoria: 'ropa',
+          ),
+        );
 
-        lista.add(ItemMaleta(nombre: 'Botas', categoria: 'calzado'));
+        lista.add(
+          ItemMaleta(nombre: 'Botas', cantidad: 1, categoria: 'calzado'),
+        );
 
-        lista.add(ItemMaleta(nombre: 'Bufanda', categoria: 'ropa'));
+        lista.add(
+          ItemMaleta(nombre: 'Bufandas', cantidad: 1, categoria: 'ropa'),
+        );
         break;
 
       case 'bosque':
         lista.add(ItemMaleta(nombre: 'Repelente', categoria: 'cuidado'));
 
         lista.add(ItemMaleta(nombre: 'Linterna', categoria: 'herramientas'));
+
+        lista.add(
+          ItemMaleta(
+            nombre: 'Botas para senderismo',
+            cantidad: 1,
+            categoria: 'calzado',
+          ),
+        );
         break;
 
       case 'desierto':
-        lista.add(ItemMaleta(nombre: 'Sombrero', categoria: 'ropa'));
+        lista.add(
+          ItemMaleta(nombre: 'Sombreros', cantidad: 1, categoria: 'ropa'),
+        );
 
         lista.add(ItemMaleta(nombre: 'Lentes de sol', categoria: 'accesorios'));
         break;
 
       case 'pueblo':
-        lista.add(ItemMaleta(nombre: 'Ropa cómoda', categoria: 'ropa'));
+        lista.add(
+          ItemMaleta(
+            nombre: 'Conjuntos cómodos',
+            cantidad: (dias / 2).ceil(),
+            categoria: 'ropa',
+          ),
+        );
         break;
     }
 
@@ -121,11 +355,23 @@ class GeneradorMaletaServicio {
     // =========================
 
     if (clima == 'frio') {
-      lista.add(ItemMaleta(nombre: 'Ropa térmica', categoria: 'ropa'));
+      lista.add(
+        ItemMaleta(
+          nombre: 'Ropa térmica',
+          cantidad: dias <= 5 ? 2 : 3,
+          categoria: 'ropa',
+        ),
+      );
 
-      lista.add(ItemMaleta(nombre: 'Guantes', categoria: 'ropa'));
+      lista.add(ItemMaleta(nombre: 'Guantes', cantidad: 1, categoria: 'ropa'));
 
-      lista.add(ItemMaleta(nombre: 'Sudaderas', categoria: 'ropa'));
+      lista.add(
+        ItemMaleta(
+          nombre: 'Sudaderas',
+          cantidad: dias <= 6 ? 2 : 3,
+          categoria: 'ropa',
+        ),
+      );
     }
 
     if (clima == 'lluvia') {
@@ -134,41 +380,20 @@ class GeneradorMaletaServicio {
       lista.add(ItemMaleta(nombre: 'Paraguas', categoria: 'accesorios'));
     }
 
-    if (clima == 'calor') {
-      lista.add(ItemMaleta(nombre: 'Ropa ligera', categoria: 'ropa'));
-    }
-
     // =========================
-    // MUDAS
+    // PRENDAS
     // =========================
 
-    int mudas = dias;
-
-    if (actividades.contains('natacion')) {
-      mudas += 1;
-    }
-
-    if (dias > 20) {
-      mudas = 14;
-
-      lista.add(ItemMaleta(nombre: 'Lavar ropa', categoria: 'recomendacion'));
-    }
-
-    if (dias > 7) {
-      lista.add(
-        ItemMaleta(
-          nombre: 'Recomendación de lavado',
-          categoria: 'recomendacion',
-        ),
-      );
-    }
-
-    lista.add(
-      ItemMaleta(nombre: 'Mudas de ropa', cantidad: mudas, categoria: 'ropa'),
+    agregarPrendas(
+      lista: lista,
+      dias: dias,
+      clima: clima,
+      tipo: tipo,
+      actividades: actividades,
     );
 
     // =========================
-    // ACTIVIDADES
+    // ACTIVIDADES FIRESTORE
     // =========================
 
     for (final actividad in actividades) {
@@ -198,53 +423,102 @@ class GeneradorMaletaServicio {
         .collection('usuarios')
         .doc(uid)
         .collection('viajes')
+        .orderBy('fechaInicio', descending: true)
+        .limit(3)
         .get();
 
     final totalViajes = viajes.docs.length;
 
-    final Map<String, int> frecuencia = {};
+    if (totalViajes > 0) {
+      final historial = await _db
+          .collection('usuarios')
+          .doc(uid)
+          .collection('historial_maleta')
+          .get();
 
-    for (final viaje in viajes.docs.take(3)) {
-      final maleta = await viaje.reference.collection('maleta').get();
+      final totalViajes = viajes.docs.length;
 
-      for (final item in maleta.docs) {
-        final nombre = item['nombre'];
+      if (totalViajes > 0) {
+        for (final doc in historial.docs) {
+          final data = doc.data();
 
-        frecuencia[nombre] = (frecuencia[nombre] ?? 0) + 1;
+          final nombre = data['nombre'];
+
+          final vecesUsado = data['veces_usado'] ?? 0;
+
+          final porcentaje = (vecesUsado / totalViajes) * 100;
+
+          // 🔥 SI USA EL ARTÍCULO EN 50% O MÁS
+          if (porcentaje >= 50) {
+            lista.add(
+              ItemMaleta(
+                nombre: nombre,
+                categoria: 'personalizado',
+                esPersonalizado: true,
+                vecesUsado: vecesUsado,
+              ),
+            );
+          }
+        }
       }
     }
 
-    frecuencia.forEach((item, usos) {
-      final porcentaje = (usos / totalViajes) * 100;
+    // =========================
+    // ASIGNAR DESTINO
+    // =========================
 
-      if (porcentaje >= 50) {
-        lista.add(
-          ItemMaleta(
-            nombre: item,
-            categoria: 'personalizado',
-            esPersonalizado: true,
-            vecesUsado: usos,
-          ),
-        );
-      }
-    });
+    for (final item in lista) {
+      item.destino = destino;
+    }
 
     // =========================
     // ELIMINAR DUPLICADOS
     // =========================
 
-    final nombres = <String>{};
+    final identificadores = <String>{};
 
     lista.removeWhere((item) {
-      if (nombres.contains(item.nombre)) {
+      final clave = '${item.destino}_${item.nombre}';
+
+      if (identificadores.contains(clave)) {
         return true;
       }
 
-      nombres.add(item.nombre);
+      identificadores.add(clave);
 
       return false;
     });
 
     return lista;
+  }
+
+  Future<bool> destinoExiste(String destino) async {
+    final destinoNormalizado = destino
+        .toLowerCase()
+        .trim()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+
+    // =========================
+    // FIRESTORE
+    // =========================
+
+    final ciudadDoc = await _db
+        .collection('ciudades')
+        .doc(destinoNormalizado)
+        .get();
+
+    if (ciudadDoc.exists) {
+      return true;
+    }
+
+    // =========================
+    // MAPBOX
+    // =========================
+
+    return await mapbox.destinoValido(destino);
   }
 }

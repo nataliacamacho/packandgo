@@ -217,7 +217,6 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Error al crear el viaje")));
     }
-
     if (mounted) {
       setState(() => cargando = false);
     }
@@ -290,6 +289,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
               TextField(
                 controller: descripcionController,
+                cursorColor: const Color(0xFF0066D2),
                 decoration: const InputDecoration(
                   labelText: "Descripción (opcional)",
                 ),
