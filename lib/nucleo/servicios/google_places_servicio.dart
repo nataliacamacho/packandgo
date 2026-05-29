@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
@@ -7,19 +6,7 @@ class GooglePlacesServicio {
   static String get _apiKey => dotenv.env['GOOGLE_API_KEY'] ?? '';
 
   // ---------------------------------------------------------------------------
-  // MAPEO APP -> GOOGLE
-  // ---------------------------------------------------------------------------
-  static const Map<String, String> _tipoAGoogleType = {
-    'restaurante': 'restaurant',
-    'cafeteria': 'cafe',
-    'bar': 'bar',
-    'parque': 'park',
-    'museo': 'museum',
-    'centro_comercial': 'shopping_mall',
-  };
-
-  // ---------------------------------------------------------------------------
-  // BUSCAR
+  // BUSCAR LUGARES (FILTRADO DESDE EL SERVIDOR)
   // ---------------------------------------------------------------------------
   static Future<List<Map<String, dynamic>>> buscarLugares(
     double lat,
@@ -29,68 +16,43 @@ class GooglePlacesServicio {
     int radio = 15000,
   }) async {
     try {
-      final googleTipo = tipo != null ? _tipoAGoogleType[tipo] : null;
-
       String url;
 
       // ---------------------------------------------------------------------
       // TEXT SEARCH
       // ---------------------------------------------------------------------
       if (query.isNotEmpty) {
-        String queryFinal = query;
-
-        if (tipo != null) {
-          final tipoTraducido = _traducirTipo(tipo);
-
-          if (query.trim().isEmpty) {
-            queryFinal = tipoTraducido;
-          } else {
-            queryFinal = '$tipoTraducido $query';
-          }
-        }
-
-        url =
-            'https://maps.googleapis.com/maps/api/place/textsearch/json'
-            '?query=${Uri.encodeComponent(queryFinal)}'
+        url = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
+            '?query=${Uri.encodeComponent(query)}'
             '&location=$lat,$lng'
             '&radius=$radio'
             '&language=es'
-            '&maxresults=5'
+            // 🔥 CORRECCIÓN 1: Quitamos maxresults=5 para que Google nos mande 20 
+            // y garantizar que haya suficientes para el Top 5
             '&fields=photos,name,geometry,rating,place_id,types,vicinity,opening_hours,price_level'
             '&key=$_apiKey';
-      }
-      // ---------------------------------------------------------------------
-      // NEARBY SEARCH
-      // ---------------------------------------------------------------------
+
+        // 🔥 CORRECCIÓN 2: Inyectar directamente a la API el filtro estricto
+        if (tipo != null && tipo.isNotEmpty) {
+          url += '&type=$tipo';
+        }
+      } 
       // ---------------------------------------------------------------------
       // NEARBY SEARCH
       // ---------------------------------------------------------------------
       else {
-        url =
-            'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+        url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
             '?location=$lat,$lng'
             '&radius=$radio'
             '&region=mx'
             '&language=es'
             '&key=$_apiKey';
 
-        // -------------------------------------------------------------
-        // TIPOS NATIVOS GOOGLE
-        // -------------------------------------------------------------
-        if (googleTipo != null &&
-            tipo != 'mirador' &&
-            tipo != 'zona_arqueologica' &&
-            tipo != 'actividades_extremas' &&
-            tipo != 'monumento' &&
-            tipo != 'playa') {
-          url += '&type=$googleTipo';
-        }
-        // -------------------------------------------------------------
-        // CATEGORÍAS PERSONALIZADAS
-        // -------------------------------------------------------------
-        else if (tipo != null) {
-          final keyword = _traducirTipo(tipo);
-          url += '&keyword=${Uri.encodeComponent(keyword)}';
+        if (tipo != null && tipo.isNotEmpty) {
+          url += '&type=$tipo';
+        } else {
+          // Por defecto, si no hay filtro, que traiga turismo
+          url += '&type=tourist_attraction';
         }
       }
 
@@ -104,23 +66,16 @@ class GooglePlacesServicio {
       }
 
       final data = jsonDecode(response.body);
-
       print('🟦 GOOGLE STATUS API: ${data['status']}');
 
       final results = data['results'] as List? ?? [];
 
-      final filtrados = results.where((place) {
+      final filtradosReales = results.where((place) {
         final nombre = place['name']?.toString() ?? '';
         final geometry = place['geometry'];
+        if (nombre.isEmpty || geometry == null) return false;
 
-        return nombre.isNotEmpty && geometry != null;
-      }).toList();
-
-      print('🟦 GOOGLE RESULTADOS: ${results.length}');
-
-      final filtradosReales = filtrados.where((place) {
         final rawTypes = place['types'];
-
         final List<String> types = (rawTypes is List)
             ? rawTypes.map((e) => e.toString()).toList()
             : <String>[];
@@ -128,13 +83,8 @@ class GooglePlacesServicio {
         if (types.isEmpty) return false;
 
         const bloqueados = [
-          'supermarket',
-          'store',
-          'department_store',
-          'pharmacy',
-          'bank',
-          'gas_station',
-          'lodging',
+          'supermarket', 'store', 'department_store',
+          'pharmacy', 'bank', 'gas_station', 'lodging',
         ];
 
         return !types.any((t) => bloqueados.contains(t));
@@ -142,92 +92,42 @@ class GooglePlacesServicio {
 
       return filtradosReales.map<Map<String, dynamic>>((place) {
         final loc = place['geometry']?['location'];
-
-        // 🔥 FIX IMPORTANTE: normalizar types correctamente
-        final List<String> types =
-            (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
-
-        print("DEBUG TYPES ${place['name']} => $types");
+        final List<String> types = (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
         String categoria = _mapearCategoria(types, nombre: place['name'] ?? '');
 
-        final nombre = (place['name'] ?? '').toString().toLowerCase();
-
-        if (nombre.contains('mirador')) {
-          categoria = 'mirador';
-        }
-
-        if (nombre.contains('zona arqueológica') ||
-            nombre.contains('arqueologica') ||
-            nombre.contains('ruinas')) {
-          categoria = 'zona_arqueologica';
-        }
-
-        if (nombre.contains('mall') ||
-            nombre.contains('plaza') ||
-            nombre.contains('center')) {
-          categoria = 'centro_comercial';
-        }
-
-        if (nombre.contains('extremo') ||
-            nombre.contains('adventure') ||
-            nombre.contains('parque acuatico')) {
-          categoria = 'actividades_extremas';
-        }
+        // Correcciones manuales basadas en el nombre
+        final nombreLower = (place['name'] ?? '').toString().toLowerCase();
+        if (nombreLower.contains('mirador')) categoria = 'mirador';
+        if (nombreLower.contains('zona arqueológica') || nombreLower.contains('ruinas')) categoria = 'zona_arqueologica';
+        if (nombreLower.contains('mall') || nombreLower.contains('plaza')) categoria = 'centro_comercial';
+        if (nombreLower.contains('extremo') || nombreLower.contains('adventure')) categoria = 'actividades_extremas';
 
         final priceLevel = place['price_level'];
 
+          String horarioTexto = 'Horario no disponible';
+          if (place['opening_hours'] != null) {
+            // Las búsquedas generales nos devuelven un booleano de si está abierto ahora
+            horarioTexto = place['opening_hours']['open_now'] == true 
+                          ? '🟢 Abierto ahora' 
+                          : '🔴 Cerrado en este momento';
+          }
+
         return {
-          // -----------------------------------------------------------------
-          // INFO
-          // -----------------------------------------------------------------
           'name': place['name'] ?? 'Sin nombre',
-
-          'direccion':
-              place['vicinity'] ??
-              place['formatted_address'] ??
-              'Sin dirección',
-
-          // -----------------------------------------------------------------
-          // COORDENADAS
-          // -----------------------------------------------------------------
+          'direccion': place['vicinity'] ?? place['formatted_address'] ?? 'Sin dirección',
           'lat': _toDouble(loc?['lat'], lat),
           'lng': _toDouble(loc?['lng'], lng),
-
-          // -----------------------------------------------------------------
-          // CATEGORÍAS
-          // -----------------------------------------------------------------
           'categoriaPrincipal': categoria,
-
           'types': types,
-
-          // -----------------------------------------------------------------
-          // RATING
-          // -----------------------------------------------------------------
           'rating': _toDouble(place['rating'], 5.0),
-
-          // -----------------------------------------------------------------
-          // POPULARIDAD
-          // -----------------------------------------------------------------
           'popularity': _popularidad(place['user_ratings_total']),
-
-          // -----------------------------------------------------------------
-          // PRECIO
-          // -----------------------------------------------------------------
           'precio': priceLevel != null ? _mapearPrecio(priceLevel) : null,
-
-          // -----------------------------------------------------------------
-          // FOTO
-          // -----------------------------------------------------------------
           'foto': _fotoUrl(place['photos']),
           'photos': place['photos'],
-
-          // -----------------------------------------------------------------
-          // IDS
-          // -----------------------------------------------------------------
           'place_id': place['place_id'] ?? '',
-
           'fuente': 'google',
+          'horario': horarioTexto,
         };
       }).toList();
     } catch (e) {
@@ -236,7 +136,72 @@ class GooglePlacesServicio {
     }
   }
 
-  // Agrega esto al final de la clase, antes del último }
+  // ---------------------------------------------------------------------------
+  // MAPEAR CATEGORÍAS
+  // ---------------------------------------------------------------------------
+  static String _mapearCategoria(List<String> types, {String nombre = ''}) {
+    final texto = types.join(' ').toLowerCase();
+    final n = nombre.toLowerCase();
+
+    if (texto.contains('restaurant') || texto.contains('food') || texto.contains('meal')) return 'restaurante';
+    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('bakery')) return 'cafeteria';
+    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub')) return 'bar';
+    if (texto.contains('park') || texto.contains('garden')) return 'parque';
+    if (texto.contains('museum') || texto.contains('art_gallery')) return 'museo';
+    if (texto.contains('beach') || n.contains('playa')) return 'playa';
+    if (texto.contains('shopping') || texto.contains('mall')) return 'centro_comercial';
+    if (texto.contains('viewpoint') || n.contains('mirador')) return 'mirador';
+    if (texto.contains('archaeological') || n.contains('ruinas') || n.contains('maya')) return 'zona_arqueologica';
+    if (texto.contains('amusement_park') || n.contains('xcaret') || n.contains('extremo')) return 'actividades_extremas';
+    if (texto.contains('tourist_attraction') || texto.contains('historic') || n.contains('monumento') || n.contains('catedral')) return 'monumento';
+
+    return 'otro';
+  }
+
+  // ---------------------------------------------------------------------------
+  // PRECIO
+  // ---------------------------------------------------------------------------
+  static String _mapearPrecio(int level) {
+    switch (level) {
+      case 0:
+      case 1: return r'$';
+      case 2: return r'$$';
+      case 3:
+      case 4: return r'$$$';
+      default: return r'$';
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // FOTO
+  // ---------------------------------------------------------------------------
+  static String? _fotoUrl(List? photos) {
+    if (photos == null || photos.isEmpty) return null;
+    final ref = photos.first['photo_reference'] ?? photos.first['photoReference'];
+    if (ref == null) return null;
+    return 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=$ref&key=$_apiKey';
+  }
+
+  // ---------------------------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------------------------
+  static double _toDouble(dynamic v, double fb) {
+    if (v == null) return fb;
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? fb;
+    return fb;
+  }
+
+  static double _popularidad(dynamic v) {
+    final pop = _toDouble(v, 0) / 100;
+    return pop > 10 ? 10 : pop;
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // BUSCAR POR MÚLTIPLES CATEGORÍAS (Para la pantalla de Exploración)
+  // ---------------------------------------------------------------------------
   static const Map<String, String> _categoriaAGoogleType = {
     'restaurante': 'restaurant',
     'cafeteria': 'cafe',
@@ -254,20 +219,20 @@ class GooglePlacesServicio {
     required List<String> categorias,
     int radio = 15000,
   }) async {
-    // Llama en paralelo una búsqueda por cada categoría
+    // Dispara las búsquedas al mismo tiempo (Concurrencia)
     final futures = categorias.map((cat) {
       final googleType = _categoriaAGoogleType[cat];
       return buscarLugares(
         lat,
         lng,
-        tipo: googleType != null ? cat : null,
+        tipo: googleType != null ? googleType : cat,
         radio: radio,
       );
     });
 
     final resultados = await Future.wait(futures);
 
-    // Aplana y deduplica por place_id
+    // Junta todos los resultados y elimina los repetidos
     final Map<String, Map<String, dynamic>> vistos = {};
     for (final lista in resultados) {
       for (final lugar in lista) {
@@ -279,248 +244,5 @@ class GooglePlacesServicio {
     }
 
     return vistos.values.toList();
-  }
-
-  // ---------------------------------------------------------------------------
-  // MAPEAR CATEGORÍAS
-  // ---------------------------------------------------------------------------
-  static String _mapearCategoria(List<String> types, {String nombre = ''}) {
-    final texto = types.join(' ').toLowerCase();
-    final n = nombre.toLowerCase();
-
-    // -------------------------------------------------------------------------
-    // RESTAURANTES
-    // -------------------------------------------------------------------------
-    if (texto.contains('restaurant') ||
-        texto.contains('food') ||
-        texto.contains('meal_takeaway') ||
-        texto.contains('meal_delivery')) {
-      return 'restaurante';
-    }
-
-    // -------------------------------------------------------------------------
-    // CAFETERÍAS
-    // -------------------------------------------------------------------------
-    if (texto.contains('cafe') ||
-        texto.contains('coffee') ||
-        texto.contains('bakery')) {
-      return 'cafeteria';
-    }
-
-    // -------------------------------------------------------------------------
-    // BARES
-    // -------------------------------------------------------------------------
-    if (texto.contains('bar') ||
-        texto.contains('night_club') ||
-        texto.contains('pub')) {
-      return 'bar';
-    }
-
-    // -------------------------------------------------------------------------
-    // PARQUES
-    // -------------------------------------------------------------------------
-    if (texto.contains('park') || texto.contains('garden')) {
-      return 'parque';
-    }
-
-    // -------------------------------------------------------------------------
-    // MUSEOS
-    // -------------------------------------------------------------------------
-    if (texto.contains('museum') || texto.contains('art_gallery')) {
-      return 'museo';
-    }
-
-    // -------------------------------------------------------------------------
-    // PLAYAS
-    // -------------------------------------------------------------------------
-    if (texto.contains('beach') ||
-        texto.contains('natural_feature') ||
-        n.contains('playa') ||
-        n.contains('beach')) {
-      return 'playa';
-    }
-
-    // -------------------------------------------------------------------------
-    // CENTROS COMERCIALES
-    // -------------------------------------------------------------------------
-    if (texto.contains('shopping') ||
-        texto.contains('mall') ||
-        texto.contains('shopping_mall') ||
-        texto.contains('department_store') ||
-        texto.contains('store')) {
-      return 'centro_comercial';
-    }
-
-    // -------------------------------------------------------------------------
-    // MIRADORES
-    // -------------------------------------------------------------------------
-    if (texto.contains('viewpoint') ||
-        texto.contains('observation') ||
-        n.contains('mirador')) {
-      return 'mirador';
-    }
-
-    // -------------------------------------------------------------------------
-    // ZONAS ARQUEOLÓGICAS
-    // -------------------------------------------------------------------------
-    if (texto.contains('archaeological') ||
-        n.contains('zona arqueologica') ||
-        n.contains('arqueologica') ||
-        n.contains('ruinas') ||
-        n.contains('templo maya') ||
-        n.contains('piramide')) {
-      return 'zona_arqueologica';
-    }
-
-    // -------------------------------------------------------------------------
-    // ACTIVIDADES EXTREMAS
-    // -------------------------------------------------------------------------
-    if (texto.contains('amusement_park') ||
-        texto.contains('stadium') ||
-        texto.contains('campground') ||
-        texto.contains('rv_park') ||
-        n.contains('xcaret') ||
-        n.contains('rafting') ||
-        n.contains('tirolesa') ||
-        n.contains('extremo') ||
-        n.contains('adventure')) {
-      return 'actividades_extremas';
-    }
-
-    // -------------------------------------------------------------------------
-    // MONUMENTOS
-    // -------------------------------------------------------------------------
-    if (texto.contains('tourist_attraction') ||
-        texto.contains('historic') ||
-        n.contains('monumento') ||
-        n.contains('catedral') ||
-        n.contains('iglesia') ||
-        n.contains('templo') ||
-        n.contains('plaza principal')) {
-      return 'monumento';
-    }
-
-    return 'otro';
-  }
-
-  // ---------------------------------------------------------------------------
-  // TRADUCIR TIPO
-  // ---------------------------------------------------------------------------
-  static String _traducirTipo(String tipo) {
-    switch (tipo) {
-      case 'restaurante':
-        return 'restaurantes';
-
-      case 'cafeteria':
-        return 'cafeterías';
-
-      case 'bar':
-        return 'bares';
-
-      case 'parque':
-        return 'parques';
-
-      case 'museo':
-        return 'museos';
-
-      case 'playa':
-        return 'playas';
-
-      case 'mirador':
-        return 'miradores';
-
-      case 'zona_arqueologica':
-        return 'zonas arqueológicas';
-
-      case 'centro_comercial':
-        return 'centros comerciales';
-
-      case 'actividades_extremas':
-        return 'actividades extremas';
-
-      case 'monumento':
-        return 'monumentos turísticos';
-
-      default:
-        return tipo;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // PRECIO
-  // ---------------------------------------------------------------------------
-  static String _mapearPrecio(int level) {
-    switch (level) {
-      case 0:
-      case 1:
-        return r'$';
-
-      case 2:
-        return r'$$';
-
-      case 3:
-      case 4:
-        return r'$$$';
-
-      default:
-        return r'$';
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // FOTO
-  // ---------------------------------------------------------------------------
-  static String? _fotoUrl(List? photos) {
-    try {
-      if (photos == null || photos.isEmpty) {
-        return null;
-      }
-
-      final primeraFoto = photos.first;
-
-      final ref =
-          primeraFoto['photo_reference'] ?? primeraFoto['photoReference'];
-
-      if (ref == null) {
-        return null;
-      }
-
-      return 'https://maps.googleapis.com/maps/api/place/photo'
-          '?maxwidth=800'
-          '&photo_reference=$ref'
-          '&key=$_apiKey';
-    } catch (e) {
-      print('❌ ERROR FOTO GOOGLE: $e');
-      return null;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // HELPERS
-  // ---------------------------------------------------------------------------
-  static double _toDouble(dynamic v, double fb) {
-    if (v == null) return fb;
-
-    if (v is double) return v;
-
-    if (v is int) return v.toDouble();
-
-    if (v is num) return v.toDouble();
-
-    if (v is String) {
-      return double.tryParse(v) ?? fb;
-    }
-
-    return fb;
-  }
-
-  static double _popularidad(dynamic v) {
-    final total = _toDouble(v, 0);
-
-    final pop = total / 100;
-
-    if (pop > 10) return 10;
-
-    return pop;
   }
 }

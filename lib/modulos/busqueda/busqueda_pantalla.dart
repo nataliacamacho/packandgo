@@ -295,20 +295,15 @@ Future<void> _resolverCoordenadas() async {
 
     // 1. Limpiamos y normalizamos el texto ingresado
     String textoLimpio = texto.trim().toLowerCase();
-
-    // Si la barra está vacía, tomamos el destino seleccionado de las etiquetas/filtros
     String destinoAValidar = textoLimpio.isNotEmpty
         ? textoLimpio
         : (destinoSeleccionado ?? '').toLowerCase().trim();
 
-   // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO (REFINADO PARA ENTREGA)
+    // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO
     if (destinoAValidar.isNotEmpty) {
-      // Filtro estricto únicamente para palabras internacionales reales prohibidas
       final esPalabraInternacional = 
-          destinoAValidar == "paris" || 
-          destinoAValidar == "bolivia" || 
-          destinoAValidar == "francia" || 
-          destinoAValidar == "europa";
+          destinoAValidar == "paris" || destinoAValidar == "bolivia" || 
+          destinoAValidar == "francia" || destinoAValidar == "europa";
 
       if (esPalabraInternacional) {
         setState(() {
@@ -318,21 +313,17 @@ Future<void> _resolverCoordenadas() async {
         });
         return;
       }
-      
-      // NOTA: Si busca términos generales ("tacos") o municipios aledaños ("Jocotepec"), 
-      // el flujo continuará nativamente usando tus coordenadas base del estado de Jalisco.
     }
 
-    // 3. CONTINUACIÓN DEL FLUJO NORMAL (Si pasa el candado, empieza la búsqueda)
     setState(() {
       cargando = true;
       error = null;
     });
 
-   try {
+    try {
       await _resolverCoordenadas();
 
-      // 1. Preparar texto de búsqueda (Nombre de ciudad natural)
+      // 3. PREPARAR TEXTO Y CIUDAD
       String nombreCiudad = "";
       try {
         final ciudad = _ciudadesMexico.firstWhere((c) => c['id'] == destinoSeleccionado);
@@ -346,12 +337,11 @@ Future<void> _resolverCoordenadas() async {
             : "turismo en $nombreCiudad";
       }
 
-      // Excepción especial para La Paz de BCS
       if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz' || destinoSeleccionado?.toLowerCase() == 'lapaz') {
         textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
       }
 
-      // 2. TRADUCTOR DE ETIQUETAS (Corregido el orden de declaración)
+      // 4. TRADUCTOR PARA APIS
       String? tipoParaApi;
       if (tipoSeleccionado != null) {
         String t = tipoSeleccionado!.toLowerCase();
@@ -365,22 +355,15 @@ Future<void> _resolverCoordenadas() async {
         else if (t.contains('extre')) tipoParaApi = 'amusement_park';
       }
 
-      // 3. Llamadas a las APIs
+      // 5. LLAMADAS (Con limitador desde el servicio)
       final google = await GooglePlacesServicio.buscarLugares(_latActual, _lngActual, query: textoConsultaApi, tipo: tipoParaApi);
       final open = await OpenTripMapServicio.buscarLugaresCulturales(_latActual, _lngActual, query: textoConsultaApi, tipo: tipoParaApi);
 
-      // 🔥 RECORTE DE SEGURIDAD (Aseguramos que no nos inunden)
-      final googleRecortado = google.take(5).toList(); 
-      final openRecortado = open.take(5).toList();
+      List<dynamic> combinados = [...google, ...open];
 
-      print("I/flutter: 🟦 Google: ${google.length}");
-      print("I/flutter: 🟩 OpenTrip: ${open.length}");
-
-      List<dynamic> combinados = [...googleRecortado, ...openRecortado];
-
-      // 4. NORMALIZAR Y TRADUCTOR BLINDADO CONTRA ERRORES NULL
-      final listaMapeada = combinados
-          .where((lugarCrudo) => lugarCrudo != null && lugarCrudo is Map) // Filtro de seguridad inicial
+      // 6. MAPEO Y NORMALIZACIÓN DE LUGARES
+      List<Map<String, dynamic>> listaProcesada = combinados
+          .where((lugarCrudo) => lugarCrudo != null && lugarCrudo is Map)
           .map((lugarCrudo) {
             final l = Map<String, dynamic>.from(lugarCrudo);
             final name = l['name'] ?? 'Sin nombre';
@@ -389,14 +372,8 @@ Future<void> _resolverCoordenadas() async {
             final properties = l["properties"] != null ? Map<String, dynamic>.from(l["properties"]) : null;
             final kinds = (l["kinds"] ?? properties?["kinds"] ?? "").toString().toLowerCase();
 
-            List<dynamic> categoriasCombinadasCrudas = [...types, kinds];
-
-            String categoriaHomologada = FiltrosEtiquetasServicio.normalizarTipoParaBuscador(
-              categoriasCombinadasCrudas, 
-              name
-            );
-
-            // Blindaje de Categorías
+            String categoriaHomologada = FiltrosEtiquetasServicio.normalizarTipoParaBuscador([...types, kinds], name);
+            
             if (tipoSeleccionado != null && tipoSeleccionado!.isNotEmpty) {
               categoriaHomologada = tipoSeleccionado!;
             }
@@ -404,7 +381,6 @@ Future<void> _resolverCoordenadas() async {
             final priceLevel = l["price_level"] ?? l["price"] ?? l["precio"] ?? -1;
             String precioRealMapeado = FiltrosEtiquetasServicio.calcularPrecioSimulado(priceLevel, name);
 
-            // Extraer coordenadas de forma segura de sub-mapas
             double latGoogle = _toDouble(l['lat']);
             double lngGoogle = _toDouble(l['lng']);
             if (l['geometry'] != null && l['geometry']['location'] != null) {
@@ -413,28 +389,11 @@ Future<void> _resolverCoordenadas() async {
               lngGoogle = _toDouble(locationMap['lng']);
             }
             
-            // Si el lugar no tiene coordenadas reales, lo saltamos para evitar fallos en el mapa
             if (latGoogle == 0 && lngGoogle == 0) return null;
             
-            String urlImagen =
-                l['foto']?.toString() ??
-                l['imagen']?.toString() ??
-                "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
+            String urlImagen = l['foto']?.toString() ?? l['imagen']?.toString() ?? "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
 
-            Lugar lugarTemporal = Lugar(
-              id: (l['place_id'] ?? l['id'] ?? name).toString(),
-              nombre: name,
-              tipo: categoriaHomologada, 
-              precio: precioRealMapeado,
-              rating: _toDouble(l['rating'], fb: 5),
-              numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(),
-              latitud: latGoogle,
-              longitud: lngGoogle,
-              resenasTexto: const ["lugar muy divertido para ir con niños familiar seguro"],
-              fotoUrl: urlImagen,
-              direccion: l['vicinity'] ?? 'Sin dirección',
-              horario: '',
-            );
+            Lugar lugarTemporal = Lugar(id: name, nombre: name, tipo: categoriaHomologada, precio: precioRealMapeado, rating: _toDouble(l['rating'], fb: 5), numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(), latitud: latGoogle, longitud: lngGoogle, resenasTexto: const ["lugar muy divertido"], fotoUrl: urlImagen, direccion: l['vicinity'] ?? 'Sin dirección', horario: l['horario'] ?? 'Horario no disponible',);
 
             List<String> etiquetasNLP = _servicioFiltros.calcularEtiquetasExperiencia(lugarTemporal);
 
@@ -453,74 +412,79 @@ Future<void> _resolverCoordenadas() async {
               'imagen': urlImagen,
             };
           })
-          .where((l) => l != null) // Limpiamos los registros inválidos
+          .where((l) => l != null)
           .cast<Map<String, dynamic>>()
           .toList(); 
 
-      // 5. FILTRAR BASURA Y GEOLOCALIZACIÓN
-      List<Map<String, dynamic>> localesLimpio = listaMapeada.where((l) {
-        final nombreMin = (l['name'] ?? 'lugar').toString().toLowerCase();
+      // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
+      listaProcesada = listaProcesada.where((l) {
+        final nombreMin = (l['name'] ?? '').toString().toLowerCase();
         final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
-        
-        String destinoAValidar = (destinoSeleccionado ?? '').toLowerCase().trim();
         bool esZonaEstricta = destinoAValidar.contains('chapala') || destinoAValidar.contains('ajijic');
         
         if (esZonaEstricta && distanciaKM > 35.0) return false; 
         if (distanciaKM > 3000.0) return false;
 
-        final esBasura =
-            nombreMin.contains("walmart") || nombreMin.contains("oxxo") ||
-            nombreMin.contains("soriana") || nombreMin.contains("bodega aurrera") ||
-            nombreMin.contains("honda") || nombreMin.contains("hospital");
+        final esBasura = nombreMin.contains("walmart") || nombreMin.contains("oxxo") || nombreMin.contains("soriana") || nombreMin.contains("bodega aurrera") || nombreMin.contains("honda") || nombreMin.contains("hospital");
 
         return !esBasura;
       }).toList();
 
-      if (localesLimpio.isEmpty && destinoSeleccionado != null) {
-        setState(() {
-          error = "Por ahora, solo trabajamos con destinos dentro de México.";
-          lugares = [];
-          cargando = false;
-        });
+      if (listaProcesada.isEmpty && destinoSeleccionado != null) {
+        setState(() { error = "Por ahora, solo trabajamos con destinos dentro de México."; lugares = []; cargando = false; });
         return;
       }
 
-      // 6. ELIMINAR DUPLICADOS
+      // 8. ELIMINAR DUPLICADOS
       final Map<String, Map<String, dynamic>> unicos = {};
-      for (final lugar in localesLimpio) {
-        final key = "${lugar['name']}${lugar['lat']}${lugar['lng']}";
-        unicos[key] = lugar;
+      for (final lugar in listaProcesada) {
+        unicos["${lugar['name']}${lugar['lat']}${lugar['lng']}"] = lugar;
       }
-      localesLimpio = unicos.values.toList();
+      listaProcesada = unicos.values.toList();
 
-      // 7. APLICAR ALGORITMO DE PESOS Y QUICKSORT
-      final conPesos = _aplicarPesos(localesLimpio);
+      // 9. PESOS Y ORDENAMIENTO (QUICKSORT)
+      final conPesos = _aplicarPesos(listaProcesada);
       final ordenados = _quickSort(conPesos);
 
-      // 8. PLAN B: RELLENO INTELIGENTE (Para asegurar las 5 tarjetas escolares)
-      List<Map<String, dynamic>> listaFinal = List.from(ordenados);
-      if (listaFinal.length < 5 && tipoSeleccionado != null) {
-        final extra = await GooglePlacesServicio.buscarLugares(_latActual, _lngActual, query: "turismo");
-        for (var l in extra) {
-          if (listaFinal.length >= 5) break;
-          if (!listaFinal.any((e) => e['name'] == l['name'])) {
-            listaFinal.add({...Map<String, dynamic>.from(l), 'categoriaPrincipal': 'Otro'});
+      // 🚀 10. EL FILTRO MAESTRO (AQUÍ SE CUMPLE LO QUE PEDISTE)
+      List<Map<String, dynamic>> filtrados = FiltrosEtiquetasServicio.filtrarYObtenerTop5(
+        listaCompleta: ordenados,
+        tipo: tipoSeleccionado,
+        precio: precioSeleccionado,
+        experiencia: estiloSeleccionado,
+        queryTexto: texto,
+      );
+
+      // 11. PLAN B RECARGADO: Garantizar 5 tarjetas (RQF36)
+      if (filtrados.length < 5) {
+        // Pedimos más resultados explícitamente y sin limitarnos a la palabra "turismo"
+        final extraGoogle = await GooglePlacesServicio.buscarLugares(
+          _latActual, 
+          _lngActual, 
+          query: "atracciones lugares populares" 
+        );
+        
+        for (var lugarExtra in extraGoogle) {
+          if (filtrados.length >= 5) break; // Si ya llegamos a 5, paramos
+          
+          // Verificamos que no sea basura y no esté repetido
+          final nombreLugar = (lugarExtra['name'] ?? '').toString();
+          bool esBasura = nombreLugar.toLowerCase().contains("walmart") || 
+                          nombreLugar.toLowerCase().contains("oxxo");
+          bool yaExiste = filtrados.any((f) => f['name'] == nombreLugar);
+          
+          if (!esBasura && !yaExiste) {
+             final lExtraMap = Map<String, dynamic>.from(lugarExtra);
+             // Le asignamos categoría 'Recomendación' para que el usuario sepa por qué salió
+             filtrados.add({...lExtraMap, 'categoriaPrincipal': 'Recomendación extra'});
           }
         }
       }
 
-      // 9. DETERMINAR TOP 5 O LISTA COMPLETA
-      final finales = (texto.isEmpty && destinoSeleccionado == null && tipoSeleccionado == null && _intereses.isEmpty)
-          ? _top5(listaFinal)
-          : listaFinal;
+      // 12. CACHÉ Y SUGERENCIAS
+      String hashQuery = _servicioFiltros.generarHashConsulta(destinoSeleccionado ?? 'gps', estiloSeleccionado ?? 'general', precioSeleccionado ?? 'libre');
+      await _servicioFiltros.guardarEnCache(hashQuery, filtrados);
 
-      // 10. CONTROL DE CACHÉ DE RESPUESTAS
-      String hashQuery = _servicioFiltros.generarHashConsulta(
-        destinoSeleccionado ?? 'gps', estiloSeleccionado ?? 'general', precioSeleccionado ?? 'libre',
-      );
-      await _servicioFiltros.guardarEnCache(hashQuery, finales);
-
-      // 11. RECOMENDADOR COSINE SIMILARITY
       if (_intereses.isNotEmpty) {
         List<double> vectorUsuario = [
           _toDouble(_intereses['Restaurante']), _toDouble(_intereses['Cafetería']),
@@ -528,16 +492,15 @@ Future<void> _resolverCoordenadas() async {
         ];
         List<String> sugerencias = await _servicioFiltros.obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
         if (sugerencias.isNotEmpty && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Otros viajeros como tú también consultaron este destino")),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Otros viajeros como tú también consultaron este destino")));
         }
       }
 
       setState(() {
-        lugares = finales; 
+        lugares = filtrados; 
         cargando = false;
       });
+
     } catch (e) {
       print("❌ ERROR BUSQUEDA: $e");
       setState(() {

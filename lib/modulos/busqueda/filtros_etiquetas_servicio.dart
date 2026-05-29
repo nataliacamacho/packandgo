@@ -360,4 +360,5 @@ class FiltrosEtiquetasServicio {
     return procesados.take(5).toList();
   }
 
+
 }
