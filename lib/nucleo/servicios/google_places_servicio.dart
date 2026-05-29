@@ -13,7 +13,7 @@ class GooglePlacesServicio {
     double lng, {
     String query = '',
     String? tipo,
-    int radio = 15000,
+    int radio = 50000,
   }) async {
     try {
       String url;
@@ -82,9 +82,14 @@ class GooglePlacesServicio {
 
         if (types.isEmpty) return false;
 
+        // 🔥 ¡ADIÓS AL ASESINO DE CAFETERÍAS!
         const bloqueados = [
-          'supermarket', 'store', 'department_store',
-          'pharmacy', 'bank', 'gas_station', 'lodging',
+          'supermarket', 
+          'department_store',
+          'pharmacy', 
+          'bank', 
+          'gas_station', 
+          'lodging',
         ];
 
         return !types.any((t) => bloqueados.contains(t));
@@ -137,15 +142,19 @@ class GooglePlacesServicio {
   }
 
   // ---------------------------------------------------------------------------
-  // MAPEAR CATEGORÍAS
+  // MAPEAR CATEGORÍAS (Corregido: Específicos primero, Generales después)
   // ---------------------------------------------------------------------------
   static String _mapearCategoria(List<String> types, {String nombre = ''}) {
     final texto = types.join(' ').toLowerCase();
     final n = nombre.toLowerCase();
 
+    // 🔥 1. ESPECÍFICOS PRIMERO (Para que "food" no se los robe)
+    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('bakery') || n.contains('cafe')) return 'cafeteria';
+    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub') || n.contains('bar')) return 'bar';
+
+    // 🔥 2. GENERALES DESPUÉS
     if (texto.contains('restaurant') || texto.contains('food') || texto.contains('meal')) return 'restaurante';
-    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('bakery')) return 'cafeteria';
-    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub')) return 'bar';
+
     if (texto.contains('park') || texto.contains('garden')) return 'parque';
     if (texto.contains('museum') || texto.contains('art_gallery')) return 'museo';
     if (texto.contains('beach') || n.contains('playa')) return 'playa';
@@ -217,7 +226,7 @@ class GooglePlacesServicio {
     double lat,
     double lng, {
     required List<String> categorias,
-    int radio = 15000,
+    int radio = 50000,
   }) async {
     // Dispara las búsquedas al mismo tiempo (Concurrencia)
     final futures = categorias.map((cat) {

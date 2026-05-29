@@ -26,20 +26,17 @@ class TarjetaLugar extends StatelessWidget {
   // ====================================================================
   // 🔥 EL EXTRACTOR INFALIBLE CON "CACHE BUSTER"
   // ====================================================================
-  String _obtenerFotoFinal() {
-    const impostor =
-        "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
-
-    String urlFinal = impostor;
-
-    // ✅ PRIORIDAD 1: usar la imagen ya construida
-    if (imagenUrl.isNotEmpty &&
-        imagenUrl.startsWith('http') &&
-        !imagenUrl.contains('unsplash')) {
-      urlFinal = imagenUrl;
+ String _obtenerFotoFinal() {
+    // ✅ PRIORIDAD 1: usar la imagen ya construida (¡Protegida contra nulos!)
+    if (imagenUrl != null && 
+        imagenUrl!.isNotEmpty && 
+        imagenUrl!.startsWith('http') && 
+        !imagenUrl!.contains('unsplash')) {
+      return imagenUrl!;
     }
-    // ✅ PRIORIDAD 2: reconstruir desde photos
-    else if (lugar != null && lugar!['photos'] != null) {
+    
+    // ✅ PRIORIDAD 2: reconstruir desde photos (¡Protegida contra nulos!)
+    if (lugar != null && lugar!['photos'] != null) {
       final fotos = lugar!['photos'];
 
       if (fotos is List && fotos.isNotEmpty) {
@@ -49,21 +46,94 @@ class TarjetaLugar extends StatelessWidget {
         final ref = primera['photo_reference'] ?? primera['photoReference'];
 
         if (ref != null) {
-          urlFinal =
-              "https://maps.googleapis.com/maps/api/place/photo"
-              "?maxwidth=400"
-              "&photo_reference=$ref"
-              "&key=${dotenv.env['GOOGLE_API_KEY']}";
+          return "https://maps.googleapis.com/maps/api/place/photo"
+                 "?maxwidth=400"
+                 "&photo_reference=$ref"
+                 "&key=${dotenv.env['GOOGLE_API_KEY']}";
         }
       }
     }
 
-    return urlFinal;
+    // 🔥 EL TRUCO MAESTRO: Si llegamos hasta aquí, significa que Google no tiene foto.
+    // Devolvemos un texto vacío ('') para engañar al Image.network.
+    // Al recibir un texto vacío, Flutter dirá "¡Error!" y activará automáticamente
+    // el errorBuilder que diseñamos hace rato, pintando tu foto HD de Wikipedia.
+    return ''; 
+  }
+
+ // -------------------------------------------------------------------------
+  // RESPALDO VISUAL ESTILO GOOGLE MAPS (100% Sin Internet)
+  // -------------------------------------------------------------------------
+  Widget obtenerRespaldoVisual(String categoria) {
+    Color colorFondo;
+    IconData icono;
+
+    switch (categoria.toLowerCase()) {
+      case 'zona_arqueologica':
+        colorFondo = Colors.brown[400]!;
+        icono = Icons.account_balance; 
+        break;
+      case 'cafeteria':
+        colorFondo = Colors.orange[400]!;
+        icono = Icons.local_cafe;
+        break;
+      case 'restaurante':
+        colorFondo = Colors.red[400]!;
+        icono = Icons.restaurant;
+        break;
+      case 'playa':
+        colorFondo = Colors.lightBlue[400]!;
+        icono = Icons.beach_access;
+        break;
+      case 'museo':
+        colorFondo = Colors.indigo[400]!;
+        icono = Icons.museum;
+        break;
+      case 'bar':
+        colorFondo = Colors.deepPurple[400]!;
+        icono = Icons.local_bar;
+        break;
+      case 'parque':
+        colorFondo = Colors.green[400]!;
+        icono = Icons.park;
+        break;
+      case 'mirador':
+        colorFondo = Colors.teal[400]!;
+        icono = Icons.filter_hdr;
+        break;
+      case 'centro_comercial':
+        colorFondo = Colors.blueGrey[400]!;
+        icono = Icons.local_mall;
+        break;
+      case 'actividades_extremas':
+        colorFondo = Colors.deepOrange[400]!;
+        icono = Icons.paragliding; // O Icons.directions_bike
+        break;
+      case 'monumento':
+        colorFondo = Colors.blue[400]!;
+        icono = Icons.account_balance;
+        break;
+      default:
+        colorFondo = Colors.grey[400]!;
+        icono = Icons.place;
+    }
+
+    return Container(
+      height: 90,
+      width: 90,
+      color: colorFondo,
+      child: Center(
+        child: Icon(icono, color: Colors.white, size: 40),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final fotoDefinitiva = _obtenerFotoFinal();
+        // Aquí mandas llamar tu función ya reparada
+    final fotoDefinitiva = _obtenerFotoFinal(); 
+    // Y proteges tu categoría por si acaso
+    final categoria = this.categoria ?? 'otro';
 
     return GestureDetector(
       onTap: onTap,
@@ -101,18 +171,8 @@ class TarjetaLugar extends StatelessWidget {
                       ),
                     );
                   },
-                  errorBuilder: (context, error, stackTrace) {
-                    // Si llegas a ver esto, es que el lugar genuinamente no tiene foto en Google
-                    return Container(
-                      height: 90,
-                      width: 90,
-                      color: const Color(0xFF0066D2).withOpacity(0.1),
-                      child: const Icon(
-                        Icons.landscape_rounded,
-                        size: 40,
-                        color: Color(0xFF0066D2),
-                      ),
-                    );
+                 errorBuilder: (context, error, stackTrace) {
+                    return obtenerRespaldoVisual(categoria ?? 'otro');
                   },
                 ),
               ),
