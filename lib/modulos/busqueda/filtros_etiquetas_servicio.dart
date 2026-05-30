@@ -338,6 +338,8 @@ class FiltrosEtiquetasServicio {
           .replaceAll('ó', 'o').replaceAll('ú', 'u');
       }
 
+      
+
       // Filtro Determinante: TIPO DE LUGAR (A prueba de acentos)
       final tipoLugar = quitarAcentos((lugar["categoriaPrincipal"] ?? "").toString());
       final tipoFiltro = tipo != null ? quitarAcentos(tipo) : null;
@@ -348,16 +350,23 @@ class FiltrosEtiquetasServicio {
       final precioFiltro = precio != null ? precio.trim() : null;
       final coincidePrecio = precio == null || precioLugar == precioFiltro;
 
-      // Filtro Secundario 2: EXPERIENCIA
+     // Filtro Secundario 2: EXPERIENCIA (Blindado contra textos como "En pareja")
       final listadoExperiencias = lugar["experiencias"] as List<dynamic>? ?? [];
       final experienciasLimpias = listadoExperiencias.map((e) => e.toString().toLowerCase().trim()).toList();
-      final coincideExperiencia = experiencia == null || experienciasLimpias.contains(experiencia.toLowerCase().trim());
-
+      
+      final expFiltro = experiencia != null ? experiencia.toLowerCase().trim() : '';
+      
+      // 🔥 LA MAGIA: Verificamos si la etiqueta (ej. "pareja") está adentro del texto 
+      // del botón (ej. "en pareja") o viceversa. Así nunca fallará.
+      final coincideExperiencia = experiencia == null || experiencia.isEmpty || 
+          experienciasLimpias.any((etiqueta) => expFiltro.contains(etiqueta) || etiqueta.contains(expFiltro));
       // Solo sobreviven los lugares que cumplan TODOS los filtros activos
       return coincideBusqueda && coincideTipo && coincidePrecio && coincideExperiencia;
     }).toList();
 
     return procesados.take(5).toList();
+
   }
+
 
 }
