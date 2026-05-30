@@ -331,6 +331,7 @@ Future<void> _resolverCoordenadas() async {
       } catch (_) { nombreCiudad = destinoSeleccionado ?? ''; }
 
       String textoConsultaApi = texto.trim();
+
       
       // Determinamos si es una categoría que Google entiende nativamente
       bool esCategoriaEstricta = false;
@@ -340,6 +341,13 @@ Future<void> _resolverCoordenadas() async {
             t.contains('parq') || t.contains('muse') || t.contains('cent')) {
           esCategoriaEstricta = true;
         }
+      }
+
+            if (textoConsultaApi.isEmpty && destinoSeleccionado != null) {
+        textoConsultaApi = "puntos de interes historicos, atracciones locales, monumentos";
+      } else if (textoConsultaApi.isEmpty) {
+        // Si tampoco hay destino, que busque atracciones populares cerca del usuario
+        textoConsultaApi = "atracciones populares, lugares de interes";
       }
 
       if (textoConsultaApi.isEmpty) {
@@ -508,8 +516,7 @@ Future<void> _resolverCoordenadas() async {
 
             return {
               ...l,
-              'name': name,
-              'direccion': l['vicinity'] ?? _obtenerDireccion(l),
+              'name': l['name'] ?? 'Sin nombre', // Si Google te manda algo crudo, usa el nombre procesado              'direccion': l['vicinity'] ?? _obtenerDireccion(l),
               'categoriaPrincipal': categoriaHomologada, 
               'experiencias': etiquetasNLP,              
               'rating': _toDouble(l['rating'], fb: 5),
@@ -519,7 +526,8 @@ Future<void> _resolverCoordenadas() async {
               'lng': lngGoogle,
               'distancia': calcularDistancia(_latActual, _lngActual, latGoogle, lngGoogle),
               'imagen': urlImagen,
-              'foto' : urlImagen,
+              'foto': urlImagen, 
+              'horario': 'Horario sujeto a disponibilidad del lugar',
             };
           })
           .where((l) => l != null)
@@ -863,11 +871,13 @@ Future<void> _resolverCoordenadas() async {
         final puntos = _intereses[categoria];
         if (puntos is int) interes = puntos >= 8 ? 10 : puntos * 1.25;
       }
+      double pesoPopularidad = destinoSeleccionado == null ? 0.1 : 0.2;
+      double pesoDistancia = destinoSeleccionado == null ? 0.4 : 0.2;
 
       lugar['relevancia'] =
           (rating * 0.4) +
-          (popularity * 0.2) +
-          (distanciaPeso * 0.2) +
+          (popularity * pesoPopularidad) +
+          (distanciaPeso * pesoDistancia) +
           (interes * 0.2);
       return lugar;
     }).toList();
