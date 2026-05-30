@@ -7,7 +7,7 @@ class TarjetaLugar extends StatelessWidget {
   final double lat;
   final double lng;
   final VoidCallback? onTap;
-  final String categoria;
+  final String categoria; 
   final String imagenUrl;
   final Map<String, dynamic>? lugar;
 
@@ -150,6 +150,7 @@ class TarjetaLugar extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
+              // 1. LA IMAGEN
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Image.network(
@@ -171,12 +172,14 @@ class TarjetaLugar extends StatelessWidget {
                       ),
                     );
                   },
-                 errorBuilder: (context, error, stackTrace) {
+                  errorBuilder: (context, error, stackTrace) {
                     return obtenerRespaldoVisual(categoria ?? 'otro');
                   },
                 ),
               ),
               const SizedBox(width: 12),
+              
+              // 2. LOS TEXTOS Y EL SEMÁFORO
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,23 +201,30 @@ class TarjetaLugar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        categoria.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w800,
+                    
+                    // 🔥 AQUÍ ESTÁ LA FILA QUE EMPUJA LA CATEGORÍA Y EL SEMÁFORO
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            (categoria ?? 'otro').toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),

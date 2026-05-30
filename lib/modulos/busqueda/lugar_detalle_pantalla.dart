@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import 'package:proyecto/nucleo/servicios/resena_servicio.dart';
 import 'package:proyecto/nucleo/utilidades/normalizador_lugares.dart';
 import 'package:proyecto/nucleo/utilidades/constantes_ciudades.dart';
@@ -425,6 +426,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   void initState() {
     super.initState();
     _registrarVisita();
+    _cargarHorarios();
   }
 
   Future<void> _registrarVisita() async {
@@ -503,6 +505,33 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
     }
     
     return widget.lugar?['precio'] ?? "\$";
+  }
+  // 1. Variables de estado para los horarios
+  bool? estaAbierto;
+  List<String> horarioSemana = [];
+  bool cargandoHorarios = true;
+
+
+  Future<void> _cargarHorarios() async {
+    final id = widget.lugar?['place_id']; 
+    print("🚦 ID DEL LUGAR A BUSCAR: $id"); // <--- NUEVO RAYO X
+    if (id != null && id.toString().isNotEmpty) {
+      final detalles = await GooglePlacesServicio.obtenerDetallesHorario(id.toString());
+      print("🚦 RESPUESTA GOOGLE DETALLES: $detalles"); // <--- NUEVO RAYO X
+      if (mounted) {
+        setState(() {
+          estaAbierto = detalles['abierto'];
+          horarioSemana = (detalles['dias'] as List<dynamic>?)
+          ?.map((item) => item.toString()) // Convierte cualquier cosa a texto seguro
+          .toList() ?? [];
+          cargandoHorarios = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() => cargandoHorarios = false);
+      }
+    }
   }
       
 
@@ -616,70 +645,110 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
               ),
 
               const SizedBox(height: 20),
-
-              const Text(
-                'Horarios de Atención',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-              const SizedBox(height: 8),
-
-              if (widget.lugar?['opening_hours'] != null && widget.lugar?['opening_hours']['weekday_text'] != null) ...[
-                Card(
-                  elevation: 0,
-                  color: Colors.grey[50],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey[200]!),
+ // 🔥 MÓDULO DE HORARIOS Y ESTADO (Versión Blindada)
+            if (cargandoHorarios)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF0066D2),
+                    strokeWidth: 2,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: (widget.lugar?['opening_hours']['weekday_text'] as List<dynamic>).map((diaTexto) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  diaTexto.toString(),
-                                  style: const TextStyle(fontSize: 14, color: Colors.black87),
-                                ),
-                              ),
-                            ],
+                ),
+              )
+            else if (estaAbierto != null || horarioSemana.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (estaAbierto != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            color: estaAbierto! ? Colors.green : Colors.red,
+                            size: 14,
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Establecimiento sin horarios registrados. Te recomendamos consultar directamente antes de tu visita.',
-                          style: TextStyle(fontSize: 13, color: Colors.amber[900], fontStyle: FontStyle.italic),
-                        ),
+                          const SizedBox(width: 8),
+                          Text(
+                            estaAbierto! ? 'Abierto ahora' : 'Cerrado en este momento',
+                            style: TextStyle(
+                              color: estaAbierto! ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
+                    if (estaAbierto != null && horarioSemana.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(height: 1),
+                      ),
+                    if (horarioSemana.isNotEmpty) ...[
+                      const Text(
+                        'Horario de la semana',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      ...horarioSemana.map((dia) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    dia,
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
                     ],
-                  ),
+                  ],
                 ),
-              ],
-              // ==============================================================
+              )
+            else
+              // Mensaje de cortesía si no hay horario
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Por el momento no contamos con información de horarios para este lugar.",
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
               ExpansionTile(
                 title: const Text(
@@ -882,6 +951,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                   ),
                 ),
             ],
+            
           ),
         ),
       ),
