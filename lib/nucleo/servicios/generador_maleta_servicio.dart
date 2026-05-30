@@ -521,4 +521,68 @@ class GeneradorMaletaServicio {
 
     return await mapbox.destinoValido(destino);
   }
+
+  Future<String> obtenerClimaEsperado({
+    required String destino,
+    required DateTime fechaInicio,
+  }) async {
+    final destinoNormalizado = destino
+        .toLowerCase()
+        .trim()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+
+    final ciudadDoc = await _db
+        .collection('ciudades')
+        .doc(destinoNormalizado)
+        .get();
+
+    String tipo = 'ciudad';
+    String clima = 'templado';
+
+    if (ciudadDoc.exists) {
+      final data = ciudadDoc.data()!;
+
+      tipo = data['tipo'] ?? 'ciudad';
+
+      final mes = fechaInicio.month;
+
+      if (mes == 12 || mes == 1 || mes == 2) {
+        clima = data['climaInvierno'] ?? 'frio';
+      } else if (mes >= 3 && mes <= 5) {
+        clima = data['climaPrimavera'] ?? 'templado';
+      } else if (mes >= 6 && mes <= 8) {
+        clima = data['climaVerano'] ?? 'calor';
+      } else {
+        clima = data['climaOtono'] ?? 'templado';
+      }
+    } else {
+      tipo = await mapbox.detectarTipoDestino(destino);
+
+      final mes = fechaInicio.month;
+
+      if (tipo == 'playa') {
+        clima = (mes >= 6 && mes <= 9) ? 'lluvia' : 'calor';
+      } else if (tipo == 'montaña') {
+        clima = (mes == 12 || mes == 1 || mes == 2) ? 'frio' : 'templado';
+      } else if (tipo == 'bosque') {
+        clima = (mes >= 6 && mes <= 9) ? 'lluvia' : 'templado';
+      } else if (tipo == 'desierto') {
+        clima = 'calor';
+      } else {
+        if (mes == 12 || mes == 1 || mes == 2) {
+          clima = 'frio';
+        } else if (mes >= 6 && mes <= 9) {
+          clima = 'lluvia';
+        } else {
+          clima = 'templado';
+        }
+      }
+    }
+
+    return clima;
+  }
 }

@@ -25,7 +25,6 @@ class UsuarioServicio {
   Future<void> actualizarUsuario({
     String? nombreUsuario,
     String? nuevaPassword,
-    String? correo,
   }) async {
     final user = _auth.currentUser;
 

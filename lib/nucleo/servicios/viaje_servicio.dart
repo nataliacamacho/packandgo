@@ -13,6 +13,7 @@ class ViajeServicio {
     required String origen,
     required String usuarioId,
     required List<String> actividades,
+    required String tipoViaje,
   }) async {
 
     final viajeData = {
@@ -36,6 +37,7 @@ class ViajeServicio {
       "cantidadDias":
           fechaFin.difference(fechaInicio).inDays + 1,
       "actividades": actividades,
+      "tipoViaje": tipoViaje,
     };
 
     // =========================

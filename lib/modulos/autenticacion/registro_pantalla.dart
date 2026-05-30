@@ -207,7 +207,8 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
 
                                     final correo = correoController.text.trim();
                                     final usuario = usuarioController.text
-                                        .trim();
+                                        .trim()
+                                        .toLowerCase();
                                     final password = passwordController.text
                                         .trim();
 
@@ -262,13 +263,17 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
                                                     .trim(),
                                               );
 
+                                      await credencial.user!.updateDisplayName(
+                                        usuario,
+                                      );
+
                                       await FirebaseFirestore.instance
                                           .collection("usuarios")
                                           .doc(credencial.user!.uid)
                                           .set({
                                             "uid": credencial.user!.uid,
                                             "correo": correo,
-                                            "nombreUsuario": usuario,
+                                            "nombreUsuario": usuario.toLowerCase(),
                                             "fechaRegistro":
                                                 FieldValue.serverTimestamp(),
                                           });

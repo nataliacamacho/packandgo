@@ -73,17 +73,7 @@ class ResenaServicio {
       });
     }
 
-    // 🔥 recalcular ranking
-    final nuevoDoc = await ref.get();
-    final nuevaData = nuevoDoc.data()!;
-
-    final estrellas = nuevaData['estrellas'] ?? 0;
-    final likes = nuevaData['likes'] ?? 0;
-    final love = nuevaData['me_encanta'] ?? 0;
-
-    final ranking = (estrellas * 10) + likes + (love * 2);
-
-    await ref.update({'ranking': ranking});
+    await recalcularRanking(idResena);
   }
 
   static int calcularRanking({
@@ -95,20 +85,82 @@ class ResenaServicio {
   }
 
   static const List<String> palabrasClave = [
+    // Experiencia general
     'gusta',
     'encanta',
+    'experiencia',
+    'recomendable',
+    'agradable',
+    'increible',
+    'excelente',
+    'horrible',
+    'pesimo',
+    'bueno',
+    'bonito',
+
+    // Precio
     'caro',
     'barato',
-    'lleno',
-    'servicio',
     'precio',
-    'lugar',
-    'comida',
-    'experiencia',
+    'costoso',
+    'economico',
+
+    // Servicio / atención
+    'servicio',
     'atencion',
-    'limpieza',
+    'amable',
+    'amabilidad',
+    'rapido',
+    'rapidez',
+    'lento',
+    'personal',
+    'mesero',
+
+    // Ambiente
     'ambiente',
-    'recomendable',
+    'tranquilo',
+    'ruidoso',
+    'comodo',
+    'relajante',
+    'familiar',
+
+    // Limpieza
+    'limpieza',
+    'sucio',
+    'limpio',
+
+    // Lugar
+    'lugar',
+    'ubicacion',
+    'vista',
+    'decoracion',
+
+    // Comida
+    'comida',
+    'delicioso',
+    'rico',
+    'platillo',
+    'bebidas',
+    'postres',
+    'menu',
+
+    // Tiempo / espera
+    'fila',
+    'espera',
+    'tardado',
+
+    // Hospedaje
+    'hotel',
+    'habitacion',
+    'cama',
+    'comodidad',
+
+    // Turismo / actividades
+    'playa',
+    'museo',
+    'parque',
+    'actividad',
+    'tour',
   ];
 
   static String _normalizar(String texto) {
@@ -120,6 +172,24 @@ class ResenaServicio {
         .replaceAll(RegExp(r'[óòöô]'), 'o')
         .replaceAll(RegExp(r'[úùüû]'), 'u')
         .replaceAll(RegExp(r'[^\w\s]'), '');
+  }
+
+  static Future<void> recalcularRanking(String idResena) async {
+    final ref = FirebaseFirestore.instance.collection('resenas').doc(idResena);
+
+    final doc = await ref.get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+
+    final estrellas = data['estrellas'] ?? 0;
+    final likes = data['likes'] ?? 0;
+    final meEncanta = data['me_encanta'] ?? 0;
+
+    final ranking = (estrellas * 10) + likes + (meEncanta * 2);
+
+    await ref.update({'ranking': ranking});
   }
 
   static Future<void> eliminarResena(String id) async {
@@ -135,15 +205,26 @@ class ResenaServicio {
       throw Exception("Las estrellas deben ser entre 1 y 5");
     }
 
-    await FirebaseFirestore.instance.collection('resenas').doc(id).update({
+    final ref = FirebaseFirestore.instance.collection('resenas').doc(id);
+
+    final doc = await ref.get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+
+    final likes = data['likes'] ?? 0;
+    final meEncanta = data['me_encanta'] ?? 0;
+
+    final ranking = (estrellas * 10) + likes + (meEncanta * 2);
+
+    await ref.update({
       'texto': texto.trim(),
-
       'estrellas': estrellas,
-
-      'ranking': estrellas * 10,
-
+      'ranking': ranking,
       'fechaEdicion': FieldValue.serverTimestamp(),
     });
+    await recalcularRanking(id);
   }
 
   static Future<String?> validarTextoResena(String texto) async {
@@ -158,7 +239,7 @@ class ResenaServicio {
     final tieneClave = palabras.any((p) => palabrasClave.contains(p));
 
     if (!tieneClave) {
-      return "Incluye detalles como servicio, precio o experiencia.";
+      return "Tu reseña parece ser poco informativa. ¿Gustas agregar más detalles (incluye experiencia, servicio o precio)?";
     }
 
     try {
@@ -175,7 +256,7 @@ class ResenaServicio {
         for (String prohibida in listaNegra) {
           final palabra = _normalizar(prohibida);
 
-          if (palabras.contains(palabra)) {
+          if (limpio.contains(palabra)) {
             return "Evita lenguaje ofensivo en tu reseña.";
           }
         }

@@ -119,26 +119,77 @@ class _LoginPantallaState extends State<LoginPantalla> {
     }
 
     try {
-      final username = UsuarioController.text.trim();
+      final username = UsuarioController.text.trim().toLowerCase();
+      final password = passwordController.text.trim();
 
-      // 🔍 1. buscar email asociado al username
-      final email = await obtenerEmailPorUsername(username);
+      // Buscar usuario en Firestore
+      final query = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .where('nombreUsuario', isEqualTo: username)
+          .limit(1)
+          .get();
 
-      if (email == null) {
+      if (query.docs.isEmpty) {
         setState(() => errorUsuario = "No existe ese nombre de usuario");
         return;
       }
 
-      // 🔐 2. login con email real
+      final data = query.docs.first.data();
+      final uid = query.docs.first.id;
+      final emailActual = data['correo'] as String;
+      final emailPendiente =
+          data['correoPendiente'] as String?; // 👈 puede ser null
+
+      // Cerrar sesión anónima si existe
       final usuarioActual = FirebaseAuth.instance.currentUser;
       if (usuarioActual != null && usuarioActual.isAnonymous) {
         await FirebaseAuth.instance.signOut();
       }
 
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: passwordController.text.trim(),
-      );
+      UserCredential? credencial;
+
+      // Intentar con correo actual primero
+      try {
+        credencial = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: emailActual,
+          password: password,
+        );
+      } on FirebaseAuthException catch (e) {
+        // Si falla Y hay un correo pendiente verificado, intentar con ese
+        if ((e.code == 'invalid-credential' || e.code == 'wrong-password') &&
+            emailPendiente != null) {
+          try {
+            credencial = await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: emailPendiente,
+              password: password,
+            );
+          } on FirebaseAuthException {
+            setState(() => errorPassword = "La contraseña es incorrecta");
+            return;
+          }
+        } else if (e.code == 'invalid-credential' ||
+            e.code == 'wrong-password') {
+          setState(() => errorPassword = "La contraseña es incorrecta");
+          return;
+        } else {
+          setState(() => errorUsuario = "Error: ${e.code}");
+          return;
+        }
+      }
+
+      await FirebaseAuth.instance.currentUser?.reload();
+      final user = FirebaseAuth.instance.currentUser;
+
+      // Sincronizar Firestore con el correo real de Auth
+      if (user != null && user.email != null) {
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(user.uid)
+            .update({
+              'correo': user.email,
+              'correoPendiente': FieldValue.delete(), // 👈 limpia el pendiente
+            });
+      }
 
       await obtenerUbicacion();
     } on FirebaseAuthException catch (e) {
@@ -148,8 +199,8 @@ class _LoginPantallaState extends State<LoginPantalla> {
         setState(() => errorUsuario = "Error: ${e.code}");
       }
     } catch (e) {
-      setState(() => errorUsuario = "Error inesperado: $e");
-      debugPrint("❌ ERROR LOGIN: $e");
+      setState(() => errorUsuario = "Error inesperado");
+      debugPrint("ERROR LOGIN: $e");
     }
   }
 

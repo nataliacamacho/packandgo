@@ -4,13 +4,16 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
+
 import 'package:proyecto/modulos/viajes/apartados/hospedaje/hospedaje_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/maleta/maleta_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/diario_personal/lista_diario_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/transporte/transporte_pantalla.dart';
 import 'package:proyecto/modulos/viajes/apartados/itinerario/itinerario_pantalla.dart';
+
 import 'package:proyecto/nucleo/utilidades/formatear_destino.dart';
-import 'package:path/path.dart' as path;
+import 'package:proyecto/nucleo/servicios/generador_maleta_servicio.dart';
 
 class DetalleViajePantalla extends StatefulWidget {
   final String idViaje;
@@ -22,6 +25,8 @@ class DetalleViajePantalla extends StatefulWidget {
   final double destinoLat;
   final double destinoLng;
   final String origen;
+  final String tipoViaje;
+  final List<dynamic> actividades;
 
   const DetalleViajePantalla({
     super.key,
@@ -34,6 +39,8 @@ class DetalleViajePantalla extends StatefulWidget {
     required this.destinoLat,
     required this.destinoLng,
     required this.origen,
+    required this.tipoViaje,
+    required this.actividades,
   });
 
   @override
@@ -43,7 +50,77 @@ class DetalleViajePantalla extends StatefulWidget {
 class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
   File? imagenLocal;
   String? imagenUrl;
+
   final ImagePicker picker = ImagePicker();
+
+  final GeneradorMaletaServicio generador = GeneradorMaletaServicio();
+
+  String climaEsperado = "Cargando clima...";
+
+  @override
+  void initState() {
+    super.initState();
+    cargarImagen();
+    cargarClima();
+  }
+
+  // =========================
+  // CARGAR CLIMA
+  // =========================
+
+  Future<void> cargarClima() async {
+    final existe = await generador.destinoExiste(widget.destino);
+
+    if (!existe) {
+      setState(() {
+        climaEsperado = "Destino no encontrado";
+      });
+
+      return;
+    }
+
+    final destinoNormalizado = widget.destino
+        .toLowerCase()
+        .trim()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+
+    final ciudadDoc = await FirebaseFirestore.instance
+        .collection('ciudades')
+        .doc(destinoNormalizado)
+        .get();
+
+    String clima = 'Templado';
+
+    if (ciudadDoc.exists) {
+      final data = ciudadDoc.data()!;
+
+      final mes = widget.fechaInicio.month;
+
+      if (mes == 12 || mes == 1 || mes == 2) {
+        clima = data['climaInvierno'] ?? 'Frío';
+      } else if (mes >= 3 && mes <= 5) {
+        clima = data['climaPrimavera'] ?? 'Templado';
+      } else if (mes >= 6 && mes <= 8) {
+        clima = data['climaVerano'] ?? 'Calor';
+      } else {
+        clima = data['climaOtono'] ?? 'Templado';
+      }
+    }
+
+    clima = clima[0].toUpperCase() + clima.substring(1);
+
+    setState(() {
+      climaEsperado = clima;
+    });
+  }
+
+  // =========================
+  // IMAGEN
+  // =========================
 
   Future<void> seleccionarImagen() async {
     final XFile? imagen = await picker.pickImage(source: ImageSource.gallery);
@@ -53,14 +130,14 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
     final file = File(imagen.path);
 
     setState(() {
-      imagenLocal = file; // muestra inmediato
+      imagenLocal = file;
     });
 
     final url = await subirImagen(file);
 
     if (url != null) {
       setState(() {
-        imagenUrl = url; // actualiza desde Firebase
+        imagenUrl = url;
       });
 
       await FirebaseFirestore.instance
@@ -72,8 +149,6 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
   Future<String?> subirImagen(File imagen) async {
     try {
-      final nombre = path.basename(imagen.path);
-
       final ref = FirebaseStorage.instance.ref().child(
         'viajes/${widget.idViaje}/portada.jpg',
       );
@@ -86,6 +161,10 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
       return null;
     }
   }
+
+  // =========================
+  // VALIDACIONES
+  // =========================
 
   bool viajeIniciado() {
     final hoy = DateTime.now();
@@ -103,7 +182,9 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
   bool yaTerminoViaje() {
     final hoy = DateTime.now();
+
     final hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
+
     final fin = DateTime(
       widget.fechaFin.year,
       widget.fechaFin.month,
@@ -112,6 +193,10 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
     return hoySinHora.isAfter(fin);
   }
+
+  // =========================
+  // CANCELAR VIAJE
+  // =========================
 
   void mostrarDialogoCancelar(BuildContext context, String idViaje) {
     showDialog(
@@ -160,11 +245,9 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    cargarImagen();
-  }
+  // =========================
+  // CARGAR IMAGEN
+  // =========================
 
   Future<void> cargarImagen() async {
     final doc = await FirebaseFirestore.instance
@@ -184,8 +267,10 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
   @override
   Widget build(BuildContext context) {
     FormateadorDestino.formatear(widget.destino);
+
     final fechaInicioTexto =
         "${widget.fechaInicio.day}/${widget.fechaInicio.month}/${widget.fechaInicio.year}";
+
     final fechaFinTexto =
         "${widget.fechaFin.day}/${widget.fechaFin.month}/${widget.fechaFin.year}";
 
@@ -219,20 +304,23 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
       extendBodyBehindAppBar: false,
 
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(200),
+        preferredSize: const Size.fromHeight(260),
+
         child: AppBar(
           automaticallyImplyLeading: true,
           backgroundColor: const Color(0xFF0066D2),
           elevation: 0,
+
           iconTheme: const IconThemeData(color: Colors.white),
 
           flexibleSpace: Stack(
             fit: StackFit.expand,
+
             children: [
-              // 🔥 PRIMERO el fondo
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
+
                   image: (imagenLocal != null)
                       ? DecorationImage(
                           image: FileImage(imagenLocal!),
@@ -247,15 +335,15 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
                 ),
               ),
 
-              // Gradiente encima del fondo
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
+
                     colors: [
                       Colors.black.withOpacity(0.2),
-                      Colors.black.withOpacity(0.6),
+                      Colors.black.withOpacity(0.7),
                     ],
                   ),
                 ),
@@ -264,8 +352,10 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               Positioned.fill(
                 child: Material(
                   color: Colors.transparent,
+
                   child: InkWell(
                     onTap: seleccionarImagen,
+
                     child: Center(
                       child: (imagenLocal == null && imagenUrl == null)
                           ? const Icon(
@@ -279,35 +369,26 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
                 ),
               ),
 
-              // Texto
               Positioned(
                 bottom: 20,
                 left: 20,
                 right: 20,
+
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+
                   children: [
                     Text(
                       widget.nombre,
+
                       style: GoogleFonts.poppins(
-                        fontSize: 24,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
 
-                    const SizedBox(height: 4),
-
-                    if (widget.descripcion.isNotEmpty)
-                      Text(
-                        widget.descripcion,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                      ),
-
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 10),
 
                     Row(
                       children: [
@@ -316,9 +397,12 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
                           color: Colors.white,
                           size: 16,
                         ),
+
                         const SizedBox(width: 6),
+
                         Text(
                           "$fechaInicioTexto - $fechaFinTexto",
+
                           style: GoogleFonts.poppins(
                             color: Colors.white70,
                             fontSize: 14,
@@ -340,12 +424,144 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
           children: [
             const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
 
+              child: Container(
+                padding: const EdgeInsets.all(18),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.place, color: Color(0xFF0066D2)),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Text(
+                            widget.destino,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+
+                      children: [
+                        infoChip(Icons.luggage, widget.tipoViaje),
+
+                        infoChip(Icons.wb_sunny, climaEsperado),
+
+                        infoChip(
+                          Icons.calendar_month,
+                          "${widget.fechaFin.difference(widget.fechaInicio).inDays + 1} días",
+                        ),
+                      ],
+                    ),
+
+                    if (widget.actividades.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+
+                      Text(
+                        "Actividades",
+
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+
+                        children: widget.actividades.map((actividad) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF3FF),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+
+                            child: Text(
+                              actividad.toString(),
+
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: const Color(0xFF0066D2),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+
+                    if (widget.descripcion.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+
+                      Text(
+                        "Descripción",
+
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        widget.descripcion,
+
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
             item(
               context,
               Icons.directions_car,
               "Transporte",
               "Opciones para llegar al destino",
+
               onTap: () {
                 if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -355,10 +571,13 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
                       ),
                     ),
                   );
+
                   return;
                 }
+
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(
                     builder: (context) => TransportePantalla(
                       origen: widget.origen,
@@ -376,6 +595,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               Icons.hotel,
               "Hospedaje",
               "Hoteles disponibles en la zona",
+
               onTap: () {
                 if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -388,8 +608,10 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
                   return;
                 }
+
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(
                     builder: (_) => HospedajePantalla(
                       lat: widget.destinoLat,
@@ -408,6 +630,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               Icons.backpack,
               "Maleta",
               "Lista recomendada para tu viaje",
+
               onTap: () {
                 if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -423,6 +646,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(
                     builder: (_) => MaletaPantalla(
                       idViaje: widget.idViaje,
@@ -438,6 +662,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               Icons.map,
               "Itinerario",
               "Planea tus actividades por día",
+
               onTap: () {
                 if (!puedePlanear()) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -453,6 +678,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(
                     builder: (context) => ItinerarioPantalla(
                       idViaje: widget.idViaje,
@@ -469,6 +695,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
               Icons.book,
               "Diario Personal",
               "Registra tus recuerdos",
+
               onTap: () {
                 if (!viajeIniciadoSistema()) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -484,6 +711,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(
                     builder: (context) => ListaDiarioPantalla(
                       idViaje: widget.idViaje,
@@ -500,8 +728,10 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
             if (viajeTerminado)
               Padding(
                 padding: const EdgeInsets.only(bottom: 30),
+
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+
                   children: [
                     ElevatedButton(
                       onPressed: () async {
@@ -516,9 +746,11 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
                         Navigator.pop(context);
                       },
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade300,
                       ),
+
                       child: const Text(
                         "Se realizó",
                         style: TextStyle(color: Colors.white),
@@ -540,9 +772,11 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
 
                         Navigator.pop(context);
                       },
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade300,
                       ),
+
                       child: const Text(
                         "No se realizó",
                         style: TextStyle(color: Colors.white),
@@ -555,16 +789,20 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
             if (!viajeTerminado)
               Padding(
                 padding: const EdgeInsets.only(bottom: 30),
+
                 child: Center(
                   child: ElevatedButton(
                     onPressed: () {
                       mostrarDialogoCancelar(context, widget.idViaje);
                     },
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                     ),
+
                     child: const Text(
                       "Cancelar viaje",
+
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
@@ -585,30 +823,70 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
+
           borderRadius: BorderRadius.circular(15),
+
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.18),
+
               blurRadius: 10,
+
               offset: const Offset(0, 4),
             ),
           ],
         ),
+
         child: ListTile(
           leading: Icon(icono, color: const Color(0xFF0066D2)),
+
           title: Text(
             titulo,
+
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
           ),
+
           subtitle: Text(subtitulo, style: GoogleFonts.poppins(fontSize: 14)),
+
           onTap: onTap,
         ),
+      ),
+    );
+  }
+
+  Widget infoChip(IconData icono, String texto) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(14),
+      ),
+
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          Icon(icono, size: 18, color: const Color(0xFF0066D2)),
+
+          const SizedBox(width: 8),
+
+          Text(
+            texto,
+
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

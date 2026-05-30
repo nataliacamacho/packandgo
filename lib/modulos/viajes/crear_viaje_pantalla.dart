@@ -21,6 +21,7 @@ class CrearViajePantalla extends StatefulWidget {
 
 class _CrearViajePantallaState extends State<CrearViajePantalla> {
   String? destinoSeleccionado;
+  String? tipoViajeSeleccionado;
 
   final descripcionController = TextEditingController();
   final geocoding = GeocodingServicio();
@@ -36,6 +37,14 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
   bool cargando = false;
 
   List<String> actividadesSeleccionadas = [];
+  final List<String> tiposViaje = [
+    'Aventura',
+    'Relajación',
+    'Familiar',
+    'Negocios',
+    'Romántico',
+    'Cultural',
+  ];
 
   @override
   void dispose() {
@@ -46,7 +55,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
   void limpiarFormulario() {
     setState(() {
       destinoSeleccionado = null;
-
+      tipoViajeSeleccionado = null;
       descripcionController.clear();
 
       rangofechas = null;
@@ -126,6 +135,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
   Future<void> crearViaje() async {
     if (destinoSeleccionado == null ||
+        tipoViajeSeleccionado == null ||
         fechaInicio == null ||
         fechaFin == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +145,6 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     }
 
     setState(() => cargando = true);
-
     try {
       final destinoNormalizado = normalizarDestino(destinoSeleccionado!);
       final coords = await geocoding.obtenerCoordenadas(destinoNormalizado);
@@ -153,13 +162,25 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
       final destinoLat = coords['lat']!;
       final destinoLng = coords['lng']!;
 
-      // 🔥 ESTE ES EL FIX REAL
+      // 1. Primero formatear
       final destinoFormateado = FormateadorDestino.formatear(
         destinoNormalizado,
       );
 
+      // 2. Luego buscar el nombre bonito en Firestore
+      String nombreMostrar = destinoFormateado;
+      final ciudadDoc = await FirebaseFirestore.instance
+          .collection('ciudades')
+          .doc(destinoNormalizado.toLowerCase().trim())
+          .get();
+
+      if (ciudadDoc.exists && ciudadDoc.data()?['nombre'] != null) {
+        nombreMostrar = ciudadDoc.data()!['nombre'];
+      }
+
+      // 3. Crear el viaje con el nombre correcto
       final idViaje = await viajeServicio.crearViaje(
-        destino: destinoFormateado,
+        destino: nombreMostrar, // 👈 cambiado
         fechaInicio: fechaInicio!,
         fechaFin: fechaFin!,
         descripcion: descripcionController.text,
@@ -168,6 +189,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         lng: destinoLng,
         origen: '',
         usuarioId: FirebaseAuth.instance.currentUser!.uid,
+        tipoViaje: tipoViajeSeleccionado!,
       );
 
       String? imagenUrl;
@@ -177,7 +199,6 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
           imagenSeleccionada!,
           idViaje,
         );
-
         await FirebaseFirestore.instance
             .collection('viajes')
             .doc(idViaje)
@@ -189,6 +210,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
       final inicioTemp = fechaInicio!;
       final finTemp = fechaFin!;
       final descripcionTemp = descripcionController.text;
+      final tipoViajeTemp = tipoViajeSeleccionado!;
+      final actividadesTemp = List<String>.from(actividadesSeleccionadas);
 
       limpiarFormulario();
 
@@ -196,15 +219,17 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         context,
         MaterialPageRoute(
           builder: (_) => DetalleViajePantalla(
-            nombre: destinoNormalizado,
+            nombre: nombreMostrar, // 👈 cambiado
+            destino: nombreMostrar, // 👈 cambiado
             fechaInicio: inicioTemp,
             fechaFin: finTemp,
             descripcion: descripcionTemp,
             idViaje: idViaje,
-            destino: destinoNormalizado,
             destinoLat: destinoLat,
             destinoLng: destinoLng,
             origen: '',
+            tipoViaje: tipoViajeTemp,
+            actividades: actividadesTemp,
           ),
         ),
       );
@@ -259,6 +284,29 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                 mostrarTipo: false,
                 mostrarEstilo: false,
                 mostrarPrecio: false,
+              ),
+              const SizedBox(height: 20),
+
+              Text("Tipo de viaje", style: GoogleFonts.poppins(fontSize: 16)),
+
+              const SizedBox(height: 10),
+
+              DropdownButtonFormField<String>(
+                value: tipoViajeSeleccionado,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                hint: const Text("Selecciona un tipo"),
+                items: tiposViaje.map((tipo) {
+                  return DropdownMenuItem(value: tipo, child: Text(tipo));
+                }).toList(),
+                onChanged: (valor) {
+                  setState(() {
+                    tipoViajeSeleccionado = valor;
+                  });
+                },
               ),
 
               const SizedBox(height: 20),

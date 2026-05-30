@@ -363,6 +363,8 @@ class ListaViajesPantalla extends StatelessWidget {
                           destinoLat: lat,
                           destinoLng: lng,
                           origen: origen,
+                          tipoViaje: (data["tipoViaje"] as String?) ?? "Desconocido",
+                          actividades: (data["actividades"] as List<dynamic>?) ?? [],
                         ),
                       ),
                     );

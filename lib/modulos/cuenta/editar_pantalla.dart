@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:proyecto/nucleo/servicios/usuario_servicio.dart';
@@ -52,39 +53,47 @@ class _EditarPerfilState extends State<EditarPerfil> {
     });
 
     try {
-      final quiereCambiarPassword = nuevaPasswordController.text
-          .trim()
-          .isNotEmpty;
+      final nuevoCorreo = correoController.text.trim();
+      final nuevoUsuario = usuarioController.text.trim().toLowerCase();
 
-      final quiereCambiarCorreo = correoController.text.trim() != user!.email;
+      final nuevaPassword = nuevaPasswordController.text.trim();
 
-      if (quiereCambiarPassword || quiereCambiarCorreo) {
-        final cred = EmailAuthProvider.credential(
-          email: user!.email!,
-          password: passwordActualController.text.trim(),
+      final passwordActual = passwordActualController.text.trim();
+
+      final quiereCambiarCorreo = nuevoCorreo != user!.email;
+
+      final quiereCambiarPassword = nuevaPassword.isNotEmpty;
+
+      // VALIDAR PASSWORD ACTUAL
+      if ((quiereCambiarCorreo || quiereCambiarPassword) &&
+          passwordActual.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ingresa tu contraseña actual')),
         );
-        if ((quiereCambiarCorreo || quiereCambiarPassword) &&
-            passwordActualController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ingresa tu contraseña actual')),
-          );
 
-          setState(() {
-            cargando = false;
-          });
+        setState(() {
+          cargando = false;
+        });
 
-          return;
-        }
-        if (quiereCambiarPassword) {
-          await user!.updatePassword(nuevaPasswordController.text.trim());
-        }
+        return;
       }
 
+      // REAUTENTICAR
+      if (quiereCambiarCorreo || quiereCambiarPassword) {
+        final cred = EmailAuthProvider.credential(
+          email: user!.email!,
+          password: passwordActual,
+        );
+
+        await user!.reauthenticateWithCredential(cred);
+      }
+
+      // VALIDAR CORREO REPETIDO
       final metodos = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
-        correoController.text.trim(),
+        nuevoCorreo,
       );
 
-      if (metodos.isNotEmpty && correoController.text.trim() != user!.email) {
+      if (metodos.isNotEmpty && nuevoCorreo != user!.email) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Ese correo ya está registrado')),
         );
@@ -95,26 +104,84 @@ class _EditarPerfilState extends State<EditarPerfil> {
 
         return;
       }
+      if (quiereCambiarCorreo) {
+        await user!.verifyBeforeUpdateEmail(nuevoCorreo);
 
-      await usuarioServicio.actualizarUsuario(
-        nombreUsuario: usuarioController.text.trim(),
-        correo: correoController.text.trim(),
-      );
+        // 👇 Guarda el correo nuevo como pendiente en Firestore
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(user!.uid)
+            .update({'correoPendiente': nuevoCorreo});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Datos actualizados correctamente')),
-      );
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Se envió verificación a $nuevoCorreo. '
+              'Verifica tu correo y vuelve a iniciar sesión.',
+            ),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        setState(() {
+          cargando = false;
+        });
+        return;
+      }
+
+      // CAMBIAR CORREO
+      // CAMBIAR CORREO
+      if (quiereCambiarCorreo) {
+        await user!.verifyBeforeUpdateEmail(nuevoCorreo);
+
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Se envió verificación a $nuevoCorreo. '
+              'Verifica tu correo y vuelve a iniciar sesión para aplicar el cambio.',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+
+        // NO cerrar sesión aquí — el usuario sigue activo con el correo anterior
+        // El cambio se aplica cuando verifique el enlace e inicie sesión de nuevo
+        setState(() {
+          cargando = false;
+        });
+        return;
+      }
+
+      // CAMBIAR PASSWORD
+      if (quiereCambiarPassword) {
+        await user!.updatePassword(nuevaPassword);
+      }
+
+      // ACTUALIZAR USUARIO EN FIRESTORE
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user!.uid)
+          .update({'nombreUsuario': nuevoUsuario});
+
+      await user!.updateDisplayName(nuevoUsuario);
+
+      if (!quiereCambiarCorreo) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Datos actualizados correctamente')),
+        );
+      }
 
       passwordActualController.clear();
       nuevaPasswordController.clear();
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de autenticación: ${e.message}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${e.code} - ${e.message}')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error al actualizar datos: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() {
         cargando = false;

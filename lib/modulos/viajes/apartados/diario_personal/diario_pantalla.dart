@@ -26,15 +26,18 @@ class DiarioPantalla extends StatefulWidget {
 class _DiarioPantallaState extends State<DiarioPantalla> {
   final ImagePicker _picker = ImagePicker();
   List<File> fotosLocales = [];
+  List<DateTime> fechasFotos = [];
   TextEditingController diarioController = TextEditingController();
 
   List<TextEditingController> captionsControllers = [];
+  List<TextEditingController> actividadControllers = [];
+  List<TextEditingController> lugarControllers = [];
 
   Future<bool> _solicitarPermisoGaleria() async {
     PermissionStatus estado;
 
     if (Platform.isAndroid) {
-      estado = await Permission.storage.request();
+      estado = await Permission.photos.request();
     } else {
       estado = await Permission.photos.request();
     }
@@ -59,30 +62,58 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
   // Función para tomar o elegir foto y guardarla localmente
   Future<void> _obtenerFoto(ImageSource fuente) async {
     try {
-      // 1. Abrimos cámara/galería con calidad 70 (Optimización requerida en tu DER)
       final XFile? foto = await _picker.pickImage(
         source: fuente,
         imageQuality: 70,
       );
 
-      if (foto != null) {
-        // 2. Obtenemos la ruta de documentos seguros del celular
-        final directorio = await getApplicationDocumentsDirectory();
+      if (foto == null) return;
 
-        // 3. Creamos un nuevo nombre para la foto usando la fecha exacta
-        final nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final rutaDestino = '${directorio.path}/$nombreArchivo';
+      // 📁 Carpeta privada permanente de la app
+      final directorioBase = await getApplicationDocumentsDirectory();
 
-        // 4. Movemos la foto temporal a la memoria permanente
-        final fotoGuardada = await File(foto.path).copy(rutaDestino);
+      // 📁 Carpeta específica del viaje
+      final carpetaViaje = Directory(
+        '${directorioBase.path}/diarios/${widget.idViaje}',
+      );
 
-        setState(() {
-          fotosLocales.add(fotoGuardada);
-          captionsControllers.add(TextEditingController());
-        });
+      // Crear carpeta si no existe
+      if (!await carpetaViaje.exists()) {
+        await carpetaViaje.create(recursive: true);
+      }
+
+      // Nombre único para la foto
+      final nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // Ruta final
+      final rutaDestino = '${carpetaViaje.path}/$nombreArchivo';
+
+      // ✅ Copiar imagen a almacenamiento local permanente
+      final fotoGuardada = await File(foto.path).copy(rutaDestino);
+
+      // 🔍 Verificar ruta guardada
+      debugPrint('Foto guardada en: ${fotoGuardada.path}');
+
+      setState(() {
+        fotosLocales.add(fotoGuardada);
+
+        captionsControllers.add(TextEditingController());
+        actividadControllers.add(TextEditingController());
+        lugarControllers.add(TextEditingController());
+
+        fechasFotos.add(DateTime.now());
+      });
+
+      // ✅ Guardado automático
+      await guardarDiario();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Foto guardada correctamente")),
+        );
       }
     } catch (e) {
-      print("❌ Error al obtener la foto: $e");
+      debugPrint("❌ Error al obtener foto: $e");
     }
   }
 
@@ -94,6 +125,9 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
         fotosConDescripcion.add({
           'ruta': fotosLocales[i].path,
           'descripcion': captionsControllers[i].text,
+          'actividad': actividadControllers[i].text,
+          'lugar': lugarControllers[i].text,
+          'fechaAgregado': fechasFotos[i],
         });
       }
       // 🔥 Obtenemos el ID de tu usuario que inició sesión
@@ -111,15 +145,6 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
             'fecha': widget.dia,
             'fotos_locales': fotosConDescripcion,
           }, SetOptions(merge: true));
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("¡Diario guardado!"),
-            backgroundColor: Color.fromARGB(255, 150, 150, 150),
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -151,6 +176,12 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
         // Verificamos si hay fotos guardadas
         if (data['fotos_locales'] != null) {
           List<dynamic> fotosGuardadas = data['fotos_locales'];
+          fotosGuardadas.sort((a, b) {
+            final fechaA = (a['fechaAgregado'] as Timestamp).toDate();
+            final fechaB = (b['fechaAgregado'] as Timestamp).toDate();
+
+            return fechaA.compareTo(fechaB);
+          });
 
           for (var item in fotosGuardadas) {
             final ruta = item['ruta'];
@@ -163,6 +194,13 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
               captionsControllers.add(
                 TextEditingController(text: item['descripcion'] ?? ''),
               );
+              actividadControllers.add(
+                TextEditingController(text: item['actividad'] ?? ''),
+              );
+
+              lugarControllers.add(
+                TextEditingController(text: item['lugar'] ?? ''),
+              );
             }
           }
         }
@@ -171,6 +209,10 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
         setState(() {
           diarioController.text = data['texto'] ?? '';
           fotosLocales = fotosRecuperadas;
+          fechasFotos = [];
+          for (var item in data['fotos_locales'] ?? []) {
+            fechasFotos.add((item['fechaAgregado'] as Timestamp).toDate());
+          }
         });
       }
     } catch (e) {
@@ -183,6 +225,24 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
     super.initState();
     // 🔥 Esto hace que la app busque tus recuerdos apenas entres a la pantalla
     cargarDiario();
+  }
+
+  @override
+  void dispose() {
+    diarioController.dispose();
+
+    for (var controller in captionsControllers) {
+      controller.dispose();
+    }
+    for (var controller in actividadControllers) {
+      controller.dispose();
+    }
+
+    for (var controller in lugarControllers) {
+      controller.dispose();
+    }
+
+    super.dispose();
   }
 
   @override
@@ -315,7 +375,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                   const SizedBox(height: 14),
 
                   SizedBox(
-                    height: 280,
+                    height: 420,
                     child: fotosLocales.isEmpty
                         ? const Center(child: Text("Aún no hay fotos"))
                         : PageView.builder(
@@ -410,10 +470,31 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                                               setState(() {
                                                 fotosLocales.removeAt(index);
 
+                                                captionsControllers[index]
+                                                    .dispose();
+
+                                                captionsControllers[index]
+                                                    .dispose();
                                                 captionsControllers.removeAt(
                                                   index,
                                                 );
+
+                                                actividadControllers[index]
+                                                    .dispose();
+                                                actividadControllers.removeAt(
+                                                  index,
+                                                );
+
+                                                lugarControllers[index]
+                                                    .dispose();
+                                                lugarControllers.removeAt(
+                                                  index,
+                                                );
+
+                                                fechasFotos.removeAt(index);
                                               });
+
+                                              await guardarDiario();
                                             },
 
                                             child: Container(
@@ -448,8 +529,73 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
                                         maxLines: 2,
 
+                                        onChanged: (_) {
+                                          guardarDiario();
+                                        },
+
                                         decoration: InputDecoration(
                                           hintText: "Pie de foto",
+                                          isDense: true,
+
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+
+                                    SizedBox(
+                                      width: 240,
+                                      child: TextField(
+                                        controller: actividadControllers[index],
+                                        textAlign: TextAlign.center,
+
+                                        onChanged: (_) {
+                                          guardarDiario();
+                                        },
+
+                                        decoration: InputDecoration(
+                                          hintText: "Actividad",
+                                          isDense: true,
+
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 8),
+
+                                    SizedBox(
+                                      width: 240,
+                                      child: TextField(
+                                        controller: lugarControllers[index],
+                                        textAlign: TextAlign.center,
+
+                                        onChanged: (_) {
+                                          guardarDiario();
+                                        },
+
+                                        decoration: InputDecoration(
+                                          hintText: "Lugar",
                                           isDense: true,
 
                                           contentPadding:
@@ -501,6 +647,9 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                     height: 180,
                     child: TextField(
                       controller: diarioController,
+                      onChanged: (_) {
+                        guardarDiario();
+                      },
                       maxLines: null,
                       expands: true,
                       textAlignVertical: TextAlignVertical.top,
@@ -517,17 +666,6 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
             ),
           ),
         ],
-      ),
-
-      /// 💾 BOTÓN GUARDAR IGUAL ESTILO
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: guardarDiario,
-        backgroundColor: const Color(0xFF0066D2),
-        icon: const Icon(Icons.save, color: Color.fromARGB(255, 255, 255, 255)),
-        label: const Text(
-          "Guardar",
-          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        ),
       ),
     );
   }
