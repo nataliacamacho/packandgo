@@ -24,9 +24,9 @@ class TarjetaLugar extends StatelessWidget {
   });
 
   // ====================================================================
-  // 🔥 EL EXTRACTOR INFALIBLE CON "CACHE BUSTER"
+  // 🔥 EL EXTRACTOR INFALIBLE CON RESPALDO VISUAL REAL HD
   // ====================================================================
- String _obtenerFotoFinal() {
+  String _obtenerFotoFinal() {
     // ✅ PRIORIDAD 1: usar la imagen ya construida (¡Protegida contra nulos!)
     if (imagenUrl != null && 
         imagenUrl!.isNotEmpty && 
@@ -35,14 +35,12 @@ class TarjetaLugar extends StatelessWidget {
       return imagenUrl!;
     }
     
-    // ✅ PRIORIDAD 2: reconstruir desde photos (¡Protegida contra nulos!)
+    // ✅ PRIORIDAD 2: reconstruir desde photos de Google
     if (lugar != null && lugar!['photos'] != null) {
       final fotos = lugar!['photos'];
 
       if (fotos is List && fotos.isNotEmpty) {
         final primera = fotos.first;
-
-        // 🔥 COMPATIBLE CON AMBOS FORMATOS
         final ref = primera['photo_reference'] ?? primera['photoReference'];
 
         if (ref != null) {
@@ -54,11 +52,41 @@ class TarjetaLugar extends StatelessWidget {
       }
     }
 
-    // 🔥 EL TRUCO MAESTRO: Si llegamos hasta aquí, significa que Google no tiene foto.
-    // Devolvemos un texto vacío ('') para engañar al Image.network.
-    // Al recibir un texto vacío, Flutter dirá "¡Error!" y activará automáticamente
-    // el errorBuilder que diseñamos hace rato, pintando tu foto HD de Wikipedia.
-    return ''; 
+    // ✅ PRIORIDAD 3: PLAN B TURÍSTICO REAL
+    // Si Google no tiene foto, devolvemos la imagen HD de Wikipedia de la categoría
+    return _obtenerImagenRespaldoWikipedia(categoria ?? 'otro'); 
+  }
+
+  // -------------------------------------------------------------------------
+  // 🌍 BANCO DE IMÁGENES DE RESPALDO HD (Wikipedia / Commons)
+  // -------------------------------------------------------------------------
+  String _obtenerImagenRespaldoWikipedia(String cat) {
+    switch (cat.toLowerCase()) {
+      case 'zona_arqueologica':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Chichen_Itza_3.jpg/800px-Chichen_Itza_3.jpg";
+      case 'cafeteria':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/A_small_cup_of_coffee.JPG/800px-A_small_cup_of_coffee.JPG";
+      case 'restaurante':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Restaurant_in_Bogot%C3%A1.jpg/800px-Restaurant_in_Bogot%C3%A1.jpg";
+      case 'playa':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Playa_del_Carmen%2C_Quintana_Roo%2C_Mexico.jpg/800px-Playa_del_Carmen%2C_Quintana_Roo%2C_Mexico.jpg";
+      case 'museo':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Museo_Nacional_de_Antropolog%C3%ADa_-_Patio_Central.jpg/800px-Museo_Nacional_de_Antropolog%C3%ADa_-_Patio_Central.jpg";
+      case 'bar':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Irish_Pub_interior.jpg/800px-Irish_Pub_interior.jpg";
+      case 'parque':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Parque_M%C3%A9xico_04.jpg/800px-Parque_M%C3%A9xico_04.jpg";
+      case 'mirador':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Mirador_de_La_Quebrada.jpg/800px-Mirador_de_La_Quebrada.jpg";
+      case 'centro_comercial':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Centro_Comercial_Santa_Fe.jpg/800px-Centro_Comercial_Santa_Fe.jpg";
+      case 'actividades_extremas':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Paragliding_Kossen.jpg/800px-Paragliding_Kossen.jpg";
+      case 'monumento':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Angel_de_la_Independencia_CDMX.jpg/800px-Angel_de_la_Independencia_CDMX.jpg";
+      default:
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Hacienda_San_Gabriel_Barrera_Guanajuato.jpg/800px-Hacienda_San_Gabriel_Barrera_Guanajuato.jpg";
+    }
   }
 
  // -------------------------------------------------------------------------

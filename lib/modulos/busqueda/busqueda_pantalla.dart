@@ -329,40 +329,50 @@ Future<void> _resolverCoordenadas() async {
         final ciudad = _ciudadesMexico.firstWhere((c) => c['id'] == destinoSeleccionado);
         nombreCiudad = ciudad['nombre'];
       } catch (_) { nombreCiudad = destinoSeleccionado ?? ''; }
+      // ====================================================================
+// 🔥 CONFIGURACIÓN UNIFICADA Y LIMPIEZA DE TEXTO DE CONSULTA
+// ====================================================================
+String textoConsultaApi = texto.trim();
 
-      String textoConsultaApi = texto.trim();
+// 1. Validamos si es una categoría que Google entiende nativamente
+bool esCategoriaEstricta = false;
+if (tipoSeleccionado != null) {
+  String t = tipoSeleccionado!.toLowerCase();
+  if (t.contains('cafe') || t.contains('rest') || t.contains('bar') || 
+      t.contains('parq') || t.contains('muse') || t.contains('cent')) {
+    esCategoriaEstricta = true;
+  }
+}
 
-      
-      // Determinamos si es una categoría que Google entiende nativamente
-      bool esCategoriaEstricta = false;
-      if (tipoSeleccionado != null) {
-        String t = tipoSeleccionado!.toLowerCase();
-        if (t.contains('cafe') || t.contains('rest') || t.contains('bar') || 
-            t.contains('parq') || t.contains('muse') || t.contains('cent')) {
-          esCategoriaEstricta = true;
-        }
-      }
+// 2. Si el usuario no escribió nada, asignamos el texto inteligente sin duplicar ifs
+if (textoConsultaApi.isEmpty) {
+  if (tipoSeleccionado != null) {
+    if (esCategoriaEstricta) {
+      // Si es restaurante, café, bar, etc., el texto debe ser idéntico al tipo
+      // para que no choque con el parámetro &type de la API de Google
+      textoConsultaApi = tipoSeleccionado!;
+    } else {
+      // Truco maestro para zonas arqueológicas, miradores, playas y actividades extremas:
+      // Forzamos la búsqueda por texto explícito agregando la ciudad si existe
+      textoConsultaApi = (destinoSeleccionado != null)
+          ? "${tipoSeleccionado!} en $destinoSeleccionado"
+          : tipoSeleccionado!;
+    }
+  } else {
+    // Si no hay ningún chip seleccionado
+    if (destinoSeleccionado != null) {
+      textoConsultaApi = "puntos de interes historicos, atracciones locales, monumentos";
+    } else {
+      // Si tampoco hay destino (Modo GPS local en tu ubicación real)
+      textoConsultaApi = "atracciones populares, lugares de interes";
+    }
+  }
+}
 
-            if (textoConsultaApi.isEmpty && destinoSeleccionado != null) {
-        textoConsultaApi = "puntos de interes historicos, atracciones locales, monumentos";
-      } else if (textoConsultaApi.isEmpty) {
-        // Si tampoco hay destino, que busque atracciones populares cerca del usuario
-        textoConsultaApi = "atracciones populares, lugares de interes";
-      }
-
-      if (textoConsultaApi.isEmpty) {
-        if (tipoSeleccionado == null) {
-          textoConsultaApi = "turismo en $nombreCiudad";
-        } else if (!esCategoriaEstricta) {
-          // 🔥 EL TRUCO: Para zonas arqueológicas, miradores, playas y actividades extremas
-          // obligamos a Google a buscarlos por TEXTO explícito para que no se confunda.
-          textoConsultaApi = "${tipoSeleccionado!} en $nombreCiudad";
-        }
-      }
-
-      if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz') {
-        textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
-      }
+// 3. Excepción de control geográfico para La Paz
+if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz') {
+  textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
+}
 
       // 4. TRADUCTOR PARA APIS
       String? tipoParaApi;
@@ -516,8 +526,7 @@ Future<void> _resolverCoordenadas() async {
 
             return {
               ...l,
-              'name': l['name'] ?? 'Sin nombre', // Si Google te manda algo crudo, usa el nombre procesado              'direccion': l['vicinity'] ?? _obtenerDireccion(l),
-              'categoriaPrincipal': categoriaHomologada, 
+              'name': _traducirNombre(l['name'] ?? 'Sin nombre'),              'categoriaPrincipal': categoriaHomologada, 
               'experiencias': etiquetasNLP,              
               'rating': _toDouble(l['rating'], fb: 5),
               'popularity': _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5),
@@ -527,6 +536,7 @@ Future<void> _resolverCoordenadas() async {
               'distancia': calcularDistancia(_latActual, _lngActual, latGoogle, lngGoogle),
               'imagen': urlImagen,
               'foto': urlImagen, 
+              'photos': l['photos'],
               'horario': 'Horario sujeto a disponibilidad del lugar',
             };
           })
@@ -535,23 +545,30 @@ Future<void> _resolverCoordenadas() async {
           .toList(); 
 
       // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
-      listaProcesada = listaProcesada.where((l) {
-        final nombreMin = (l['name'] ?? '').toString().toLowerCase();
-        final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
-        bool esZonaEstricta = destinoAValidar.contains('chapala') || destinoAValidar.contains('ajijic');
-        
-        if (esZonaEstricta && distanciaKM > 35.0) return false; 
-        if (distanciaKM > 3000.0) return false;
+listaProcesada = listaProcesada.where((l) {
+  final nombreMin = (l['name'] ?? '').toString().toLowerCase();
+  final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
+  
+double limiteMaximoKM = (destinoSeleccionado == null) ? 15.0 : 80.0;
+  if (distanciaKM > limiteMaximoKM) return false;
+  final esBasura = nombreMin.contains("walmart") || 
+                   nombreMin.contains("oxxo") || 
+                   nombreMin.contains("soriana") || 
+                   nombreMin.contains("bodega aurrera") || 
+                   nombreMin.contains("honda") || 
+                   nombreMin.contains("hospital");
 
-        final esBasura = nombreMin.contains("walmart") || nombreMin.contains("oxxo") || nombreMin.contains("soriana") || nombreMin.contains("bodega aurrera") || nombreMin.contains("honda") || nombreMin.contains("hospital");
+  return !esBasura;
+}).toList();
 
-        return !esBasura;
-      }).toList();
-
-      if (listaProcesada.isEmpty && destinoSeleccionado != null) {
-        setState(() { error = "Por ahora, solo trabajamos con destinos dentro de México."; lugares = []; cargando = false; });
-        return;
-      }
+if (listaProcesada.isEmpty && destinoSeleccionado != null) {
+  setState(() { 
+    error = "Por ahora, solo trabajamos con destinos dentro de México."; 
+    lugares = []; 
+    cargando = false; 
+  });
+  return;
+}
 
       // 8. ELIMINAR DUPLICADOS
       final Map<String, Map<String, dynamic>> unicos = {};
@@ -852,36 +869,50 @@ Future<void> _resolverCoordenadas() async {
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
-
   // -------------------------------------------------------------------------
-  // PESOS
-  // -------------------------------------------------------------------------
-  List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
-    return lista.map((lugar) {
-      final rating = _toDouble(lugar['rating'], fb: 5);
-      final popularity = _toDouble(lugar['popularity'], fb: 5);
-      final distancia = _toDouble(lugar['distancia'], fb: 1);
-      final categoria = lugar['categoriaPrincipal'].toString().toLowerCase();
+// PESOS (MODIFICADO PARA DAR PRIORIDAD ABSOLUTA A GOOGLE PLACES)
+// -------------------------------------------------------------------------
+List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
+  // 🔥 Al agregar <Map<String, dynamic>> aquí, matamos el error de tipado nulo
+  return lista.map<Map<String, dynamic>>((lugar) {
+    final rating = _toDouble(lugar['rating'], fb: 5);
+    final popularity = _toDouble(lugar['popularity'], fb: 5);
+    final distancia = _toDouble(lugar['distancia'], fb: 1);
+    final categoria = lugar['categoriaPrincipal'].toString().toLowerCase();
 
-      double distanciaPeso = 10 / (distancia + 1);
-      if (distanciaPeso > 10) distanciaPeso = 10;
+    // Bono de cercanía geográfico
+    double distanciaPeso = 10 / (distancia + 1);
+    if (distanciaPeso > 10) distanciaPeso = 10;
 
+    // 🔥 LA REGLA MAESTRA DEL GPS LOCAL
+    if (destinoSeleccionado == null) {
+      // Si es búsqueda local en tu ubicación real, ignoramos la popularidad de internet
+      // y ordenamos los lugares puramente por el que tengas más cerca de ti.
+      lugar['relevancia'] = distanciaPeso * 10.0;
+    } else {
+      // Si el usuario buscó un destino turístico, aplicamos la fórmula polinomial base
       double interes = 0;
       if (_intereses.containsKey(categoria)) {
         final puntos = _intereses[categoria];
         if (puntos is int) interes = puntos >= 8 ? 10 : puntos * 1.25;
       }
-      double pesoPopularidad = destinoSeleccionado == null ? 0.1 : 0.2;
-      double pesoDistancia = destinoSeleccionado == null ? 0.4 : 0.2;
+
+      final tieneFotosReales = lugar['photos'] != null && 
+                               (lugar['photos'] is List) && 
+                               (lugar['photos'] as List).isNotEmpty;
+      double bonoFuenteGoogle = tieneFotosReales ? 20.0 : 0.0;
 
       lugar['relevancia'] =
-          (rating * 0.4) +
-          (popularity * pesoPopularidad) +
-          (distanciaPeso * pesoDistancia) +
-          (interes * 0.2);
-      return lugar;
-    }).toList();
-  }
+          (rating * 0.3) +
+          (popularity * 0.2) +
+          (distanciaPeso * 0.2) +
+          (interes * 0.2) +
+          bonoFuenteGoogle;
+    }
+
+    return lugar;
+  }).toList();
+} 
 
   // -------------------------------------------------------------------------
   // QUICKSORT
@@ -979,6 +1010,37 @@ Future<void> _resolverCoordenadas() async {
     if (v is String) return double.tryParse(v) ?? fb;
     return fb;
   }
+
+  // -------------------------------------------------------------------------
+// TRADUCTOR DE EMERGENCIA PARA NOMBRES
+// -------------------------------------------------------------------------
+String _traducirNombre(String nombreOriginal) {
+  String nombre = nombreOriginal;
+  // Diccionario para forzar los lugares que la API manda en inglés
+  final traducciones = {
+    'temple of immaculate': 'Templo de la Inmaculada',
+    'temple of the immaculate': 'Templo de la Inmaculada',
+    'bust of': 'Busto de',
+    'statue of': 'Estatua de',
+    'monument to': 'Monumento a',
+    'church of': 'Iglesia de',
+    'museum of': 'Museo de',
+    'cathedral of': 'Catedral de',
+    'historic center': 'Centro Histórico',
+    'main square': 'Plaza Principal',
+    'city hall': 'Palacio Municipal',
+  };
+
+  String nombreMin = nombre.toLowerCase();
+  traducciones.forEach((ingles, espanol) {
+    if (nombreMin.contains(ingles)) {
+      // Reemplaza el texto sin importar si viene en mayúsculas o minúsculas
+      nombre = nombre.replaceAll(RegExp(ingles, caseSensitive: false), espanol);
+    }
+  });
+  
+  return nombre;
+}
 
   // -------------------------------------------------------------------------
   // UI
@@ -1194,7 +1256,7 @@ Future<void> _resolverCoordenadas() async {
           lat: _toDouble(l['lat']),
           lng: _toDouble(l['lng']),
           categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
-          imagenUrl: l['imagen']?.toString() ?? '',
+          imagenUrl: l['foto'] ?? l['imagen'],        
           lugar: l, // 🔥 EL PUENTE MÁGICO QUE LE MANDA LOS DATOS A LA TARJETA
           onTap: () {
             if (widget.esSeleccion) {
