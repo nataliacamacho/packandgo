@@ -48,6 +48,8 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
   String avisoRuta = "";
 
   List<SegmentoRuta> segmentos = [];
+  static const double _esperaAeropuerto = 2.0;
+  static const double _esperaTerminal = 0.5;
   double costoTotal = 0;
   double tiempoTotal = 0;
 
@@ -672,6 +674,21 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
         ),
       );
     }
+    // RQF78 — sumar tiempos de espera entre transportes
+    double tiempoEspera = 0;
+    for (int i = 0; i < segmentos.length - 1; i++) {
+      final actual = segmentos[i].tipo;
+      final siguiente = segmentos[i + 1].tipo;
+      if (actual == 'avion' || siguiente == 'avion') {
+        tiempoEspera += _esperaAeropuerto;
+      } else if (actual != siguiente) {
+        tiempoEspera += _esperaTerminal;
+      }
+    }
+
+    costoTotal = segmentos.fold(0.0, (sum, s) => sum + s.costo);
+    tiempoTotal =
+        segmentos.fold(0.0, (sum, s) => sum + s.tiempo) + tiempoEspera;
 
     setState(() {
       cargando = false;
@@ -793,7 +810,59 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
 
                 const SizedBox(height: 20),
 
-                ...segmentos.map(_cardSegmento),
+                ...segmentos
+                    .where((s) => s.tipo != "espera")
+                    .map(_cardSegmento),
+
+                const SizedBox(height: 10),
+
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF3FF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Tiempo total estimado",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            formatearTiempo(tiempoTotal),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Costo total estimado",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            "\$${costoTotal.toStringAsFixed(0)} MXN",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      const Text(
+                        "* Incluye tiempos de espera en aeropuerto",
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
     );

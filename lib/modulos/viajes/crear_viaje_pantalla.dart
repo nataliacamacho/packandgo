@@ -252,6 +252,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        surfaceTintColor: const Color.fromARGB(255, 255, 255, 255),
+        scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: true,
         title: Text("Pack&Go", style: GoogleFonts.poppins(fontSize: 32)),
@@ -292,10 +294,21 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
               const SizedBox(height: 10),
 
               DropdownButtonFormField<String>(
+                dropdownColor: const Color.fromARGB(255, 255, 255, 255),
                 value: tipoViajeSeleccionado,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(
+                  filled: true,
+                  fillColor: const Color(0xFFFDF6EC),
+                  enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFF6A230)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0066D2),
+                      width: 2,
+                    ),
                   ),
                 ),
                 hint: const Text("Selecciona un tipo"),
@@ -321,7 +334,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5D09E),
+                    color: const Color(0xFFFDF6EC),
+                    border: Border.all(color: const Color(0xFFF6A230)),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -333,13 +347,30 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
+
+              Text(
+                "Descripción (opcional)",
+                style: GoogleFonts.poppins(fontSize: 16),
+              ),
 
               TextField(
                 controller: descripcionController,
                 cursorColor: const Color(0xFF0066D2),
-                decoration: const InputDecoration(
-                  labelText: "Descripción (opcional)",
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFFDF6EC),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFF6A230)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0066D2),
+                      width: 2,
+                    ),
+                  ),
                 ),
               ),
 
@@ -376,9 +407,13 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                         }
                       });
                     },
-                    backgroundColor: Colors.white,
-
+                    backgroundColor: const Color(0xFFFDF6EC),
                     selectedColor: const Color(0xFFF6A230),
+                    side: BorderSide(
+                      color: seleccionada
+                          ? const Color(0xFFF6A230)
+                          : Colors.orange.shade200,
+                    ),
 
                     checkmarkColor: Colors.white,
                   );
@@ -394,6 +429,10 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF6A230),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 3,
                     ),
                     onPressed: cargando ? null : crearViaje,
                     child: cargando

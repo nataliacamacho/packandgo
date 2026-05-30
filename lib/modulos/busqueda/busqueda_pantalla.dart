@@ -979,6 +979,8 @@ Future<void> _resolverCoordenadas() async {
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       appBar: AppBar(
+        surfaceTintColor: const Color.fromARGB(255, 255, 255, 255),
+        scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,

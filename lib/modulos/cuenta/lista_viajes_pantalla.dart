@@ -211,6 +211,8 @@ class ListaViajesPantalla extends StatelessWidget {
               ? "Viajes futuros"
               : "Viajes pasados",
         ),
+        surfaceTintColor: const Color.fromARGB(255, 255, 255, 255),
+        scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
       ),
