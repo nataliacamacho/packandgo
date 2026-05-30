@@ -63,14 +63,96 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
 
     /// 🔥 CAMBIO CLAVE: si no hay hours, lo dejamos pasar
     debugPrint("HORARIOS DEL LUGAR: ${lugar['hours']}");
+    debugPrint("================================");
+    debugPrint("NOMBRE: ${lugar['nombre']}");
+    debugPrint("HOURS: ${lugar['hours']}");
+    debugPrint("TIPO HOURS: ${lugar['hours'].runtimeType}");
+    debugPrint("HORARIO REAL RECIBIDO:");
+    debugPrint(lugar['hours'].toString());
+    debugPrint("HORARIO:");
+debugPrint(lugar['horario'].toString());
+
+debugPrint("HOURS:");
+debugPrint(lugar['hours'].toString());
+    debugPrint("================================");
 
     bool horariosDisponibles =
         lugar['hours'] != null && lugar['hours'].toString().trim().isNotEmpty;
+
+    if (horariosDisponibles) {
+      final fechaSeleccionada = dia.weekday;
+      final horarioLugar = lugar['hours'].toString().toLowerCase();
+
+      bool cerradoEseDia = false;
+
+      switch (fechaSeleccionada) {
+        case DateTime.monday:
+          cerradoEseDia =
+              horarioLugar.contains("monday: closed") ||
+              horarioLugar.contains("lunes: cerrado");
+          break;
+
+        case DateTime.tuesday:
+          cerradoEseDia =
+              horarioLugar.contains("tuesday: closed") ||
+              horarioLugar.contains("martes: cerrado");
+          break;
+
+        case DateTime.wednesday:
+          cerradoEseDia =
+              horarioLugar.contains("wednesday: closed") ||
+              horarioLugar.contains("miercoles: cerrado") ||
+              horarioLugar.contains("miércoles: cerrado");
+          break;
+
+        case DateTime.thursday:
+          cerradoEseDia =
+              horarioLugar.contains("thursday: closed") ||
+              horarioLugar.contains("jueves: cerrado");
+          break;
+
+        case DateTime.friday:
+          cerradoEseDia =
+              horarioLugar.contains("friday: closed") ||
+              horarioLugar.contains("viernes: cerrado");
+          break;
+
+        case DateTime.saturday:
+          cerradoEseDia =
+              horarioLugar.contains("saturday: closed") ||
+              horarioLugar.contains("sabado: cerrado") ||
+              horarioLugar.contains("sábado: cerrado");
+          break;
+
+        case DateTime.sunday:
+          cerradoEseDia =
+              horarioLugar.contains("sunday: closed") ||
+              horarioLugar.contains("domingo: cerrado");
+          break;
+      }
+
+      if (cerradoEseDia) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Este lugar no estará disponible el día seleccionado. ¿Deseas elegir otro día o lugar?",
+            ),
+          ),
+        );
+
+        return;
+      }
+    }
 
     /// Agregar siempre el lugar
     setState(() {
       itinerarioPorDia[fechaKey]!.add(lugarNormalizado);
     });
+
+    ItinerarioServicio.guardarItinerarioEnFirebase(
+      widget.idViaje,
+      itinerarioPorDia,
+    );
 
     /// Mostrar aviso informativo si no hay horarios confiables
     if (!horariosDisponibles) {
@@ -327,6 +409,11 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
                               setState(() {
                                 itinerarioPorDia[fechaKey]!.removeAt(i);
                               });
+
+                              ItinerarioServicio.guardarItinerarioEnFirebase(
+                                widget.idViaje,
+                                itinerarioPorDia,
+                              );
                             },
                           ),
 
