@@ -72,6 +72,8 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
             // 🔥 AQUÍ ESTABA EL ERROR
             destinoLat: viaje["lat"],
             destinoLng: viaje["lng"],
+            tipoViaje: viaje["tipoViaje"] ?? "Desconocido",
+            actividades: (viaje["actividades"] as List<dynamic>?) ?? [],
           ),
         ),
       );
@@ -118,6 +120,8 @@ class _NavegacionPrincipalState extends State<NavegacionPrincipal> {
             // 🔥 AQUÍ ESTABA EL ERROR
             destinoLat: viaje["lat"],
             destinoLng: viaje["lng"],
+            tipoViaje: viaje["tipoViaje"] ?? "Desconocido",
+            actividades: (viaje["actividades"] as List<dynamic>?) ?? [],
           ),
         ),
       );

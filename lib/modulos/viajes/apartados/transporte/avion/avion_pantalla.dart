@@ -7,7 +7,8 @@ class PantallaAvion extends StatefulWidget {
   final String destino;
   final String origen;
 
-  const PantallaAvion({super.key, required this.destino, required this.origen});
+  const PantallaAvion(
+      {super.key, required this.destino, required this.origen});
 
   @override
   State<PantallaAvion> createState() => _PantallaAvionState();
@@ -15,7 +16,6 @@ class PantallaAvion extends StatefulWidget {
 
 class _PantallaAvionState extends State<PantallaAvion> {
   final servicio = ServicioAvion();
-
   List<RutaAvion> rutas = [];
   bool loading = true;
   String? error;
@@ -33,10 +33,8 @@ class _PantallaAvionState extends State<PantallaAvion> {
     });
 
     String origen = widget.origen;
-
     if (origen.isEmpty) {
-      final ubicacion = UbicacionServicio();
-      origen = await ubicacion.obtenerCiudadActual() ?? '';
+      origen = await UbicacionServicio().obtenerCiudadActual() ?? '';
     }
 
     if (origen.isEmpty) {
@@ -47,10 +45,8 @@ class _PantallaAvionState extends State<PantallaAvion> {
       return;
     }
 
-    final result = await servicio.obtenerRutas(
-      origen: origen,
-      destino: widget.destino,
-    );
+    final result =
+        await servicio.obtenerRutas(origen: origen, destino: widget.destino);
 
     if (result.isEmpty) {
       setState(() {
@@ -69,56 +65,41 @@ class _PantallaAvionState extends State<PantallaAvion> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      extendBodyBehindAppBar: false,
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
           children: [
             Container(
               padding: const EdgeInsets.only(
-                top: 50,
-                left: 16,
-                right: 16,
-                bottom: 16,
-              ),
+                  top: 50, left: 16, right: 16, bottom: 16),
               decoration: const BoxDecoration(color: Color(0xFFF6A230)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   const Center(
-                    child: Text(
-                      "Ruta en Avión",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: Text("Ruta en Avión",
+                        style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
                   ),
                   const Center(
-                    child: Text(
-                      "Información estimada",
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: Text("Información estimada",
+                        style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    widget.destino,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
+                  Text(widget.destino,
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9))),
                 ],
               ),
             ),
-
             Positioned(
               top: 0,
               left: 0,
@@ -135,91 +116,130 @@ class _PantallaAvionState extends State<PantallaAvion> {
           ],
         ),
       ),
-
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : error != null
-          ? Center(child: Text(error!))
-          : Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  color: Colors.orange.shade100,
-                  child: const Text(
-                    "⚠️ Información estimada basada en aeropuertos cercanos",
-                  ),
-                ),
-
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: rutas.length,
-                    itemBuilder: (_, index) {
-                      final r = rutas[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.18),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "${r.origen} → ${r.destino}",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+              ? Center(child: Text(error!))
+              : Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      color: Colors.orange.shade100,
+                      child: const Text(
+                        "⚠️ Los horarios, precios y aerolíneas mostrados son estimaciones basadas en distancia real. Para reservar, verifica disponibilidad y tarifas directamente en el sitio oficial de cada aerolínea.",
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    // Encabezado de tabla (RQF76)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF6A230),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Expanded(
+                              child: Text("Aerolínea",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))),
+                          Expanded(
+                              child: Text("Horario",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))),
+                          Expanded(
+                              child: Text("Duración",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))),
+                          Expanded(
+                              child: Text("Precio",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12))),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: rutas.length,
+                        itemBuilder: (_, index) {
+                          final r = rutas[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
                                   ),
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                Text(r.aeropuertoOrigen),
-                                Text(r.aeropuertoDestino),
-
-                                const SizedBox(height: 8),
-
-                                Row(
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.access_time, size: 16),
-                                    const SizedBox(width: 5),
-                                    Text(r.duracion),
+                                    // Fila de tabla
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                            child: Text(
+                                                r.aerolineas.first,
+                                                style: const TextStyle(
+                                                    fontSize: 12))),
+                                        Expanded(
+                                            child: Text(r.horarios.first,
+                                                style: const TextStyle(
+                                                    fontSize: 12))),
+                                        Expanded(
+                                            child: Text(r.duracion,
+                                                style: const TextStyle(
+                                                    fontSize: 12))),
+                                        Expanded(
+                                          child: Text(
+                                            "\$${r.precio}",
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight:
+                                                    FontWeight.bold,
+                                                color: Color(0xFF0066D2)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "${r.aeropuertoOrigen} → ${r.aeropuertoDestino}",
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey),
+                                    ),
                                   ],
                                 ),
-
-                                Text("\$${r.precio}"),
-
-                                const SizedBox(height: 8),
-
-                                const Text("Aerolíneas:"),
-                                ...r.aerolineas.map((a) => Text("• $a")),
-
-                                const SizedBox(height: 8),
-
-                                const Text("Horarios:"),
-                                ...r.horarios.map((h) => Text("• $h")),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
     );
   }
 }

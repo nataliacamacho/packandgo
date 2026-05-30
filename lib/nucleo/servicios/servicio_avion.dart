@@ -1,16 +1,28 @@
 import 'dart:math';
 import 'google_servicio.dart';
+import 'transporte_firestore_servicio.dart';
 import '../../modulos/viajes/apartados/transporte/avion/modelo_ruta_avion.dart';
 
 class ServicioAvion {
   final google = GoogleServicio();
+  final _firestore = TransporteFirestoreServicio();
   final random = Random();
 
   Future<List<RutaAvion>> obtenerRutas({
     required String origen,
     required String destino,
   }) async {
-    // 🔥 PETICIONES EN PARALELO
+    // 1. Intentar cache de Firestore (RQNF28/29)
+    final cached = await _firestore.obtenerDatosAvion(
+      origen: origen,
+      destino: destino,
+    );
+
+    if (cached != null) {
+      return cached.map((r) => RutaAvion.fromMap(r)).toList();
+    }
+
+    // 2. Calcular
     final resultados = await Future.wait([
       google.buscarAeropuerto(origen),
       google.buscarAeropuerto(destino),
@@ -20,6 +32,11 @@ class ServicioAvion {
     final aeroDestino = resultados[1];
 
     if (aeroOrigen == null || aeroDestino == null) {
+      await _firestore.registrarError(
+        origen: origen,
+        destino: destino,
+        tipo: 'avion',
+      );
       return [];
     }
 
@@ -31,97 +48,81 @@ class ServicioAvion {
     );
 
     final duracion = calcularDuracionVuelo(km);
-    final precio = calcularPrecioVuelo(km);
+    final precioBase = double.parse(calcularPrecioVuelo(km));
 
-    return [
-      RutaAvion(
+    final aerolineasBase = [
+      "Aeroméxico",
+      "Volaris",
+      "Viva Aerobus",
+      "Interjet",
+      "Magnicharters",
+    ];
+
+    final horariosBase = generarHorarios();
+    final List<RutaAvion> opciones = [];
+    final List<Map<String, dynamic>> paraGuardar = [];
+
+    for (int i = 0; i < 5; i++) {
+      final variacion = 1.0 + (i * 0.08);
+      final precioVar = (precioBase * variacion).toStringAsFixed(0);
+
+      final ruta = RutaAvion(
         origen: origen,
         destino: destino,
         aeropuertoOrigen: aeroOrigen["nombre"],
         aeropuertoDestino: aeroDestino["nombre"],
         duracion: duracion,
-        precio: precio,
-        horarios: generarHorarios(),
-        aerolineas: generarAerolineas(),
-      ),
-    ];
+        precio: precioVar,
+        horarios: [horariosBase[i % horariosBase.length]],
+        aerolineas: [aerolineasBase[i]],
+      );
+
+      opciones.add(ruta);
+      paraGuardar.add(ruta.toMap());
+    }
+
+    // 3. Guardar en Firestore (RQNF28)
+    await _firestore.guardarDatosAvion(
+      origen: origen,
+      destino: destino,
+      rutas: paraGuardar,
+    );
+
+    return opciones;
   }
 
-  // 🔥 DISTANCIA ENTRE AEROPUERTOS
-  double calcularDistanciaKm(
-    double lat1,
-    double lng1,
-    double lat2,
-    double lng2,
-  ) {
+  double calcularDistanciaKm(double lat1, double lng1, double lat2, double lng2) {
     const R = 6371;
-
     final dLat = (lat2 - lat1) * pi / 180;
     final dLng = (lng2 - lng1) * pi / 180;
-
-    final a =
-        sin(dLat / 2) * sin(dLat / 2) +
+    final a = sin(dLat / 2) * sin(dLat / 2) +
         cos(lat1 * pi / 180) *
             cos(lat2 * pi / 180) *
             sin(dLng / 2) *
             sin(dLng / 2);
-
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return R * c;
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
-  // 🔥 DURACIÓN REALISTA DE VUELO
   String calcularDuracionVuelo(double km) {
-    const velocidad = 800.0;
-
-    double horas = km / velocidad;
-
-    // tiempo extra real (aeropuerto)
-    horas += 2;
-
+    double horas = km / 800 + 2;
     final h = horas.floor();
     final min = ((horas - h) * 60).round();
-
     return "$h h $min min";
   }
 
-  // 🔥 PRECIO REALISTA
   String calcularPrecioVuelo(double km) {
     double precio = km * 2.5;
-
     if (precio < 900) precio = 900;
-
-    // ✨ ajuste para vuelos largos
     if (km > 1500) precio *= 1.2;
     if (km > 3000) precio *= 1.4;
-
-    double variacion = precio * 0.15;
-    precio += (random.nextDouble() * variacion * 2 - variacion);
-
     return precio.toStringAsFixed(0);
   }
 
-  // 🔥 HORARIOS
-  List<String> generarHorarios() {
-    final now = DateTime.now();
-
-    return List.generate(4, (i) {
-      final hora = now.add(Duration(hours: i * 3 + 2));
-      final h = hora.hour > 12 ? hora.hour - 12 : hora.hour;
-      final periodo = hora.hour >= 12 ? "PM" : "AM";
-
-      return "${h.toString().padLeft(2, '0')}:00 $periodo";
-    });
-  }
-
-  // 🔥 AEROLÍNEAS
-  List<String> generarAerolineas() {
-    const base = ["Aeroméxico", "Volaris", "Viva Aerobus"];
-
-    final lista = List<String>.from(base);
-    lista.shuffle();
-
-    return lista.take(2).toList();
-  }
+  List<String> generarHorarios() => [
+        "06:00 AM",
+        "09:00 AM",
+        "12:00 PM",
+        "03:00 PM",
+        "07:00 PM",
+      ];
 }

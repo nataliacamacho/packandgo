@@ -23,7 +23,6 @@ class PantallaAutobus extends StatefulWidget {
 
 class _PantallaAutobusState extends State<PantallaAutobus> {
   final servicio = ServicioAutobus();
-
   List<RutaAutobus> rutas = [];
   bool loading = true;
   String? error;
@@ -37,19 +36,16 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
   Future<void> cargar() async {
     try {
       String? ciudadOrigen = widget.origen;
-
       if (ciudadOrigen.isEmpty) {
         ciudadOrigen = await UbicacionServicio().obtenerCiudadActual();
       }
 
       if (ciudadOrigen == null || ciudadOrigen.isEmpty) {
         if (!mounted) return;
-
         setState(() {
           error = "No se pudo obtener la ubicación.";
           loading = false;
         });
-
         return;
       }
 
@@ -59,18 +55,15 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
       );
 
       if (!mounted) return;
-
       setState(() {
         rutas = rutasCalculadas;
         error = rutasCalculadas.isEmpty
             ? "No se encontraron rutas disponibles."
             : null;
-
         loading = false;
       });
     } catch (e) {
       if (!mounted) return;
-
       setState(() {
         error = "Ocurrió un error al obtener las rutas.";
         loading = false;
@@ -81,8 +74,7 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      extendBodyBehindAppBar: false,
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -130,7 +122,6 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
                 ],
               ),
             ),
-
             Positioned(
               top: 0,
               left: 0,
@@ -147,14 +138,12 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
           ],
         ),
       ),
-
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : error != null
           ? Center(child: Text(error!))
           : Column(
               children: [
-                // 🔥 AVISO DE ESTIMACIÓN
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
@@ -164,15 +153,16 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
                     style: TextStyle(fontSize: 13),
                   ),
                 ),
-
                 Expanded(
                   child: ListView.builder(
                     itemCount: rutas.length,
                     itemBuilder: (_, index) {
                       final r = rutas[index];
-
                       return Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -186,60 +176,83 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
                             ],
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(14),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "${r.origen} → ${r.destino}",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 8),
-
+                                // Encabezado con clase
                                 Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Icon(Icons.access_time, size: 16),
-                                    const SizedBox(width: 5),
-                                    Text(r.duracion),
+                                    Expanded(
+                                      child: Text(
+                                        "${r.origen} → ${r.destino}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF6A230),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        r.clase,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
-
-                                Row(
-                                  children: [
-                                    const SizedBox(width: 5),
-                                    Text("\$${r.precio}"),
-                                  ],
-                                ),
-
                                 const SizedBox(height: 10),
-
-                                const Text(
-                                  "Horarios disponibles:",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-
-                                const SizedBox(height: 5),
-
-                                ...r.horarios.map((h) => Text("• $h")),
-
-                                const SizedBox(height: 10),
-
-                                const Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Icon(
-                                    Icons.directions_bus,
-                                    color: Colors.blue,
+                                // Tabla
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                    horizontal: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      _col(
+                                        Icons.access_time,
+                                        "Duración",
+                                        r.duracion,
+                                      ),
+                                      _col(
+                                        Icons.attach_money,
+                                        "Precio",
+                                        "\$${r.precio} MXN",
+                                      ),
+                                      _col(
+                                        Icons.schedule,
+                                        "Horario",
+                                        r.horarios.first,
+                                      ),
+                                    ],
                                   ),
                                 ),
-
-                                const SizedBox(height: 5),
-
+                                const SizedBox(height: 6),
                                 const Text(
-                                  "Estimación basada en distancia",
+                                  "Estimación basada en distancia real",
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey,
@@ -255,6 +268,20 @@ class _PantallaAutobusState extends State<PantallaAutobus> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _col(IconData icon, String label, String value) {
+    return Column(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFFF6A230)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

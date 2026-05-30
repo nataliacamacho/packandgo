@@ -21,6 +21,7 @@ class CrearViajePantalla extends StatefulWidget {
 
 class _CrearViajePantallaState extends State<CrearViajePantalla> {
   String? destinoSeleccionado;
+  String? tipoViajeSeleccionado;
 
   final descripcionController = TextEditingController();
   final geocoding = GeocodingServicio();
@@ -36,6 +37,14 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
   bool cargando = false;
 
   List<String> actividadesSeleccionadas = [];
+  final List<String> tiposViaje = [
+    'Aventura',
+    'Relajación',
+    'Familiar',
+    'Negocios',
+    'Romántico',
+    'Cultural',
+  ];
 
   @override
   void dispose() {
@@ -46,7 +55,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
   void limpiarFormulario() {
     setState(() {
       destinoSeleccionado = null;
-
+      tipoViajeSeleccionado = null;
       descripcionController.clear();
 
       rangofechas = null;
@@ -126,6 +135,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
   Future<void> crearViaje() async {
     if (destinoSeleccionado == null ||
+        tipoViajeSeleccionado == null ||
         fechaInicio == null ||
         fechaFin == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +145,6 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     }
 
     setState(() => cargando = true);
-
     try {
       final destinoNormalizado = normalizarDestino(destinoSeleccionado!);
       final coords = await geocoding.obtenerCoordenadas(destinoNormalizado);
@@ -153,13 +162,25 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
       final destinoLat = coords['lat']!;
       final destinoLng = coords['lng']!;
 
-      // 🔥 ESTE ES EL FIX REAL
+      // 1. Primero formatear
       final destinoFormateado = FormateadorDestino.formatear(
         destinoNormalizado,
       );
 
+      // 2. Luego buscar el nombre bonito en Firestore
+      String nombreMostrar = destinoFormateado;
+      final ciudadDoc = await FirebaseFirestore.instance
+          .collection('ciudades')
+          .doc(destinoNormalizado.toLowerCase().trim())
+          .get();
+
+      if (ciudadDoc.exists && ciudadDoc.data()?['nombre'] != null) {
+        nombreMostrar = ciudadDoc.data()!['nombre'];
+      }
+
+      // 3. Crear el viaje con el nombre correcto
       final idViaje = await viajeServicio.crearViaje(
-        destino: destinoFormateado,
+        destino: nombreMostrar, // 👈 cambiado
         fechaInicio: fechaInicio!,
         fechaFin: fechaFin!,
         descripcion: descripcionController.text,
@@ -168,6 +189,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         lng: destinoLng,
         origen: '',
         usuarioId: FirebaseAuth.instance.currentUser!.uid,
+        tipoViaje: tipoViajeSeleccionado!,
       );
 
       String? imagenUrl;
@@ -177,7 +199,6 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
           imagenSeleccionada!,
           idViaje,
         );
-
         await FirebaseFirestore.instance
             .collection('viajes')
             .doc(idViaje)
@@ -189,6 +210,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
       final inicioTemp = fechaInicio!;
       final finTemp = fechaFin!;
       final descripcionTemp = descripcionController.text;
+      final tipoViajeTemp = tipoViajeSeleccionado!;
+      final actividadesTemp = List<String>.from(actividadesSeleccionadas);
 
       limpiarFormulario();
 
@@ -196,15 +219,17 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         context,
         MaterialPageRoute(
           builder: (_) => DetalleViajePantalla(
-            nombre: destinoNormalizado,
+            nombre: nombreMostrar, // 👈 cambiado
+            destino: nombreMostrar, // 👈 cambiado
             fechaInicio: inicioTemp,
             fechaFin: finTemp,
             descripcion: descripcionTemp,
             idViaje: idViaje,
-            destino: destinoNormalizado,
             destinoLat: destinoLat,
             destinoLng: destinoLng,
             origen: '',
+            tipoViaje: tipoViajeTemp,
+            actividades: actividadesTemp,
           ),
         ),
       );
@@ -227,6 +252,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        surfaceTintColor: const Color.fromARGB(255, 255, 255, 255),
+        scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: true,
         title: Text("Pack&Go", style: GoogleFonts.poppins(fontSize: 32)),
@@ -260,6 +287,40 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                 mostrarEstilo: false,
                 mostrarPrecio: false,
               ),
+              const SizedBox(height: 20),
+
+              Text("Tipo de viaje", style: GoogleFonts.poppins(fontSize: 16)),
+
+              const SizedBox(height: 10),
+
+              DropdownButtonFormField<String>(
+                dropdownColor: const Color.fromARGB(255, 255, 255, 255),
+                value: tipoViajeSeleccionado,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFFDF6EC),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFF6A230)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0066D2),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                hint: const Text("Selecciona un tipo"),
+                items: tiposViaje.map((tipo) {
+                  return DropdownMenuItem(value: tipo, child: Text(tipo));
+                }).toList(),
+                onChanged: (valor) {
+                  setState(() {
+                    tipoViajeSeleccionado = valor;
+                  });
+                },
+              ),
 
               const SizedBox(height: 20),
 
@@ -273,7 +334,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5D09E),
+                    color: const Color(0xFFFDF6EC),
+                    border: Border.all(color: const Color(0xFFF6A230)),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -285,13 +347,30 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
+
+              Text(
+                "Descripción (opcional)",
+                style: GoogleFonts.poppins(fontSize: 16),
+              ),
 
               TextField(
                 controller: descripcionController,
                 cursorColor: const Color(0xFF0066D2),
-                decoration: const InputDecoration(
-                  labelText: "Descripción (opcional)",
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFFDF6EC),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFF6A230)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0066D2),
+                      width: 2,
+                    ),
+                  ),
                 ),
               ),
 
@@ -328,9 +407,13 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                         }
                       });
                     },
-                    backgroundColor: Colors.white,
-
+                    backgroundColor: const Color(0xFFFDF6EC),
                     selectedColor: const Color(0xFFF6A230),
+                    side: BorderSide(
+                      color: seleccionada
+                          ? const Color(0xFFF6A230)
+                          : Colors.orange.shade200,
+                    ),
 
                     checkmarkColor: Colors.white,
                   );
@@ -346,6 +429,10 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF6A230),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 3,
                     ),
                     onPressed: cargando ? null : crearViaje,
                     child: cargando
