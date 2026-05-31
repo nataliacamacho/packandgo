@@ -152,6 +152,7 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
 class BusquedaPantalla extends StatefulWidget {
   final bool esSeleccion;
   final String? destinoInicial;
+  
 
   const BusquedaPantalla({
     super.key,
@@ -180,6 +181,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   String? error;
 
   List<Map<String, dynamic>> lugares = [];
+  List<String> sugerenciasAutocompletado = [];
 
   // -------------------------------------------------------------------------
   // USUARIO
@@ -1073,22 +1075,53 @@ String _traducirNombre(String nombreOriginal) {
                       children: [
                         const SizedBox(height: 16),
 
-                        // 🔍 BUSCADOR
+                       // 🔍 BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
                         BarraBusqueda(
                           onChanged: (v) {
                             final textoLimpio = v.trim();
-                            setState(() => query = textoLimpio);
-
-                            if (textoLimpio.length >= 3) {
+                            setState(() {
+                              // Cambiamos el texto usando la función interna que limpia/actualiza tu buscador
                               _buscar(texto: textoLimpio);
-                            }
-
-                            if (textoLimpio.isEmpty) {
-                              _buscar();
-                            }
+                              // Calcula las sugerencias usando tu motor Levenshtein centralizado
+                              sugerenciasAutocompletado = FiltrosEtiquetasServicio.autocompletarDestinos(textoLimpio);
+                            });
                           },
                         ),
 
+                        // 🔥 DIBUJAR LAS SUGERENCIAS DEBAJO DE LA BARRA
+                        if (sugerenciasAutocompletado.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                              ],
+                            ),
+                            child: Column(
+                              children: sugerenciasAutocompletado.map((destinoSugerido) {
+                                return ListTile(
+                                  leading: const Icon(Icons.location_on, color: Colors.blue),
+                                  title: Text(destinoSugerido),
+                                  onTap: () {
+                                    setState(() {
+                                      // 1. Asignamos de forma oficial el destino correcto al filtro superior
+                                      destinoSeleccionado = destinoSugerido;
+                                      
+                                      // 2. Cerramos el menú flotante para que no estorbe en la UI
+                                      sugerenciasAutocompletado = []; 
+                                    });
+
+                                    // 3. 🔥 DISPARO REAL Y LIMPIO: Ejecuta la función de búsqueda original de tu pantalla
+                                    _buscar(texto: destinoSugerido);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          
                         const SizedBox(height: 12),
 
                         // 🔥 FILTROS
