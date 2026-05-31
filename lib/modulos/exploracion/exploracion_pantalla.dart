@@ -21,21 +21,13 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
   List<dynamic> lugaresRecomendados = [];
   bool estaCargando = true;
   int indiceActual = 0;
+  int indiceDestinoSimilar = 0;
 
   Map<String, int> perfilUsuario = {};
   final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  List<Map<String, dynamic>> destinosSimilares = [];
 
   double bonusKNNGlobal = 0;
-
-  final Map<String, List<String>> mapeoTags = {
-    'parque': ['park'],
-    'parques': ['park'],
-    'restaurante': ['restaurant'],
-    'cafeteria': ['cafe'],
-    'museo': ['museum'],
-    'playa': ['beach'],
-    'bar': ['bar'],
-  };
 
   final List<Map<String, dynamic>> ciudadesPopulares = [
     {'name': 'Ciudad de México', 'lat': 19.4326, 'lng': -99.1332},
@@ -51,7 +43,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     _inicializarExploracion();
   }
 
-  // =========================
   Future<bool> _esUsuarioNuevo() async {
     final doc = await FirebaseFirestore.instance
         .collection('usuarios')
@@ -59,20 +50,14 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         .get();
 
     if (!doc.exists) return true;
-
     final data = doc.data();
     final historial = data?['historialEtiquetas'];
-
     if (historial == null || (historial as Map).isEmpty) return true;
-
-    // ✅ Usuario nuevo si no tiene NINGUNA etiqueta con valor mayor a 0
     return !(historial as Map).values.any((v) => (v as num) > 0);
   }
 
-  // =========================
   Future<void> _inicializarExploracion() async {
     final esNuevo = await _esUsuarioNuevo();
-
     if (esNuevo) {
       await _cargarCiudadesPopulares();
     } else {
@@ -80,7 +65,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     }
   }
 
-  // =========================
   Future<void> _actualizarPerfilUsuario() async {
     final doc = await FirebaseFirestore.instance
         .collection('usuarios')
@@ -88,40 +72,31 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         .get();
 
     if (!doc.exists) return;
-
     final data = doc.data();
-
     final etiquetas = Map<String, dynamic>.from(
       data?['historialEtiquetas'] ?? {},
     );
-
     perfilUsuario = etiquetas.map(
       (key, value) => MapEntry(key.toLowerCase(), (value as num).toInt()),
     );
   }
 
-  // =========================
   Future<void> _cargarCiudadesPopulares() async {
     setState(() => estaCargando = true);
 
     List<dynamic> lista = [];
 
     for (final c in ciudadesPopulares) {
-      // Busca solo 1 lugar turístico representativo de cada ciudad
       final lugares = await GooglePlacesServicio.buscarLugares(
         c['lat'],
         c['lng'],
-        tipo: 'monumento', // tourist_attraction → trae fotos bonitas
-        radio: 3000, // radio chico para que salga algo del centro
+        tipo: 'monumento',
+        radio: 3000,
       );
 
       if (lugares.isNotEmpty) {
-        // Toma el mejor (primero = mejor rating de Google)
         final mejor = lugares.first;
-
-        // Sobreescribe el nombre con el de la ciudad
         mejor['name'] = c['name'];
-
         lista.add(mejor);
       }
     }
@@ -129,12 +104,16 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     _set(lista);
   }
 
-  // =========================
   Future<void> _cargarLugaresPersonalizados() async {
     setState(() => estaCargando = true);
 
     try {
       await _actualizarPerfilUsuario();
+      await cargarDestinosViajerosSimilares();
+
+      // RQF30: empieza en el primer destino similar disponible
+      indiceDestinoSimilar = 0;
+
       bonusKNNGlobal = await obtenerBonusKNN();
 
       final pos = await UbicacionServicio().obtenerUbicacionActual();
@@ -146,13 +125,10 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       List<Map<String, dynamic>> lugares;
 
       if (perfilUsuario.isNotEmpty) {
-        // ✅ Busca específicamente las categorías que le interesan al usuario
-        // Toma las top 4 categorías con más interacciones
         final topCategorias = perfilUsuario.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
 
         final categorias = topCategorias.take(4).map((e) => e.key).toList();
-
         debugPrint("🎯 Buscando categorías del perfil: $categorias");
 
         lugares = await GooglePlacesServicio.buscarPorCategorias(
@@ -162,11 +138,10 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
           radio: 15000,
         );
       } else {
-        // Sin perfil: búsqueda genérica de turismo
         lugares = await GooglePlacesServicio.buscarLugares(
           pos.latitude,
           pos.longitude,
-          tipo: 'monumento', // tourist_attraction, mucho mejor que sin tipo
+          tipo: 'monumento',
           radio: 15000,
         );
       }
@@ -179,8 +154,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     }
   }
 
-  // =========================
-  // RQF10: Ordenar resultados de mayor a menor puntaje
   List<dynamic> _procesar(List<dynamic> input) {
     const categoriasExcluidas = {'otro'};
 
@@ -189,54 +162,33 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       return !categoriasExcluidas.contains(cat);
     }).toList();
 
-    // Calculamos el score de similitud para cada lugar
     for (final l in filtrados) {
       l['score'] = _score(l);
     }
 
-    // RQF10: Método sort() para ordenar de MAYOR a MENOR (descendente)
     filtrados.sort((a, b) => (b['score'] ?? 0).compareTo(a['score'] ?? 0));
-    for (var lugar in filtrados) {
-      debugPrint("Lugar: ${lugar['name']} - Score Final: ${lugar['score']}");
-    }
     return filtrados;
   }
 
-  // =========================
-  // RQF8 y RQF9: Cálculo de puntaje de similitud y asignación de 1 punto
   double _score(Map l) {
     final rating = (l['rating'] ?? 0).toDouble();
     final pop = (l['user_ratings_total'] ?? 0).toDouble();
     final categoria = (l['categoriaPrincipal'] ?? '').toString().toLowerCase();
 
-    double scoreBase =
-        (rating * 3) + log(pop + 1); // Lo que ya tenías de popularidad
-    double puntajeSimilitud =
-        0.0; // RQF8: Inicializamos el puntaje de similitud
+    double scoreBase = (rating * 3) + log(pop + 1);
+    double puntajeSimilitud = 0.0;
 
     if (perfilUsuario.isNotEmpty) {
-      // Comparamos las etiquetas del destino con las del perfil
       if (perfilUsuario.containsKey(categoria)) {
-        // RQF9: Asignar 1 punto por cada coincidencia
         puntajeSimilitud += 1.0;
-
-        // (Opcional) Le sumamos un peso extra basado en la frecuencia para mejor precisión
         puntajeSimilitud += (perfilUsuario[categoria]! * 0.5);
-        debugPrint(
-          "✅ Match directo: $categoria -> +1 punto de similitud (RQF9)",
-        );
       }
-
-      // Bonus KNN que tenías
       puntajeSimilitud *= (1 + bonusKNNGlobal);
     }
 
-    // El score total es la suma de la base + la similitud
     return scoreBase + puntajeSimilitud;
   }
 
-  // =========================
-  // RQF11: Registro de interacciones con Filtro Inteligente de Ciudades
   Future<void> registrarInteraccion(Map lugar) async {
     if (uid.isEmpty) return;
 
@@ -245,11 +197,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         .toLowerCase();
     final nombreLugar = (lugar['name'] ?? 'desconocido').toString();
 
-    // 🔥 LÍNEA DE ORO: Te imprimirá en la consola de tu editor todo el objeto
-    // para que veas qué datos trae el lugar cuando le das clic.
-    debugPrint("🔍 Click en: $nombreLugar | Datos del mapa: $lugar");
-
-    // 1. Buscamos la dirección en cualquier formato que use la API
     String direccionDeAPI = 'Desconocido';
     if (lugar['vicinity'] != null) {
       direccionDeAPI = lugar['vicinity'].toString();
@@ -263,29 +210,26 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       direccionDeAPI = lugar['location']['city'].toString();
     }
 
-    // 2. Filtro inteligente: Analizamos el texto para guardar la ciudad limpia
-    String destino = 'Guadalajara'; // Ciudad por defecto si todo lo demás falla
-    String direccionMinusculas = direccionDeAPI.toLowerCase();
+    String destino = 'Guadalajara';
+    String dir = direccionDeAPI.toLowerCase();
 
-    if (direccionMinusculas.contains('acapulco')) {
+    if (dir.contains('acapulco')) {
       destino = 'Acapulco';
-    } else if (direccionMinusculas.contains('guadalajara') ||
-        direccionMinusculas.contains('tlaquepaque') ||
-        direccionMinusculas.contains('zapopan')) {
+    } else if (dir.contains('guadalajara') ||
+        dir.contains('tlaquepaque') ||
+        dir.contains('zapopan')) {
       destino = 'Guadalajara';
-    } else if (direccionMinusculas.contains('méxico') ||
-        direccionMinusculas.contains('cdmx') ||
-        direccionMinusculas.contains('df')) {
+    } else if (dir.contains('méxico') ||
+        dir.contains('cdmx') ||
+        dir.contains('df')) {
       destino = 'Ciudad de México';
-    } else if (direccionMinusculas.contains('monterrey')) {
+    } else if (dir.contains('monterrey')) {
       destino = 'Monterrey';
-    } else if (direccionMinusculas.contains('cancún') ||
-        direccionMinusculas.contains('cancun')) {
+    } else if (dir.contains('cancún') || dir.contains('cancun')) {
       destino = 'Cancún';
-    } else if (direccionMinusculas.contains('oaxaca')) {
+    } else if (dir.contains('oaxaca')) {
       destino = 'Oaxaca';
     } else if (direccionDeAPI != 'Desconocido') {
-      // Si es otra ciudad diferente a las anteriores, guarda lo que mande la API
       destino = direccionDeAPI;
     }
 
@@ -320,26 +264,20 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     }, SetOptions(merge: true));
   }
 
-  // =========================
   Future<double> obtenerBonusKNN() async {
     final snap = await FirebaseFirestore.instance.collection('usuarios').get();
-
     double best = 0;
 
     for (final d in snap.docs) {
       if (d.id == uid) continue;
-
       final data = d.data();
       final etiquetasRaw = Map<String, dynamic>.from(
         data['historialEtiquetas'] ?? {},
       );
-
       final other = etiquetasRaw.map(
         (k, v) => MapEntry(k.toLowerCase(), (v as num).toInt()),
       );
-
       final sim = _cosine(perfilUsuario, other);
-
       if (sim > best) best = sim;
     }
 
@@ -348,39 +286,101 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
   double _cosine(Map<String, int> a, Map<String, int> b) {
     double dot = 0, ma = 0, mb = 0;
-
     final keys = {...a.keys, ...b.keys};
 
     for (final k in keys) {
       final va = (a[k] ?? 0).toDouble();
       final vb = (b[k] ?? 0).toDouble();
-
       dot += va * vb;
       ma += va * va;
       mb += vb * vb;
     }
 
     if (ma == 0 || mb == 0) return 0;
-
     return dot / (sqrt(ma) * sqrt(mb));
   }
 
-  // =========================
   void _set(List<dynamic> lista) {
     if (!mounted) return;
-
     setState(() {
       lugaresRecomendados = lista.take(6).toList();
       estaCargando = false;
-      if (lugaresRecomendados.length >= 3) {
-        indiceActual = 2;
-      } else {
-        indiceActual = 0;
-      }
+      // Empieza en el primer lugar (índice 0)
+      indiceActual = 0;
     });
   }
 
-  // =========================
+  // RQF30: carga hasta 3 destinos de viajeros similares
+  Future<void> cargarDestinosViajerosSimilares() async {
+    final snap = await FirebaseFirestore.instance.collection('usuarios').get();
+    Map<String, int> destinosContador = {};
+
+    for (final d in snap.docs) {
+      if (d.id == uid) continue;
+
+      final data = d.data();
+      final etiquetas = Map<String, dynamic>.from(
+        data['historialEtiquetas'] ?? {},
+      );
+      final perfilOtro = etiquetas.map(
+        (k, v) => MapEntry(k.toLowerCase(), (v as num).toInt()),
+      );
+
+      final similitud = _cosine(perfilUsuario, perfilOtro);
+
+      debugPrint(
+        "👥 Usuario: ${d.id} -> similitud = ${similitud.toStringAsFixed(3)}",
+      );
+
+      if (similitud >= 0.7) {
+        final destinos = Map<String, dynamic>.from(
+          data['historialDestinos'] ?? {},
+        );
+        for (final destino in destinos.keys) {
+          destinosContador[destino] = (destinosContador[destino] ?? 0) + 1;
+        }
+      }
+    }
+
+    final ordenados = destinosContador.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    destinosSimilares.clear();
+
+    // RQF30: intenta cargar hasta 3 destinos similares
+    for (final destino in ordenados.take(3)) {
+      final ciudad = ciudadesPopulares.firstWhere(
+        (c) => c['name'].toString().toLowerCase() == destino.key.toLowerCase(),
+        orElse: () => {},
+      );
+
+      if (ciudad.isNotEmpty) {
+        final lugares = await GooglePlacesServicio.buscarLugares(
+          ciudad['lat'],
+          ciudad['lng'],
+          tipo: 'monumento',
+          radio: 3000,
+        );
+
+        if (lugares.isNotEmpty) {
+          final lugar = Map<String, dynamic>.from(lugares.first);
+          lugar['name'] = ciudad['name'];
+          lugar['esDestino'] = true;
+          destinosSimilares.add(lugar);
+          debugPrint(
+            "✅ RQF30: Destino similar cargado -> ${ciudad['name']} (foto: ${lugar['foto'] != null})",
+          );
+        }
+      }
+    }
+
+    debugPrint(
+      "📊 RQF30: Total destinos similares cargados: ${destinosSimilares.length}",
+    );
+
+    debugPrint("📍 Destinos encontrados: $destinosContador");
+  }
+
   void _siguienteLugar() {
     if (indiceActual < lugaresRecomendados.length - 1) {
       setState(() => indiceActual++);
@@ -393,24 +393,190 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     }
   }
 
+  void _siguienteDestinoSimilar() {
+    if (indiceDestinoSimilar < destinosSimilares.length - 1) {
+      setState(() => indiceDestinoSimilar++);
+    }
+  }
+
+  void _anteriorDestinoSimilar() {
+    if (indiceDestinoSimilar > 0) {
+      setState(() => indiceDestinoSimilar--);
+    }
+  }
+
+  // =========================
+  // Tarjeta — imagen cubre el 100% sin bordes
+  // La clave: AspectRatio + LayoutBuilder para darle
+  // constraints reales a la imagen antes de pintar.
+  Widget _buildTarjetaLugar({
+    required Map<String, dynamic> lugar,
+    required VoidCallback onTap,
+  }) {
+    final String nombre = lugar['name'] ?? 'Lugar sin nombre';
+    final String? fotoUrl = lugar['foto'];
+
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Altura total del carrusel es 250; barra de texto = 45
+            const double alturaTexto = 45.0;
+            final double alturaImagen = constraints.maxHeight > 0
+                ? constraints.maxHeight - alturaTexto
+                : 205.0;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Imagen con constraints explícitos del padre
+                SizedBox(
+                  width: constraints.maxWidth,
+                  height: alturaImagen,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: fotoUrl != null
+                        ? Image.network(
+                            fotoUrl,
+                            fit: BoxFit.cover,
+                            width: constraints.maxWidth,
+                            height: alturaImagen,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: const Color(0xFF1a7fd4),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFF1a7fd4),
+                              child: const Icon(
+                                Icons.landscape,
+                                color: Colors.white,
+                                size: 70,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: const Color(0xFF1a7fd4),
+                            child: const Icon(
+                              Icons.landscape,
+                              color: Colors.white,
+                              size: 70,
+                            ),
+                          ),
+                  ),
+                ),
+
+                // Barra azul con nombre — altura fija
+                Container(
+                  height: alturaTexto,
+                  width: constraints.maxWidth,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  child: Text(
+                    nombre,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // =========================
+  Widget _buildCarrusel({
+    required bool estaCargando,
+    required List<dynamic> items,
+    required int indiceActual,
+    required VoidCallback onAnterior,
+    required VoidCallback onSiguiente,
+    required Widget Function(Map<String, dynamic> item) buildTarjeta,
+  }) {
+    return SizedBox(
+      height: 250,
+      child: estaCargando
+          ? const Center(child: CircularProgressIndicator())
+          : items.isEmpty
+          ? const Center(child: Text("No hay recomendaciones"))
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: indiceActual > 0 ? onAnterior : null,
+                  child: Container(
+                    width: 40,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: indiceActual > 0
+                          ? const Color(0xFF0066D2)
+                          : Colors.grey,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 15),
+
+                // La tarjeta ocupa todo el espacio restante del Row,
+                // y el SizedBox padre le da height: 250 — así LayoutBuilder
+                // recibe constraints correctos (ancho Y alto definidos)
+                Expanded(
+                  child: buildTarjeta(
+                    items[indiceActual] as Map<String, dynamic>,
+                  ),
+                ),
+
+                const SizedBox(width: 15),
+
+                GestureDetector(
+                  onTap: indiceActual < items.length - 1 ? onSiguiente : null,
+                  child: Container(
+                    width: 40,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: indiceActual < items.length - 1
+                          ? const Color(0xFF0066D2)
+                          : Colors.grey,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    String nombre = 'Desconocido';
-
-    if (lugaresRecomendados.isNotEmpty) {
-      final lugar = lugaresRecomendados[indiceActual];
-      nombre = lugar['name'] ?? 'Lugar sin nombre';
-    }
-
-    Map<String, dynamic>? lugar;
-
-    if (lugaresRecomendados.isNotEmpty) {
-      lugar = lugaresRecomendados[indiceActual];
-    }
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        surfaceTintColor: Colors.white,
+        scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -437,7 +603,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         onRefresh: () async {
           await _inicializarExploracion();
         },
-
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Padding(
@@ -450,6 +615,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                 ),
                 const SizedBox(height: 25),
 
+                // ── Recomendaciones ──
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -457,143 +623,78 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
-
                 const SizedBox(height: 15),
 
-                SizedBox(
-                  height: 250,
-                  child: estaCargando
-                      ? const Center(child: CircularProgressIndicator())
-                      : lugaresRecomendados.isEmpty
-                      ? const Center(child: Text("No hay recomendaciones"))
-                      : Row(
-                          children: [
-                            GestureDetector(
-                              onTap: indiceActual > 0 ? _anteriorLugar : null,
-                              child: Container(
-                                width: 40,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: indiceActual > 0
-                                      ? const Color(0xFF0066D2)
-                                      : Colors.grey,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_back_ios_new,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(width: 15),
-
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final lugar =
-                                      lugaresRecomendados[indiceActual];
-
-                                  // 🔥 registrar interacción
-                                  await registrarInteraccion(lugar);
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => LugarDetallePantalla(
-                                        lugar: lugar,
-                                        // 🔥 Le pasamos la foto de Natalia ('foto') a la variable que acabamos de crear
-                                        imagenUrl:
-                                            lugar['foto'] ??
-                                            "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0066D2),
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                top: Radius.circular(15),
-                                              ),
-                                          child: lugar?['foto'] != null
-                                              ? Image.network(
-                                                  lugar?['foto'],
-                                                  width: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) {
-                                                    return Container(
-                                                      color: Colors.blueAccent,
-                                                      child: const Icon(
-                                                        Icons.landscape,
-                                                        color: Colors.white,
-                                                        size: 70,
-                                                      ),
-                                                    );
-                                                  },
-                                                )
-                                              : Container(
-                                                  color: Colors.blueAccent,
-                                                  child: const Icon(
-                                                    Icons.landscape,
-                                                    color: Colors.white,
-                                                    size: 70,
-                                                  ),
-                                                ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(15),
-                                        child: Text(
-                                          nombre,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(width: 15),
-
-                            GestureDetector(
-                              onTap:
-                                  indiceActual < lugaresRecomendados.length - 1
-                                  ? _siguienteLugar
-                                  : null,
-                              child: Container(
-                                width: 40,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color:
-                                      indiceActual <
-                                          lugaresRecomendados.length - 1
-                                      ? const Color(0xFF0066D2)
-                                      : Colors.grey,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
+                _buildCarrusel(
+                  estaCargando: estaCargando,
+                  items: lugaresRecomendados,
+                  indiceActual: indiceActual,
+                  onAnterior: _anteriorLugar,
+                  onSiguiente: _siguienteLugar,
+                  buildTarjeta: (lugar) => _buildTarjetaLugar(
+                    lugar: lugar,
+                    onTap: () async {
+                      await registrarInteraccion(lugar);
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LugarDetallePantalla(
+                            lugar: lugar,
+                            imagenUrl:
+                                lugar['foto'] ??
+                                "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
+                          ),
                         ),
+                      );
+                    },
+                  ),
                 ),
 
-                const SizedBox(height: 90),
+                // ── RQF30: Viajeros similares ──
+                if (destinosSimilares.isNotEmpty) ...[
+                  const SizedBox(height: 25),
+
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Otros viajeros como tú también consultaron...",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  _buildCarrusel(
+                    estaCargando: false,
+                    items: destinosSimilares,
+                    indiceActual: indiceDestinoSimilar,
+                    onAnterior: _anteriorDestinoSimilar,
+                    onSiguiente: _siguienteDestinoSimilar,
+                    buildTarjeta: (destino) => _buildTarjetaLugar(
+                      lugar: destino,
+                      onTap: () async {
+                        await registrarInteraccion(destino);
+                        if (!mounted) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LugarDetallePantalla(
+                              lugar: destino,
+                              imagenUrl:
+                                  destino['foto'] ??
+                                  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop",
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 70),
 
                 ElevatedButton.icon(
                   onPressed: () {
@@ -616,6 +717,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                     backgroundColor: const Color(0xFFF6A230),
                   ),
                 ),
+
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     foregroundColor: const Color.fromARGB(255, 158, 158, 158),
@@ -626,7 +728,10 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                   icon: const Icon(Icons.location_on),
                   label: const Text(
                     "Activar/Desactivar ubicación",
-                    style: TextStyle(color: Color.fromARGB(255, 158, 158, 158), fontSize: 12),
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 158, 158, 158),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],

@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 class GooglePlacesServicio {
   static String get _apiKey => dotenv.env['GOOGLE_API_KEY'] ?? '';
 
-
   // ---------------------------------------------------------------------------
   // BUSCAR LUGARES (FILTRADO DESDE EL SERVIDOR) - VERSIÓN REPARADA (HORARIOS)
   // ---------------------------------------------------------------------------
@@ -23,7 +22,8 @@ class GooglePlacesServicio {
       // TEXT SEARCH
       // ---------------------------------------------------------------------
       if (query.isNotEmpty) {
-        url = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
+        url =
+            'https://maps.googleapis.com/maps/api/place/textsearch/json'
             '?query=${Uri.encodeComponent(query)}'
             '&location=$lat,$lng'
             '&radius=$radio'
@@ -35,7 +35,7 @@ class GooglePlacesServicio {
         if (tipo != null && tipo.isNotEmpty) {
           url += '&type=$tipo';
         }
-      } 
+      }
       // ---------------------------------------------------------------------
       // NEARBY SEARCH (El culpable reparado)
       // ---------------------------------------------------------------------
@@ -43,13 +43,16 @@ class GooglePlacesServicio {
         // 🔥 Para que nearbysearch envíe horarios, cambiamos a la versión 'textsearch'
         // pero buscando por el "tipo" en texto en la ubicación específica.
         // Es un truco legal de Google Maps para obligarlo a darte todos los fields sin costo extra.
-        
-        String queryTipo = tipo != null && tipo.isNotEmpty ? tipo : 'tourist_attraction';
+
+        String queryTipo = tipo != null && tipo.isNotEmpty
+            ? tipo
+            : 'tourist_attraction';
         // Traducimos el tipo a español para que la búsqueda sea más natural (ej: 'restaurant' a 'restaurantes')
-        if(queryTipo == 'restaurant') queryTipo = 'restaurantes';
-        if(queryTipo == 'cafe') queryTipo = 'cafeterías';
-        
-        url = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
+        if (queryTipo == 'restaurant') queryTipo = 'restaurantes';
+        if (queryTipo == 'cafe') queryTipo = 'cafeterías';
+
+        url =
+            'https://maps.googleapis.com/maps/api/place/textsearch/json'
             '?query=${Uri.encodeComponent(queryTipo)}'
             '&location=$lat,$lng'
             '&radius=$radio'
@@ -86,11 +89,11 @@ class GooglePlacesServicio {
         if (types.isEmpty) return false;
 
         const bloqueados = [
-          'supermarket', 
+          'supermarket',
           'department_store',
-          'pharmacy', 
-          'bank', 
-          'gas_station', 
+          'pharmacy',
+          'bank',
+          'gas_station',
           'lodging',
         ];
 
@@ -99,32 +102,42 @@ class GooglePlacesServicio {
 
       return filtradosReales.map<Map<String, dynamic>>((place) {
         final loc = place['geometry']?['location'];
-        final List<String> types = (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        final List<String> types =
+            (place['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
         String categoria = _mapearCategoria(types, nombre: place['name'] ?? '');
 
         final nombreLower = (place['name'] ?? '').toString().toLowerCase();
         if (nombreLower.contains('mirador')) categoria = 'mirador';
-        if (nombreLower.contains('zona arqueológica') || nombreLower.contains('ruinas')) categoria = 'zona_arqueologica';
-        if (nombreLower.contains('mall') || nombreLower.contains('plaza')) categoria = 'centro_comercial';
-        if (nombreLower.contains('extremo') || nombreLower.contains('adventure')) categoria = 'actividades_extremas';
+        if (nombreLower.contains('zona arqueológica') ||
+            nombreLower.contains('ruinas'))
+          categoria = 'zona_arqueologica';
+        if (nombreLower.contains('mall') || nombreLower.contains('plaza'))
+          categoria = 'centro_comercial';
+        if (nombreLower.contains('extremo') ||
+            nombreLower.contains('adventure'))
+          categoria = 'actividades_extremas';
 
         final priceLevel = place['price_level'];
 
         // 🔥 ¡AQUÍ ESTÁ LA MAGIA PARA LA TARJETA!
         bool? estaAbierto;
         String horarioTexto = 'Horario no disponible';
-        
-        if (place['opening_hours'] != null && place['opening_hours']['open_now'] != null) {
+
+        if (place['opening_hours'] != null &&
+            place['opening_hours']['open_now'] != null) {
           estaAbierto = place['opening_hours']['open_now'];
-          horarioTexto = estaAbierto == true 
-                       ? '🟢 Abierto ahora' 
-                       : '🔴 Cerrado en este momento';
+          horarioTexto = estaAbierto == true
+              ? '🟢 Abierto ahora'
+              : '🔴 Cerrado en este momento';
         }
 
         return {
           'name': place['name'] ?? 'Sin nombre',
-          'direccion': place['vicinity'] ?? place['formatted_address'] ?? 'Sin dirección',
+          'direccion':
+              place['vicinity'] ??
+              place['formatted_address'] ??
+              'Sin dirección',
           'lat': _toDouble(loc?['lat'], lat),
           'lng': _toDouble(loc?['lng'], lng),
           'categoriaPrincipal': categoria,
@@ -154,20 +167,43 @@ class GooglePlacesServicio {
     final n = nombre.toLowerCase();
 
     // 🔥 1. ESPECÍFICOS PRIMERO (Para que "food" no se los robe)
-    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('bakery') || n.contains('cafe')) return 'cafeteria';
-    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub') || n.contains('bar')) return 'bar';
+    if (texto.contains('cafe') ||
+        texto.contains('coffee') ||
+        texto.contains('bakery') ||
+        n.contains('cafe'))
+      return 'cafeteria';
+    if (texto.contains('bar') ||
+        texto.contains('night_club') ||
+        texto.contains('pub') ||
+        n.contains('bar'))
+      return 'bar';
 
     // 🔥 2. GENERALES DESPUÉS
-    if (texto.contains('restaurant') || texto.contains('food') || texto.contains('meal')) return 'restaurante';
+    if (texto.contains('restaurant') ||
+        texto.contains('food') ||
+        texto.contains('meal'))
+      return 'restaurante';
 
     if (texto.contains('park') || texto.contains('garden')) return 'parque';
-    if (texto.contains('museum') || texto.contains('art_gallery')) return 'museo';
+    if (texto.contains('museum') || texto.contains('art_gallery'))
+      return 'museo';
     if (texto.contains('beach') || n.contains('playa')) return 'playa';
-    if (texto.contains('shopping') || texto.contains('mall')) return 'centro_comercial';
+    if (texto.contains('shopping') || texto.contains('mall'))
+      return 'centro_comercial';
     if (texto.contains('viewpoint') || n.contains('mirador')) return 'mirador';
-    if (texto.contains('archaeological') || n.contains('ruinas') || n.contains('maya')) return 'zona_arqueologica';
-    if (texto.contains('amusement_park') || n.contains('xcaret') || n.contains('extremo')) return 'actividades_extremas';
-    if (texto.contains('tourist_attraction') || texto.contains('historic') || n.contains('monumento') || n.contains('catedral')) return 'monumento';
+    if (texto.contains('archaeological') ||
+        n.contains('ruinas') ||
+        n.contains('maya'))
+      return 'zona_arqueologica';
+    if (texto.contains('amusement_park') ||
+        n.contains('xcaret') ||
+        n.contains('extremo'))
+      return 'actividades_extremas';
+    if (texto.contains('tourist_attraction') ||
+        texto.contains('historic') ||
+        n.contains('monumento') ||
+        n.contains('catedral'))
+      return 'monumento';
 
     return 'otro';
   }
@@ -178,11 +214,15 @@ class GooglePlacesServicio {
   static String _mapearPrecio(int level) {
     switch (level) {
       case 0:
-      case 1: return r'$';
-      case 2: return r'$$';
+      case 1:
+        return r'$';
+      case 2:
+        return r'$$';
       case 3:
-      case 4: return r'$$$';
-      default: return r'$';
+      case 4:
+        return r'$$$';
+      default:
+        return r'$';
     }
   }
 
@@ -191,9 +231,10 @@ class GooglePlacesServicio {
   // ---------------------------------------------------------------------------
   static String? _fotoUrl(List? photos) {
     if (photos == null || photos.isEmpty) return null;
-    final ref = photos.first['photo_reference'] ?? photos.first['photoReference'];
+    final ref =
+        photos.first['photo_reference'] ?? photos.first['photoReference'];
     if (ref == null) return null;
-    return 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=$ref&key=$_apiKey';
+    return 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&maxheight=800&photo_reference=$ref&key=$_apiKey';
   }
 
   // ---------------------------------------------------------------------------
@@ -211,7 +252,6 @@ class GooglePlacesServicio {
     final pop = _toDouble(v, 0) / 100;
     return pop > 10 ? 10 : pop;
   }
-
 
   // ---------------------------------------------------------------------------
   // BUSCAR POR MÚLTIPLES CATEGORÍAS (Para la pantalla de Exploración)
@@ -248,19 +288,24 @@ class GooglePlacesServicio {
 
     // 🔥 FILTRO DE "NORMALIZACIÓN"
     final Map<String, Map<String, dynamic>> vistos = {};
-    
+
     for (final lista in resultados) {
       for (final lugar in lista) {
-        print("DEBUG: Comparando lugar -> '${lugar['name']}' con ID -> '${lugar['place_id']}'");
+        print(
+          "DEBUG: Comparando lugar -> '${lugar['name']}' con ID -> '${lugar['place_id']}'",
+        );
         // Normalizamos el nombre: minúsculas y sin espacios al inicio/final
-        final nombreLimpio = (lugar['name'] ?? 'sin_nombre').toString().toLowerCase().trim();
-        
+        final nombreLimpio = (lugar['name'] ?? 'sin_nombre')
+            .toString()
+            .toLowerCase()
+            .trim();
+
         if (vistos.containsKey(nombreLimpio)) {
           final existente = vistos[nombreLimpio]!;
           // Regla: Nos quedamos con el que tiene foto, o el que tiene dirección más larga (suele ser el registro más completo)
           final tieneFotoNuevo = lugar['foto'] != null;
           final tieneFotoViejo = existente['foto'] != null;
-          
+
           if (tieneFotoNuevo && !tieneFotoViejo) {
             vistos[nombreLimpio] = lugar;
           }
@@ -274,7 +319,9 @@ class GooglePlacesServicio {
   }
 
   // 🔥 NUEVA FUNCIÓN: OBTENER HORARIOS Y SEMÁFORO DESDE DETAILS
-  static Future<Map<String, dynamic>> obtenerDetallesHorario(String placeId) async {
+  static Future<Map<String, dynamic>> obtenerDetallesHorario(
+    String placeId,
+  ) async {
     final apiKey = dotenv.env['GOOGLE_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) return {'abierto': null, 'dias': []};
 
@@ -283,7 +330,7 @@ class GooglePlacesServicio {
       '?place_id=$placeId'
       '&fields=opening_hours'
       '&language=es'
-      '&key=$apiKey'
+      '&key=$apiKey',
     );
 
     try {
@@ -294,7 +341,9 @@ class GooglePlacesServicio {
           final hours = data['result']['opening_hours'];
           return {
             'abierto': hours['open_now'],
-            'dias': hours['weekday_text'] != null ? List<String>.from(hours['weekday_text']) : <String>[],
+            'dias': hours['weekday_text'] != null
+                ? List<String>.from(hours['weekday_text'])
+                : <String>[],
           };
         }
       }
