@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto/nucleo/utilidades/auth_wrapper.dart';
-import 'modulos/autenticacion/inicio_pantalla.dart';
+import 'modulos/autenticacion/login_pantalla.dart';
 import 'modulos/exploracion/exploracion_pantalla.dart';
 import 'modulos/autenticacion/registro_pantalla.dart';
 import 'modulos/cuenta/editar_pantalla.dart';

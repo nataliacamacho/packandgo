@@ -368,5 +368,82 @@ class FiltrosEtiquetasServicio {
 
   }
 
+  // 🔍 ===================================================================
+  // MOTOR DE AUTOCOMPLETADO INTELIGENTE (RQF34 y RQF35)
+  // ===================================================================
+
+  /// Función auxiliar para limpiar acentos y caracteres raros
+  static String _removerAcentos(String texto) {
+    var conAcentos = 'áéíóúüñÁÉÍÓÚÜÑ';
+    var sinAcentos = 'aeiouunAEIOUUN';
+    String resultado = texto;
+    for (int i = 0; i < conAcentos.length; i++) {
+      resultado = resultado.replaceAll(conAcentos[i], sinAcentos[i]);
+    }
+    return resultado.toLowerCase().trim();
+  }
+
+  /// Algoritmo matemático de Distancia de Levenshtein (Mide variaciones de letras)
+  static int _calcularLevenshtein(String s1, String s2) {
+    if (s1 == s2) return 0;
+    if (s1.isEmpty) return s2.length;
+    if (s2.isEmpty) return s1.length;
+
+    List<int> v0 = List<int>.generate(s2.length + 1, (i) => i);
+    List<int> v1 = List<int>.filled(s2.length + 1, 0);
+
+    for (int i = 0; i < s1.length; i++) {
+      v1[0] = i + 1;
+      for (int j = 0; j < s2.length; j++) {
+        int costo = (s1[i] == s2[j]) ? 0 : 1;
+        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + costo].reduce((a, b) => a < b ? a : b);
+      }
+      v0 = List<int>.from(v1);
+    }
+    return v0[s2.length];
+  }
+
+  /// 🔥 CEREBRO CENTRAL DE AUTOCOMPLETADO DISAÑADO PARA LA ESCUELA
+  /// Filtra una lista de destinos oficiales de México tolerando errores ortográficos y acentos
+  static List<String> autocompletarDestinos(String inputUsuario) {
+    if (inputUsuario.trim().length < 2) return [];
+
+    // Catálogo oficial de destinos de Pack&Go México para la demo escolar
+    final List<String> catalogoDestinos = [
+      "Acapulco", "Guadalajara", "Manzanillo", "Puebla", "Caborca", 
+      "Cancún", "Monterrey", "Oaxaca", "Mazatlán", "Chapala", "Ajijic",
+      "Bacalar", "Mérida", "Puerto Vallarta", "Cozumel", "Querétaro"
+    ];
+
+    final inputLimpio = _removerAcentos(inputUsuario);
+    List<Map<String, dynamic>> candidatosConPuntaje = [];
+
+    for (var destino in catalogoDestinos) {
+      final destinoLimpio = _removerAcentos(destino);
+
+      // Coincidencia Directa o Parcial (Contiene el texto ingresado)
+      if (destinoLimpio.contains(inputLimpio) || inputLimpio.contains(destinoLimpio)) {
+        candidatosConPuntaje.add({'destino': destino, 'score': 0});
+        continue;
+      }
+
+      // Coincidencia Difusa: Si el usuario se equivoca por 1 o 2 letras (Levenshtein)
+      // Solo evaluamos si las longitudes son similares para no alentar la app
+      if ((destinoLimpio.length - inputLimpio.length).abs() <= 3) {
+        int distancia = _calcularLevenshtein(inputLimpio, destinoLimpio);
+        // Si el error es de máximo 2 letras cambiadas o faltantes, es válido
+        if (distancia <= 2) {
+          candidatosConPuntaje.add({'destino': destino, 'score': distancia});
+        }
+      }
+    }
+
+    // Ordenamos para que los aciertos más exactos salgan primero
+    candidatosConPuntaje.sort((a, b) => a['score'].compareTo(b['score']));
+
+    // Regresamos solo los nombres en texto limpios (Máximo 4 sugerencias para la UI)
+    return candidatosConPuntaje.map((e) => e['destino'] as String).take(4).toList();
+  }
+
 
 }
