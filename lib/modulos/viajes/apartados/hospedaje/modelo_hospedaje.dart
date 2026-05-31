@@ -43,9 +43,9 @@ class Hospedaje {
     return Hospedaje(
       nombre: json['name'] ?? 'Sin nombre',
       imagen: imageUrl,
-      precio: ((json['rating'] ?? 3.0) * 500).toDouble(),
+      precio: (json['price_level'] ?? 0).toDouble(),
       ubicacion: json['vicinity'] ?? 'México',
-      disponible: true,
+      disponible: false,
       link: "",
       lat: lat,
       lng: lng,

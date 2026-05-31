@@ -30,6 +30,8 @@ class HospedajeServicio {
 
   Future<List<Hospedaje>> obtenerHospedajes({
     required String destino,
+    required DateTime fechaInicio,
+    required DateTime fechaFin,
     int radius = 12000,
   }) async {
     final apiKey = dotenv.env['GOOGLE_API_KEY'];
@@ -59,23 +61,50 @@ class HospedajeServicio {
     final results = data['results'] as List;
 
     final list = results
+        .where((e) => _filtrar(e))
         .map((e) => Hospedaje.fromGoogle(e, apiKey))
-        .where((h) => _filtrar(h.ubicacion, destino))
         .toList();
 
     list.sort((a, b) => b.rating.compareTo(a.rating));
 
-    return list.take(10).toList();
+    final hoy = DateTime.now();
+    final listConDisponibilidad = list.map((h) {
+      final disponible =
+          fechaInicio.isAfter(hoy) && fechaFin.isAfter(fechaInicio);
+      return Hospedaje(
+        nombre: h.nombre,
+        imagen: h.imagen,
+        precio: h.precio,
+        ubicacion: h.ubicacion,
+        disponible: disponible,
+        link: h.link,
+        lat: h.lat,
+        lng: h.lng,
+        rating: h.rating,
+        placeId: h.placeId,
+      );
+    }).toList();
+
+    return listConDisponibilidad.take(10).toList();
   }
 
-  bool _filtrar(String ubicacion, String destino) {
-    final u = ubicacion.toLowerCase();
-    final d = destino.toLowerCase();
+  bool _filtrar(Map<String, dynamic> json) {
+    final vicinity = (json['vicinity'] ?? '').toString().toLowerCase();
+    final name = (json['name'] ?? '').toString().toLowerCase();
+    final formatted = (json['formatted_address'] ?? '')
+        .toString()
+        .toLowerCase();
 
-    return u.contains(d.split(' ').first) ||
-        u.contains('méxico') ||
-        u.contains('quintana roo') ||
-        u.contains('jalisco') ||
-        u.contains('baja california');
+    final texto = '$vicinity $name $formatted';
+
+    // Excluir resultados claramente fuera de México
+    if (texto.contains('united states') ||
+        texto.contains('usa') ||
+        texto.contains('españa') ||
+        texto.contains('spain')) {
+      return false;
+    }
+
+    return true;
   }
 }
