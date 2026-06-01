@@ -111,7 +111,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       await _actualizarPerfilUsuario();
       await cargarDestinosViajerosSimilares();
 
-      // RQF30: empieza en el primer destino similar disponible
       indiceDestinoSimilar = 0;
 
       bonusKNNGlobal = await obtenerBonusKNN();

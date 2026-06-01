@@ -40,10 +40,9 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   bool subiendoFoto = false;
 
   // ===================================================================
-  // 📸 FUNCIÓN UNIVERSAL CON DETECTOR DE IMPOSTORES
+  // FUNCIÓN UNIVERSAL CON DETECTOR DE IMPOSTORES
   // ===================================================================
   String _obtenerFotoFinal() {
-    // 🛑 Este es el "impostor" que nos estaba engañando
     const impostor =
         "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=400&auto=format&fit=crop";
 
@@ -52,14 +51,14 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
       return url != null && url.startsWith('http') && url != impostor;
     }
 
-    // 1. Buscamos la foto REAL en todas las llaves posibles (sin dejarnos engañar)
+    // 1. Buscamos la foto REAL en todas las llaves posibles
     if (esFotoReal(widget.imagenUrl)) return widget.imagenUrl!;
     if (esFotoReal(widget.lugar?['foto']?.toString()))
       return widget.lugar!['foto'].toString();
     if (esFotoReal(widget.lugar?['imagen']?.toString()))
       return widget.lugar!['imagen'].toString();
 
-    // 2. EL SÚPER SEGURO: Extraemos de Google directamente si todo lo de arriba falla
+    // 2. Extraemos de Google directamente si todo lo de arriba falla
     if (widget.lugar?['photos'] != null) {
       final list = widget.lugar!['photos'] as List<dynamic>;
       if (list.isNotEmpty) {
@@ -117,7 +116,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   }
 
   // =========================
-  // 📍 COORDENADAS Y MAPA
+  //  COORDENADAS Y MAPA
   // =========================
   double? getLat() {
     if (widget.lugar == null) return null;
@@ -157,7 +156,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   }
 
   // =========================
-  // ⭐ INTERFAZ DE RESEÑAS
+  //  INTERFAZ DE RESEÑAS
   // =========================
   Widget _buildEstrellasView(int e) {
     return Row(
@@ -312,11 +311,9 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                   );
                 },
               ),
-
-              // 🔥 EMPUJA EL BOTÓN ELIMINAR HASTA LA DERECHA
               const Spacer(),
 
-              // 🗑️ ELIMINAR SOLO SI ES TU RESEÑA
+              // ELIMINAR SOLO SI ES TU RESEÑA
               if (data['id_usuario'] == uid)
                 TextButton.icon(
                   onPressed: () async {
@@ -392,7 +389,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
     try {
       String? fotoUrl;
 
-      // 🔥 SUBIR FOTO SI EL USUARIO SELECCIONÓ UNA
+      // SUBIR FOTO SI EL USUARIO SELECCIONÓ UNA
       if (imagenResena != null) {
         fotoUrl = await _subirImagenResena();
       }
@@ -437,7 +434,6 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
         .trim()
         .toLowerCase();
 
-    // 🔥 AQUÍ USAMOS LA MISMA LÓGICA QUE EN TU BUILD PARA OBTENER LA UBICACIÓN LIMPIA
     final ubicacionLimpia =
         widget.lugar?['direccion'] ??
         widget.ubicacion ??
@@ -447,7 +443,6 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
     if (categoria.isEmpty || categoria == 'otro') return;
 
     try {
-      // Usamos el mismo filtro inteligente que ya probamos, pero aplicado a la variable limpia
       String destino = _extraerCiudadDeDireccion(ubicacionLimpia);
 
       await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
@@ -473,7 +468,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
     // 1. Buscamos primero en tu lista oficial
     for (var ciudad in ciudadesMexico) {
-      // 🔥 USAMOS 'dir' (que ya es minúsculas) para comparar
+      // USAMOS 'dir' (que ya es minúsculas) para comparar
       if (dir.contains(ciudad['nombre'].toString().toLowerCase())) {
         return ciudad['nombre'];
       }
@@ -493,7 +488,6 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
     // 1. Aquí pegas el helper, justo arriba del build
   String _formatearPrecioDinamico() {
-    // Le agregué un signo de interrogación a widget.lugar? por si acaso
     final apiPriceLevel = widget.lugar?['price_level'] ?? widget.lugar?['price'];
     
     if (apiPriceLevel != null) {
@@ -514,10 +508,10 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
   Future<void> _cargarHorarios() async {
     final id = widget.lugar?['place_id']; 
-    print("🚦 ID DEL LUGAR A BUSCAR: $id"); // <--- NUEVO RAYO X
+    print(" ID DEL LUGAR A BUSCAR: $id"); 
     if (id != null && id.toString().isNotEmpty) {
       final detalles = await GooglePlacesServicio.obtenerDetallesHorario(id.toString());
-      print("🚦 RESPUESTA GOOGLE DETALLES: $detalles"); // <--- NUEVO RAYO X
+      print(" RESPUESTA GOOGLE DETALLES: $detalles"); 
       if (mounted) {
         setState(() {
           estaAbierto = detalles['abierto'];
@@ -578,7 +572,6 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // MUESTRA LA FOTO CALCULADA POR EL SÚPER SEGURO
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.network(
@@ -631,7 +624,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
               const SizedBox(height: 16),
 
               // ==============================================================
-              // 🔥 AQUÍ ESTÁ LO NUEVO: PRECIO Y HORARIOS (YA INTEGRADOS)
+              // PRECIO Y HORARIOS 
               // ==============================================================
               Row(
                 children: [
@@ -645,7 +638,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
               ),
 
               const SizedBox(height: 20),
- // 🔥 MÓDULO DE HORARIOS Y ESTADO (Versión Blindada)
+            //MÓDULO DE HORARIOS Y ESTADO 
             if (cargandoHorarios)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
@@ -726,7 +719,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                 ),
               )
             else
-              // Mensaje de cortesía si no hay horario
+              // Mensaje si no hay horario
               Container(
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.symmetric(vertical: 16),
@@ -790,7 +783,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
                           const SizedBox(height: 18),
 
-                          // ✍️ Caja de reseña
+                          // Caja de reseña
                           TextField(
                             controller: resenaController,
                             maxLines: 4,
@@ -808,7 +801,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
                           const SizedBox(height: 14),
 
-                          // 📸 BOTÓN FOTO
+                          // BOTÓN FOTO
                           Row(
                             children: [
                               ElevatedButton.icon(
@@ -844,7 +837,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                             ],
                           ),
 
-                          // 👀 Preview de imagen
+                          // Preview de imagen
                           if (imagenResena != null) ...[
                             const SizedBox(height: 14),
 
@@ -861,7 +854,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
                           const SizedBox(height: 20),
 
-                          // 🚀 BOTÓN PUBLICAR
+                          //  BOTÓN PUBLICAR
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -899,7 +892,7 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
 
                           const SizedBox(height: 24),
 
-                          // 📝 LISTA DE RESEÑAS
+                          // LISTA DE RESEÑAS
                           if (docs.isEmpty)
                             Container(
                               width: double.infinity,

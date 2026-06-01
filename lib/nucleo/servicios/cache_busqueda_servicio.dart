@@ -6,7 +6,7 @@ class CacheBusquedaServicio {
   static final _db = FirebaseFirestore.instance;
 
   // =========================
-  // 🔐 GENERAR HASH
+  //  GENERAR HASH
   // =========================
   static String generarHash(
     String? destino,
@@ -20,7 +20,7 @@ class CacheBusquedaServicio {
   }
 
   // =========================
-  // 📦 OBTENER CACHE
+  //  OBTENER CACHE
   // =========================
   static Future<List<Map<String, dynamic>>?> obtenerCache(
       String hash) async {
@@ -35,7 +35,7 @@ class CacheBusquedaServicio {
   }
 
   // =========================
-  // 💾 GUARDAR CACHE
+  //   GUARDAR CACHE
   // =========================
   static Future<void> guardarCache(
     String hash,

@@ -38,7 +38,7 @@ class ResenaServicio {
   }) async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    // 🚫 No reaccionarte a ti mismo
+    // No reaccionarse a ti mismo
     if (uid == autorId) {
       throw "No puedes reaccionar a tu propia reseña";
     }
@@ -54,7 +54,7 @@ class ResenaServicio {
     final usuariosLike = List<String>.from(data['usuarios_like'] ?? []);
     final usuariosLove = List<String>.from(data['usuarios_love'] ?? []);
 
-    // 🚫 Ya reaccionó antes
+    //  Ya reaccionó antes
     if (usuariosLike.contains(uid) || usuariosLove.contains(uid)) {
       throw Exception("Ya reaccionaste a esta reseña");
     }
@@ -281,11 +281,11 @@ class ResenaServicio {
 
     final existe = await ref.get();
 
-    // 🔥 SI YA EXISTE -> ELIMINAR FAVORITO
+    // SI YA EXISTE -> ELIMINAR FAVORITO
     if (existe.exists) {
       await ref.delete();
     }
-    // 🔥 SI NO EXISTE -> GUARDAR FAVORITO
+    // SI NO EXISTE -> GUARDAR FAVORITO
     else {
       await ref.set({'id_resena': idResena, 'fecha_guardado': Timestamp.now()});
     }

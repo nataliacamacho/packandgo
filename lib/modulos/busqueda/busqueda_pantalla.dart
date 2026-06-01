@@ -332,8 +332,8 @@ Future<void> _resolverCoordenadas() async {
         nombreCiudad = ciudad['nombre'];
       } catch (_) { nombreCiudad = destinoSeleccionado ?? ''; }
       // ====================================================================
-// 🔥 CONFIGURACIÓN UNIFICADA Y LIMPIEZA DE TEXTO DE CONSULTA
-// ====================================================================
+      // CONFIGURACIÓN UNIFICADA Y LIMPIEZA DE TEXTO DE CONSULTA
+      // ====================================================================
 String textoConsultaApi = texto.trim();
 
 // 1. Validamos si es una categoría que Google entiende nativamente
@@ -395,7 +395,7 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
 
       List<dynamic> combinados = [...google, ...open];
 
-// 6. MAPEO Y NORMALIZACIÓN DE LUGARES
+      // 6. MAPEO Y NORMALIZACIÓN DE LUGARES
       List<Map<String, dynamic>> listaProcesada = combinados
           .where((lugarCrudo) => lugarCrudo != null && lugarCrudo is Map)
           .map((lugarCrudo) {
@@ -410,7 +410,6 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
               categoriaHomologada = FiltrosEtiquetasServicio.normalizarTipoParaBuscador([...types, kinds], name);
             }
             
-            // 🔥 EL HACK INTELIGENTE
             // Si la categoría ES ESTRICTA (Cafetería, Restaurante), no hacemos trampa.
             // Si la categoría NO ES ESTRICTA (Zona Arqueológica, Mirador), confiamos en la 
             // búsqueda de texto de Google y forzamos la etiqueta para que no se elimine.
@@ -443,7 +442,7 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
             }
 
             Lugar lugarTemporal = Lugar(id: name, nombre: name, tipo: categoriaHomologada, precio: precioRealMapeado, rating: _toDouble(l['rating'], fb: 5), numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(), latitud: latGoogle, longitud: lngGoogle, resenasTexto: const ["lugar muy divertido"], fotoUrl: urlImagen, direccion: l['vicinity'] ?? 'Sin dirección', horario: l['horario'] ?? 'Horario no disponible',);
-// 🔥 DISTRIBUCIÓN INTELIGENTE DE EXPERIENCIAS (Ajustada a la realidad)
+            // DISTRIBUCIÓN  DE EXPERIENCIAS (Ajustada a la realidad)
             List<String> etiquetasNLP = [];
             final nombreMinuscula = name.toLowerCase();
             
@@ -510,7 +509,7 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
                }
             }
 
-            // 🔥 EL ESCUDO ANTI-VACÍOS (El secreto para que nunca falle)
+            //  ESCUDO ANTI-VACÍOS 
             // Si después de toda la inteligencia, la etiqueta Pareja y Familiar no se 
             // asignaron a suficientes lugares, forzamos la repartición equitativa
             int codigoHashSeguridad = name.length;
@@ -528,7 +527,8 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
 
             return {
               ...l,
-              'name': _traducirNombre(l['name'] ?? 'Sin nombre'),              'categoriaPrincipal': categoriaHomologada, 
+              'name': _traducirNombre(l['name'] ?? 'Sin nombre'),       
+              'categoriaPrincipal': categoriaHomologada, 
               'experiencias': etiquetasNLP,              
               'rating': _toDouble(l['rating'], fb: 5),
               'popularity': _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5),
@@ -546,31 +546,31 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
           .cast<Map<String, dynamic>>()
           .toList(); 
 
-      // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
-listaProcesada = listaProcesada.where((l) {
-  final nombreMin = (l['name'] ?? '').toString().toLowerCase();
-  final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
-  
-double limiteMaximoKM = (destinoSeleccionado == null) ? 15.0 : 80.0;
-  if (distanciaKM > limiteMaximoKM) return false;
-  final esBasura = nombreMin.contains("walmart") || 
-                   nombreMin.contains("oxxo") || 
-                   nombreMin.contains("soriana") || 
-                   nombreMin.contains("bodega aurrera") || 
-                   nombreMin.contains("honda") || 
-                   nombreMin.contains("hospital");
+              // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
+        listaProcesada = listaProcesada.where((l) {
+          final nombreMin = (l['name'] ?? '').toString().toLowerCase();
+          final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
+          
+        double limiteMaximoKM = (destinoSeleccionado == null) ? 15.0 : 80.0;
+          if (distanciaKM > limiteMaximoKM) return false;
+          final esBasura = nombreMin.contains("walmart") || 
+                          nombreMin.contains("oxxo") || 
+                          nombreMin.contains("soriana") || 
+                          nombreMin.contains("bodega aurrera") || 
+                          nombreMin.contains("honda") || 
+                          nombreMin.contains("hospital");
 
-  return !esBasura;
-}).toList();
+          return !esBasura;
+        }).toList();
 
-if (listaProcesada.isEmpty && destinoSeleccionado != null) {
-  setState(() { 
-    error = "Por ahora, solo trabajamos con destinos dentro de México."; 
-    lugares = []; 
-    cargando = false; 
-  });
-  return;
-}
+        if (listaProcesada.isEmpty && destinoSeleccionado != null) {
+          setState(() { 
+            error = "Por ahora, solo trabajamos con destinos dentro de México."; 
+            lugares = []; 
+            cargando = false; 
+          });
+          return;
+        }
 
       // 8. ELIMINAR DUPLICADOS
       final Map<String, Map<String, dynamic>> unicos = {};
@@ -583,7 +583,7 @@ if (listaProcesada.isEmpty && destinoSeleccionado != null) {
       final conPesos = _aplicarPesos(listaProcesada);
       final ordenados = _quickSort(conPesos);
 
-      // 🚀 10. EL FILTRO MAESTRO (AQUÍ SE CUMPLE LO QUE PEDISTE)
+      // 10. EL FILTRO MAESTRO 
       List<Map<String, dynamic>> filtrados = FiltrosEtiquetasServicio.filtrarYObtenerTop5(
         listaCompleta: ordenados,
         tipo: tipoSeleccionado,
@@ -875,7 +875,6 @@ if (listaProcesada.isEmpty && destinoSeleccionado != null) {
 // PESOS (MODIFICADO PARA DAR PRIORIDAD ABSOLUTA A GOOGLE PLACES)
 // -------------------------------------------------------------------------
 List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
-  // 🔥 Al agregar <Map<String, dynamic>> aquí, matamos el error de tipado nulo
   return lista.map<Map<String, dynamic>>((lugar) {
     final rating = _toDouble(lugar['rating'], fb: 5);
     final popularity = _toDouble(lugar['popularity'], fb: 5);
@@ -886,10 +885,10 @@ List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
     double distanciaPeso = 10 / (distancia + 1);
     if (distanciaPeso > 10) distanciaPeso = 10;
 
-    // 🔥 LA REGLA MAESTRA DEL GPS LOCAL
+    // GPS LOCAL
     if (destinoSeleccionado == null) {
-      // Si es búsqueda local en tu ubicación real, ignoramos la popularidad de internet
-      // y ordenamos los lugares puramente por el que tengas más cerca de ti.
+      // Si es búsqueda local en su ubicación real, ignoramos la popularidad de internet
+      // y ordenamos los lugares puramente por el que el usuario tenga más cerca
       lugar['relevancia'] = distanciaPeso * 10.0;
     } else {
       // Si el usuario buscó un destino turístico, aplicamos la fórmula polinomial base
@@ -934,8 +933,8 @@ List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
     return [..._quickSort(mayores), ...iguales, ..._quickSort(menores)];
   }
 
-// -------------------------------------------------------------------------
-  // TOP 5 REPARADO (COMPLETA SIEMPRE LAS 5 TARJETAS)
+  // -------------------------------------------------------------------------
+  // TOP 5 (COMPLETA SIEMPRE LAS 5 TARJETAS)
   // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _top5(List<Map<String, dynamic>> lista) {
     final Map<String, Map<String, dynamic>> categorias = {};
@@ -977,7 +976,7 @@ List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
       tipo: tipoSeleccionado,
       precio: precioSeleccionado,
       experiencia: estiloSeleccionado,
-      // 🔥 Si escribió la ciudad o la categoría, vaciamos el texto para no asfixiar el filtro
+      // Si escribió la ciudad o la categoría, vaciamos el texto para no asfixiar el filtro
       queryTexto: (esCiudad || esCategoria) ? '' : query, 
     );
   }
@@ -1075,20 +1074,20 @@ String _traducirNombre(String nombreOriginal) {
                       children: [
                         const SizedBox(height: 16),
 
-                       // 🔍 BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
+                       //  BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
                         BarraBusqueda(
                           onChanged: (v) {
                             final textoLimpio = v.trim();
                             setState(() {
                               // Cambiamos el texto usando la función interna que limpia/actualiza tu buscador
                               _buscar(texto: textoLimpio);
-                              // Calcula las sugerencias usando tu motor Levenshtein centralizado
+                              // Calcula las sugerencias usando el motor Levenshtein centralizado
                               sugerenciasAutocompletado = FiltrosEtiquetasServicio.autocompletarDestinos(textoLimpio);
                             });
                           },
                         ),
 
-                        // 🔥 DIBUJAR LAS SUGERENCIAS DEBAJO DE LA BARRA
+                        // DIBUJAR LAS SUGERENCIAS DEBAJO DE LA BARRA
                         if (sugerenciasAutocompletado.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1114,7 +1113,7 @@ String _traducirNombre(String nombreOriginal) {
                                       sugerenciasAutocompletado = []; 
                                     });
 
-                                    // 3. 🔥 DISPARO REAL Y LIMPIO: Ejecuta la función de búsqueda original de tu pantalla
+                                    // 3. Ejecuta la función de búsqueda original de tu pantalla
                                     _buscar(texto: destinoSugerido);
                                   },
                                 );
@@ -1124,7 +1123,7 @@ String _traducirNombre(String nombreOriginal) {
                           
                         const SizedBox(height: 12),
 
-                        // 🔥 FILTROS
+                        // FILTROS
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: FiltrosBusqueda(
@@ -1157,7 +1156,7 @@ String _traducirNombre(String nombreOriginal) {
 
                         const SizedBox(height: 16),
 
-                        // 🔥 LISTA
+                        // LISTA
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.65,
                           child: _buildLista(),
@@ -1290,7 +1289,7 @@ String _traducirNombre(String nombreOriginal) {
           lng: _toDouble(l['lng']),
           categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
           imagenUrl: l['foto'] ?? l['imagen'],        
-          lugar: l, // 🔥 EL PUENTE MÁGICO QUE LE MANDA LOS DATOS A LA TARJETA
+          lugar: l, // EL PUENTE QUE LE MANDA LOS DATOS A LA TARJETA
           onTap: () {
             if (widget.esSeleccion) {
               Navigator.pop(context, {

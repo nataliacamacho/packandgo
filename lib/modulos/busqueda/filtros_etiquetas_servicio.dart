@@ -38,10 +38,8 @@ class Lugar {
 class FiltrosEtiquetasServicio {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Lista negra de palabras ambiguas para el procesamiento NLP
   final Set<String> listaNegraNLP = {'bonito', 'agradable', 'bueno', 'lugar', 'excelente', 'bien'};
 
-  // Matriz base de correspondencia inicial de pesos por palabra clave
   final Map<String, Map<String, Map<String, double>>> matrizPesosNLP = {
     'restaurante': {
       'Familiar': {'niños': 5, 'comida': 2, 'menú infantil': 5, 'divertido': 3, 'seguro': 4, 'amable': 3},
@@ -73,7 +71,6 @@ class FiltrosEtiquetasServicio {
     },
   };
 
-  // 🧠 SOLUCIÓN ERROR 1: Agregamos su propio transformador seguro interno para parsear números
   double _toDouble(dynamic v, {double fb = 0}) {
     if (v == null) return fb;
     if (v is double) return v;
@@ -86,7 +83,6 @@ class FiltrosEtiquetasServicio {
   Future<bool> validarDestinoEnMexico(String destino, List<String> ciudadesValidas) async {
     String destinoNormalizado = destino.toLowerCase().trim();
 
-    // 🔥 EXCEPCIÓN GEOGRÁFICA CRÍTICA: Forzar el contexto de México para "La Paz"
     if (destinoNormalizado == 'la paz' || destinoNormalizado == 'lapaz') {
       destinoNormalizado = 'la paz baja california sur';
     }
@@ -154,7 +150,7 @@ class FiltrosEtiquetasServicio {
   }
 
   List<String> calcularEtiquetasExperiencia(Lugar lugar) {
-    // 🔥 SOLUCIÓN: Limpiamos acentos y cambiamos espacios por guiones bajos
+    // Limpiamos acentos y cambiamos espacios por guiones bajos
     // para que "Cafetería" -> "cafeteria" y "Zona arqueológica" -> "zona_arqueologica"
     String categoriaLimpia = lugar.tipo.toLowerCase().trim()
         .replaceAll(RegExp(r'[áäâà]'), 'a')
@@ -264,7 +260,7 @@ class FiltrosEtiquetasServicio {
   final nameLower = placeName.toLowerCase().trim();
   final todoElTexto = categoriesFromApi.map((e) => e.toString().toLowerCase()).join(",");
 
-  // Mapeo Estándar (Los nombres aquí DEBEN coincidir con los de tus botones de filtro)
+  // Mapeo Estándar (Los nombres aquí DEBEN coincidir con los de los botones de filtro)
   if (nameLower.contains("café") || nameLower.contains("coffee") || nameLower.contains("panaderia") || todoElTexto.contains("cafe") || todoElTexto.contains("coffee") || todoElTexto.contains("bakery") || todoElTexto.contains("pastry")) return "Cafetería";  if (nameLower.contains("bar") || todoElTexto.contains("bar") || todoElTexto.contains("night_club")) return "Bar";
   if (nameLower.contains("parque") || todoElTexto.contains("garden") || todoElTexto.contains("park")) return "Parque";
   if (nameLower.contains("museo") || todoElTexto.contains("museum")) return "Museo";
@@ -279,7 +275,7 @@ class FiltrosEtiquetasServicio {
   return "Otro";
 }
 
-  /// ASIGNADOR INTELIGENTE DE PRECIO SIMULADO (Para que los filtros de precio tengan datos variados)
+  /// ASIGNADOR DE PRECIO SIMULADO (Para que los filtros de precio tengan datos variados)
   static String calcularPrecioSimulado(dynamic apiPrice, String placeName) {
     if (apiPrice != null && apiPrice.toString().isNotEmpty) {
       String value = apiPrice.toString().trim();
@@ -310,7 +306,6 @@ class FiltrosEtiquetasServicio {
       final nombre = (lugar["name"] ?? "").toString().toLowerCase();
       final direccion = (lugar["direccion"] ?? lugar["vicinity"] ?? "").toString().toLowerCase();
       
-      // 🚫 CONTROL DE FRONTERAS
       if (direccion.contains("miami") || 
           direccion.contains("houston") || 
           direccion.contains("fl ") || 
@@ -325,7 +320,7 @@ class FiltrosEtiquetasServicio {
         return false;
       }
 
-      // 🔥 FILTRO DE TEXTO INTELIGENTE REPARADO
+      //FILTRO DE TEXTO INTELIGENTE 
       // Si escribió algo, buscamos en el nombre O en la dirección
       final coincideBusqueda = textoBusqueda.isEmpty || 
                                nombre.contains(textoBusqueda) || 
@@ -356,7 +351,7 @@ class FiltrosEtiquetasServicio {
       
       final expFiltro = experiencia != null ? experiencia.toLowerCase().trim() : '';
       
-      // 🔥 LA MAGIA: Verificamos si la etiqueta (ej. "pareja") está adentro del texto 
+      //  Verificamos si la etiqueta (ej. "pareja") está adentro del texto 
       // del botón (ej. "en pareja") o viceversa. Así nunca fallará.
       final coincideExperiencia = experiencia == null || experiencia.isEmpty || 
           experienciasLimpias.any((etiqueta) => expFiltro.contains(etiqueta) || etiqueta.contains(expFiltro));
@@ -368,10 +363,7 @@ class FiltrosEtiquetasServicio {
 
   }
 
-  // 🔍 ===================================================================
-  // MOTOR DE AUTOCOMPLETADO INTELIGENTE (RQF34 y RQF35)
-  // ===================================================================
-
+  // MOTOR DE AUTOCOMPLETADO (RQF34 y RQF35)
   /// Función auxiliar para limpiar acentos y caracteres raros
   static String _removerAcentos(String texto) {
     var conAcentos = 'áéíóúüñÁÉÍÓÚÜÑ';
@@ -402,17 +394,32 @@ class FiltrosEtiquetasServicio {
     }
     return v0[s2.length];
   }
-
-  /// 🔥 CEREBRO CENTRAL DE AUTOCOMPLETADO DISAÑADO PARA LA ESCUELA
+//autocompletar destinos
   /// Filtra una lista de destinos oficiales de México tolerando errores ortográficos y acentos
   static List<String> autocompletarDestinos(String inputUsuario) {
     if (inputUsuario.trim().length < 2) return [];
 
-    // Catálogo oficial de destinos de Pack&Go México para la demo escolar
     final List<String> catalogoDestinos = [
+      // Urber Principales y Playas Famosas
       "Acapulco", "Guadalajara", "Manzanillo", "Puebla", "Caborca", 
       "Cancún", "Monterrey", "Oaxaca", "Mazatlán", "Chapala", "Ajijic",
-      "Bacalar", "Mérida", "Puerto Vallarta", "Cozumel", "Querétaro"
+      "Bacalar", "Mérida", "Puerto Vallarta", "Cozumel", "Querétaro",
+      "Tulum", "Guanajuato", "Cabo San Lucas", "San José del Cabo",
+      "Tijuana", "Veracruz", "Mazamitla", "Tapalpa", "Tequila",
+      "Playa del Carmen", "Huatulco", "Puerto Escondido", "Zihuatanejo",
+      "Cuernavaca", "Pachuca", "San Luis Potosí", "Zacatecas", "Morelia",
+      "Pátzcuaro", "Taxco", "Valle de Bravo", "Tepoztlán", "Malinalco",
+      
+      // Pueblos Mágicos y Destinos Culturales Clave
+      "Teotihuacán", "San Miguel de Allende", "Campeche", "Palenque",
+      "San Cristóbal de las Casas", "Comitán", "Izamal", "Valladolid",
+      "Sayulita", "San Blas", "Loreto", "Todos Santos", "Creel",
+      "Batopilas", "Parras de la Fuente", "Cuatro Ciénegas", "Arteaga",
+      "Santiago", "Real de Catorce", "Xilitla", "Aquismón", "Jerez",
+      "Sombrerete", "Pinos", "Dolores Hidalgo", "Mineral de Pozos",
+      "Salvatierra", "Yuriria", "Jalpan de Serra", "Cadereyta",
+      "Bernal", "Tequisquiapan", "Amealco", "Huichapan", "Tecozautla",
+      "Real del Monte", "Huasca de Ocampo", "Mineral del Chico"
     ];
 
     final inputLimpio = _removerAcentos(inputUsuario);
