@@ -180,7 +180,7 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
 
       // 3. Crear el viaje con el nombre correcto
       final idViaje = await viajeServicio.crearViaje(
-        destino: nombreMostrar, // 👈 cambiado
+        destino: nombreMostrar, 
         fechaInicio: fechaInicio!,
         fechaFin: fechaFin!,
         descripcion: descripcionController.text,
@@ -219,8 +219,8 @@ class _CrearViajePantallaState extends State<CrearViajePantalla> {
         context,
         MaterialPageRoute(
           builder: (_) => DetalleViajePantalla(
-            nombre: nombreMostrar, // 👈 cambiado
-            destino: nombreMostrar, // 👈 cambiado
+            nombre: nombreMostrar, 
+            destino: nombreMostrar, 
             fechaInicio: inicioTemp,
             fechaFin: finTemp,
             descripcion: descripcionTemp,

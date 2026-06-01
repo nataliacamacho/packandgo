@@ -101,7 +101,7 @@ class FiltrosBusqueda extends StatelessWidget {
     );
   }
 
-  // 🔥 CIUDADES DESDE FIRESTORE (CLAVE = doc.id)
+  // CIUDADES DESDE FIRESTORE (CLAVE = doc.id)
   Widget _buildDropdownCiudades() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -129,7 +129,7 @@ class FiltrosBusqueda extends StatelessWidget {
               final data = doc.data() as Map<String, dynamic>;
 
               return PopupMenuItem<String>(
-                value: doc.id, // 🔥 IMPORTANTE: usamos el ID (gdl, cdmx...)
+                value: doc.id, // usamos el ID (gdl, cdmx...)
                 child: Row(
                   children: [
                     Expanded(child: Text(data["nombre"])),

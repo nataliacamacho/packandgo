@@ -9,7 +9,7 @@ class LugaresServicio {
 static String get openTripApiKey =>
     dotenv.env['OPENTRIPMAP_API_KEY'] ?? '';
 
-  // 🔎 FOURSQUARE
+  //  FOURSQUARE
   static Future<List<Map<String, dynamic>>> buscarFoursquare(String query) async {
     final url = Uri.parse(
         "https://api.foursquare.com/v3/places/search?query=$query&limit=10");
@@ -42,7 +42,7 @@ static String get openTripApiKey =>
     }
   }
 
-  // 🌍 OPENTRIPMAP
+  //  OPENTRIPMAP
   static Future<List<Map<String, dynamic>>> buscarOpenTripMap(String query) async {
     final url = Uri.parse(
         "https://api.opentripmap.com/0.1/en/places/geoname?name=$query&apikey=$openTripApiKey");
@@ -68,7 +68,7 @@ static String get openTripApiKey =>
     }
   }
 
-  // 🔗 COMBINAR RESULTADOS
+  //  COMBINAR RESULTADOS
   static Future<List<Map<String, dynamic>>> buscarLugares(String query) async {
     final foursquare = await buscarFoursquare(query);
     final openTrip = await buscarOpenTripMap(query);

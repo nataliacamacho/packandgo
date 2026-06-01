@@ -1,6 +1,6 @@
 class NormalizadorLugares {
   // =========================
-  // 🎯 CATEGORÍA PRINCIPAL
+  // CATEGORÍA PRINCIPAL
   // =========================
   static String obtenerCategoria(Map<String, dynamic>? lugar) {
     if (lugar == null) return 'Atracción turística';
@@ -18,7 +18,7 @@ class NormalizadorLugares {
   }
 
   // =========================
-  // 🟢 GOOGLE PLACES
+  //  GOOGLE PLACES
   // =========================
   static String? _categoriaGoogle(Map<String, dynamic> lugar) {
     if (lugar['types'] == null || lugar['types'] is! List) return null;
@@ -27,7 +27,7 @@ class NormalizadorLugares {
       lugar['types'].map((e) => e.toString().toLowerCase()),
     );
 
-    // 🔥 PRIORIDAD (orden IMPORTANTE)
+    //  PRIORIDAD (orden IMPORTANTE)
     if (_match(tipos, ['restaurant', 'food'])) return 'Restaurante';
     if (_match(tipos, ['cafe'])) return 'Cafetería';
     if (_match(tipos, ['bar', 'night_club'])) return 'Bar';
@@ -42,7 +42,7 @@ class NormalizadorLugares {
   }
 
   // =========================
-  // 🟡 OPENTRIPMAP
+  //  OPENTRIPMAP
   // =========================
   static String? _categoriaOpenTripMap(Map<String, dynamic> lugar) {
     if (lugar['kinds'] == null) return null;
@@ -65,7 +65,7 @@ class NormalizadorLugares {
   }
 
   // =========================
-  // 🔵 FOURSQUARE (fallback)
+  //  FOURSQUARE (fallback)
   // =========================
   static String? _categoriaFoursquare(Map<String, dynamic> lugar) {
     if (lugar['categories'] == null ||
@@ -78,7 +78,7 @@ class NormalizadorLugares {
   }
 
   // =========================
-  // 🔍 MATCH FLEXIBLE
+  //  MATCH FLEXIBLE
   // =========================
   static bool _match(List<String> tipos, List<String> claves) {
     return tipos.any(
@@ -87,21 +87,21 @@ class NormalizadorLugares {
   }
 
   // =========================
-  // 🌍 NOMBRE LIMPIO (IDIOMA)
+  // NOMBRE LIMPIO (IDIOMA)
   // =========================
   static String obtenerNombre(Map<String, dynamic>? lugar) {
     if (lugar == null) return 'Lugar desconocido';
 
     String nombre = lugar['name'] ?? 'Lugar desconocido';
 
-    // 🔥 limpieza básica
+    // limpieza básica
     nombre = nombre.replaceAll(RegExp(r'\(.*?\)'), '');
 
     return nombre.trim();
   }
 
   // =========================
-  // 📍 DIRECCIÓN LIMPIA
+  // DIRECCIÓN LIMPIA
   // =========================
   static String obtenerDireccion(Map<String, dynamic>? lugar) {
     if (lugar == null) return 'Ubicación desconocida';

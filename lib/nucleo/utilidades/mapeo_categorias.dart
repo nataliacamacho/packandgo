@@ -27,7 +27,7 @@ class MapeoCategorias {
     }
 
 
-    // 🍽️ COMIDA
+    //  COMIDA
     if (texto.contains("restaurant") ||
         texto.contains("foods") ||
         texto.contains("food")) {
@@ -49,7 +49,7 @@ class MapeoCategorias {
       return "bar";
     }
 
-    // 🌿 NATURALEZA
+    //  NATURALEZA
     if (texto.contains("park") || texto.contains("natural")) {
       return "parque";
     }
@@ -62,7 +62,7 @@ class MapeoCategorias {
       return "playa";
     }
 
-    // 🏛️ CULTURA
+    //  CULTURA
     if (texto.contains("museum") || texto.contains("museums")) {
       return "museo";
     }
@@ -75,17 +75,17 @@ class MapeoCategorias {
       return "zona_arqueologica";
     }
 
-    // 🛍️
+    // 
     if (texto.contains("shop") || texto.contains("shopping")) {
       return "centro_comercial";
     }
 
-    // 📍
+    //
     if (texto.contains("view")) {
       return "mirador";
     }
 
-    // ⚡
+    // 
     if (texto.contains("sport")) {
       return "actividades_extremas";
     }
