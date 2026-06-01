@@ -34,7 +34,63 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     {'name': 'Guadalajara', 'lat': 20.6597, 'lng': -103.3496},
     {'name': 'Monterrey', 'lat': 25.6866, 'lng': -100.3161},
     {'name': 'Cancún', 'lat': 21.1619, 'lng': -86.8515},
+    {'name': 'Puebla', 'lat': 19.0414, 'lng': -98.2063},
+    {'name': 'Mérida', 'lat': 20.9674, 'lng': -89.5926},
+    {'name': 'Tijuana', 'lat': 32.5149, 'lng': -117.0382},
+    {'name': 'León', 'lat': 21.1220, 'lng': -101.6823},
+    {'name': 'Querétaro', 'lat': 20.5888, 'lng': -100.3899},
+    {'name': 'Toluca', 'lat': 19.2826, 'lng': -99.6557},
+    {'name': 'Acapulco', 'lat': 16.8531, 'lng': -99.8237},
+    {'name': 'Puerto Vallarta', 'lat': 20.6534, 'lng': -105.2253},
+    {'name': 'Los Cabos', 'lat': 22.8905, 'lng': -109.9167},
+    {'name': 'Mazatlán', 'lat': 23.2494, 'lng': -106.4111},
+    {'name': 'Veracruz', 'lat': 19.1738, 'lng': -96.1342},
     {'name': 'Oaxaca', 'lat': 17.0732, 'lng': -96.7266},
+    {'name': 'San Miguel de Allende', 'lat': 20.9144, 'lng': -100.7430},
+    {'name': 'Guanajuato', 'lat': 21.0190, 'lng': -101.2574},
+    {'name': 'Morelia', 'lat': 19.7050, 'lng': -101.1949},
+    {'name': 'Zacatecas', 'lat': 22.7709, 'lng': -102.5832},
+    {'name': 'Tuxtla Gutiérrez', 'lat': 16.7528, 'lng': -93.1167},
+    {'name': 'San Cristóbal de las Casas', 'lat': 16.7370, 'lng': -92.6376},
+    {'name': 'Villahermosa', 'lat': 17.9895, 'lng': -92.9475},
+    {'name': 'Campeche', 'lat': 19.8301, 'lng': -90.5349},
+    {'name': 'Chetumal', 'lat': 18.5043, 'lng': -88.3053},
+    {'name': 'Playa del Carmen', 'lat': 20.6296, 'lng': -87.0739},
+    {'name': 'Tulum', 'lat': 20.2114, 'lng': -87.4654},
+    {'name': 'Cozumel', 'lat': 20.4229, 'lng': -86.9223},
+    {'name': 'Aguascalientes', 'lat': 21.8853, 'lng': -102.2916},
+    {'name': 'Saltillo', 'lat': 25.4383, 'lng': -100.9737},
+    {'name': 'Torreón', 'lat': 25.5428, 'lng': -103.4068},
+    {'name': 'Chihuahua', 'lat': 28.6329, 'lng': -106.0691},
+    {'name': 'Ciudad Juárez', 'lat': 31.6904, 'lng': -106.4245},
+    {'name': 'Durango', 'lat': 24.0277, 'lng': -104.6532},
+    {'name': 'Hermosillo', 'lat': 29.0729, 'lng': -110.9559},
+    {'name': 'Caborca', 'lat': 30.7167, 'lng': -112.1500},
+    {'name': 'La Paz', 'lat': 24.1426, 'lng': -110.3128},
+    {'name': 'Ensenada', 'lat': 31.8667, 'lng': -116.6000},
+    {'name': 'Colima', 'lat': 19.2433, 'lng': -103.7241},
+    {'name': 'Manzanillo', 'lat': 19.1138, 'lng': -104.3385},
+    {'name': 'Tepic', 'lat': 21.5085, 'lng': -104.8956},
+    {'name': 'Nuevo Vallarta', 'lat': 20.6829, 'lng': -105.2850},
+    {'name': 'Cuernavaca', 'lat': 18.9242, 'lng': -99.2216},
+    {'name': 'Taxco', 'lat': 18.5563, 'lng': -99.6057},
+    {'name': 'Tlaxcala', 'lat': 19.3139, 'lng': -98.2404},
+    {'name': 'Pachuca', 'lat': 20.1011, 'lng': -98.7591},
+    {'name': 'Tula de Allende', 'lat': 20.0544, 'lng': -99.3429},
+    {'name': 'Xalapa', 'lat': 19.5438, 'lng': -96.9102},
+    {'name': 'Coatepec', 'lat': 19.4524, 'lng': -96.9613},
+    {'name': 'Orizaba', 'lat': 18.8506, 'lng': -97.1036},
+    {'name': 'Metepec', 'lat': 19.2530, 'lng': -99.6010},
+    {'name': 'Valle de Bravo', 'lat': 19.1925, 'lng': -100.1327},
+    {'name': 'Izamal', 'lat': 20.9300, 'lng': -89.0200},
+    {'name': 'Valladolid', 'lat': 20.6896, 'lng': -88.2017},
+    {'name': 'Bacalar', 'lat': 18.6783, 'lng': -88.3891},
+    {'name': 'Isla Holbox', 'lat': 21.5236, 'lng': -87.3000},
+    {'name': 'Real de Catorce', 'lat': 23.6900, 'lng': -100.8900},
+    {'name': 'San Luis Potosí', 'lat': 22.1565, 'lng': -100.9855},
+    {'name': 'Tequila', 'lat': 20.8823, 'lng': -103.8355},
+    {'name': 'Chapala', 'lat': 20.2967, 'lng': -103.1917},
+    {'name': 'Ajijic', 'lat': 20.2972, 'lng': -103.2542},
   ];
 
   @override
@@ -111,8 +167,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       await _actualizarPerfilUsuario();
       await cargarDestinosViajerosSimilares();
 
-      indiceDestinoSimilar = 0;
-
       bonusKNNGlobal = await obtenerBonusKNN();
 
       final pos = await UbicacionServicio().obtenerUbicacionActual();
@@ -171,7 +225,8 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
   double _score(Map l) {
     final rating = (l['rating'] ?? 0).toDouble();
-    final pop = (l['user_ratings_total'] ?? 0).toDouble();
+    // 🔥 FIX: usa 'popularity' que es el campo que devuelve el servicio
+    final pop = (l['popularity'] ?? 0).toDouble();
     final categoria = (l['categoriaPrincipal'] ?? '').toString().toLowerCase();
 
     double scoreBase = (rating * 3) + log(pop + 1);
@@ -301,11 +356,12 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
   void _set(List<dynamic> lista) {
     if (!mounted) return;
+    final recortada = lista.take(6).toList();
+    final mitad = (recortada.length / 2).floor();
     setState(() {
-      lugaresRecomendados = lista.take(6).toList();
+      lugaresRecomendados = recortada;
       estaCargando = false;
-      // Empieza en el primer lugar (índice 0)
-      indiceActual = 0;
+      indiceActual = mitad;
     });
   }
 
@@ -331,7 +387,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
         "👥 Usuario: ${d.id} -> similitud = ${similitud.toStringAsFixed(3)}",
       );
 
-      if (similitud >= 0.7) {
+      if (similitud >= 0.3) {
         final destinos = Map<String, dynamic>.from(
           data['historialDestinos'] ?? {},
         );
@@ -347,7 +403,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
     destinosSimilares.clear();
 
     // RQF30: intenta cargar hasta 3 destinos similares
-    for (final destino in ordenados.take(3)) {
+    for (final destino in ordenados.take(5)) {
       final ciudad = ciudadesPopulares.firstWhere(
         (c) => c['name'].toString().toLowerCase() == destino.key.toLowerCase(),
         orElse: () => {},
@@ -377,31 +433,38 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       "📊 RQF30: Total destinos similares cargados: ${destinosSimilares.length}",
     );
 
+    indiceDestinoSimilar = (destinosSimilares.length / 2).floor();
+
     debugPrint("📍 Destinos encontrados: $destinosContador");
   }
 
   void _siguienteLugar() {
-    if (indiceActual < lugaresRecomendados.length - 1) {
-      setState(() => indiceActual++);
-    }
+    setState(() {
+      indiceActual = (indiceActual + 1) % lugaresRecomendados.length;
+    });
   }
 
   void _anteriorLugar() {
-    if (indiceActual > 0) {
-      setState(() => indiceActual--);
-    }
+    setState(() {
+      indiceActual =
+          (indiceActual - 1 + lugaresRecomendados.length) %
+          lugaresRecomendados.length;
+    });
   }
 
   void _siguienteDestinoSimilar() {
-    if (indiceDestinoSimilar < destinosSimilares.length - 1) {
-      setState(() => indiceDestinoSimilar++);
-    }
+    setState(() {
+      indiceDestinoSimilar =
+          (indiceDestinoSimilar + 1) % destinosSimilares.length;
+    });
   }
 
   void _anteriorDestinoSimilar() {
-    if (indiceDestinoSimilar > 0) {
-      setState(() => indiceDestinoSimilar--);
-    }
+    setState(() {
+      indiceDestinoSimilar =
+          (indiceDestinoSimilar - 1 + destinosSimilares.length) %
+          destinosSimilares.length;
+    });
   }
 
   // =========================
@@ -517,14 +580,12 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 GestureDetector(
-                  onTap: indiceActual > 0 ? onAnterior : null,
+                  onTap: onAnterior,
                   child: Container(
                     width: 40,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: indiceActual > 0
-                          ? const Color(0xFF0066D2)
-                          : Colors.grey,
+                      color: const Color(0xFF0066D2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -548,14 +609,12 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
                 const SizedBox(width: 15),
 
                 GestureDetector(
-                  onTap: indiceActual < items.length - 1 ? onSiguiente : null,
+                  onTap: onSiguiente,
                   child: Container(
                     width: 40,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: indiceActual < items.length - 1
-                          ? const Color(0xFF0066D2)
-                          : Colors.grey,
+                      color: const Color(0xFF0066D2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(

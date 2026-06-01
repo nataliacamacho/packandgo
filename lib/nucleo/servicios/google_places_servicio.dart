@@ -273,43 +273,34 @@ class GooglePlacesServicio {
     required List<String> categorias,
     int radio = 50000,
   }) async {
-    // Dispara las búsquedas al mismo tiempo (Concurrencia)
-    final futures = categorias.map((cat) {
+    final futures = categorias.map((cat) async {
       final googleType = _categoriaAGoogleType[cat];
-      return buscarLugares(
+      final resultados = await buscarLugares(
         lat,
         lng,
         tipo: googleType != null ? googleType : cat,
         radio: radio,
       );
+      // 🔥 FIX: fuerza la categoría del perfil a los resultados de esa búsqueda
+      for (final lugar in resultados) {
+        lugar['categoriaPrincipal'] = cat;
+      }
+      return resultados;
     });
 
     final resultados = await Future.wait(futures);
 
-    // 🔥 FILTRO DE "NORMALIZACIÓN"
     final Map<String, Map<String, dynamic>> vistos = {};
-
     for (final lista in resultados) {
       for (final lugar in lista) {
-        print(
-          "DEBUG: Comparando lugar -> '${lugar['name']}' con ID -> '${lugar['place_id']}'",
-        );
-        // Normalizamos el nombre: minúsculas y sin espacios al inicio/final
         final nombreLimpio = (lugar['name'] ?? 'sin_nombre')
             .toString()
             .toLowerCase()
             .trim();
-
-        if (vistos.containsKey(nombreLimpio)) {
-          final existente = vistos[nombreLimpio]!;
-          // Regla: Nos quedamos con el que tiene foto, o el que tiene dirección más larga (suele ser el registro más completo)
-          final tieneFotoNuevo = lugar['foto'] != null;
-          final tieneFotoViejo = existente['foto'] != null;
-
-          if (tieneFotoNuevo && !tieneFotoViejo) {
-            vistos[nombreLimpio] = lugar;
-          }
-        } else {
+        if (!vistos.containsKey(nombreLimpio)) {
+          vistos[nombreLimpio] = lugar;
+        } else if (lugar['foto'] != null &&
+            vistos[nombreLimpio]!['foto'] == null) {
           vistos[nombreLimpio] = lugar;
         }
       }
