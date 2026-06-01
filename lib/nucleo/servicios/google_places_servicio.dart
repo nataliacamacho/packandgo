@@ -28,7 +28,6 @@ class GooglePlacesServicio {
             '&location=$lat,$lng'
             '&radius=$radio'
             '&language=es'
-            // 🔥 El candado de horarios está bien aquí
             '&fields=photos,name,geometry,rating,place_id,types,vicinity,opening_hours,price_level'
             '&key=$_apiKey';
 
@@ -37,12 +36,12 @@ class GooglePlacesServicio {
         }
       }
       // ---------------------------------------------------------------------
-      // NEARBY SEARCH (El culpable reparado)
+      // NEARBY SEARCH 
       // ---------------------------------------------------------------------
       else {
-        // 🔥 Para que nearbysearch envíe horarios, cambiamos a la versión 'textsearch'
+        // Para que nearbysearch envíe horarios, cambiamos a la versión 'textsearch'
         // pero buscando por el "tipo" en texto en la ubicación específica.
-        // Es un truco legal de Google Maps para obligarlo a darte todos los fields sin costo extra.
+        // Es un truco legal de Google Maps para obligarlo a dar todos los fields sin costo extra.
 
         String queryTipo = tipo != null && tipo.isNotEmpty
             ? tipo
@@ -57,12 +56,11 @@ class GooglePlacesServicio {
             '&location=$lat,$lng'
             '&radius=$radio'
             '&language=es'
-            // 🔥 AHORA SÍ LE PEDIMOS LOS HORARIOS EXPLÍCITAMENTE AL NEARBY
             '&fields=photos,name,geometry,rating,place_id,types,vicinity,opening_hours,price_level'
             '&key=$_apiKey';
       }
 
-      print('🌎 URL GOOGLE: $url');
+      print('URL GOOGLE: $url');
 
       final response = await http.get(Uri.parse(url));
 
@@ -120,7 +118,6 @@ class GooglePlacesServicio {
 
         final priceLevel = place['price_level'];
 
-        // 🔥 ¡AQUÍ ESTÁ LA MAGIA PARA LA TARJETA!
         bool? estaAbierto;
         String horarioTexto = 'Horario no disponible';
 
@@ -150,7 +147,7 @@ class GooglePlacesServicio {
           'place_id': place['place_id'] ?? '',
           'fuente': 'google',
           'horario': horarioTexto,
-          'abierto': estaAbierto, // 🔥 ¡ESTO ES LO QUE NECESITA TU TARJETA!
+          'abierto': estaAbierto, 
         };
       }).toList();
     } catch (e) {
@@ -166,7 +163,7 @@ class GooglePlacesServicio {
     final texto = types.join(' ').toLowerCase();
     final n = nombre.toLowerCase();
 
-    // 🔥 1. ESPECÍFICOS PRIMERO (Para que "food" no se los robe)
+    // 1. ESPECÍFICOS PRIMERO (Para que "food" no se los robe)
     if (texto.contains('cafe') ||
         texto.contains('coffee') ||
         texto.contains('bakery') ||
@@ -178,7 +175,7 @@ class GooglePlacesServicio {
         n.contains('bar'))
       return 'bar';
 
-    // 🔥 2. GENERALES DESPUÉS
+    // 2. GENERALES DESPUÉS
     if (texto.contains('restaurant') ||
         texto.contains('food') ||
         texto.contains('meal'))
@@ -286,7 +283,7 @@ class GooglePlacesServicio {
 
     final resultados = await Future.wait(futures);
 
-    // 🔥 FILTRO DE "NORMALIZACIÓN"
+    // FILTRO DE "NORMALIZACIÓN"
     final Map<String, Map<String, dynamic>> vistos = {};
 
     for (final lista in resultados) {
@@ -318,7 +315,7 @@ class GooglePlacesServicio {
     return vistos.values.toList();
   }
 
-  // 🔥 NUEVA FUNCIÓN: OBTENER HORARIOS Y SEMÁFORO DESDE DETAILS
+  // OBTENER HORARIOS Y SEMÁFORO DESDE DETAILS
   static Future<Map<String, dynamic>> obtenerDetallesHorario(
     String placeId,
   ) async {

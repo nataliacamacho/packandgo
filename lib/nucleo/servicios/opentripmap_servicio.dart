@@ -10,7 +10,7 @@ class OpenTripMapServicio {
     'restaurante': 'foods',
     'restaurant': 'foods',
     'cafeteria': 'cafes,foods',
-    'cafe': 'cafes,foods', // ¡Aquí estaba el problema!
+    'cafe': 'cafes,foods', 
     'bar': 'pubs,bars',
     'parque': 'natural',
     'park': 'natural',
@@ -35,7 +35,7 @@ class OpenTripMapServicio {
     int radio = 15000,
   }) async {
     
-    // 🔥 FILTRADO DESDE EL ORIGEN PARA OTM
+    // FILTRADO DESDE EL ORIGEN PARA OTM
     String kindsAPI = 'foods,cultural,religion,natural,architecture,amusement_parks';
     
     if (tipo != null && tipo.isNotEmpty) {
@@ -55,7 +55,7 @@ class OpenTripMapServicio {
       '&lat=$lat'
       '&kinds=$kindsAPI'
       '&rate=1'
-      '&limit=30' // 🔥 Subimos el límite para que nunca te falten tarjetas
+      '&limit=30' 
       '&apikey=$_apiKey',
     );
 

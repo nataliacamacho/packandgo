@@ -23,11 +23,8 @@ class TarjetaLugar extends StatelessWidget {
     this.lugar,
   });
 
-  // ====================================================================
-  // 🔥 EL EXTRACTOR INFALIBLE CON RESPALDO VISUAL REAL HD
-  // ====================================================================
   String _obtenerFotoFinal() {
-    // ✅ PRIORIDAD 1: usar la imagen ya construida (¡Protegida contra nulos!)
+    //  PRIORIDAD 1: usar la imagen ya construida 
     if (imagenUrl != null && 
         imagenUrl!.isNotEmpty && 
         imagenUrl!.startsWith('http') && 
@@ -35,7 +32,7 @@ class TarjetaLugar extends StatelessWidget {
       return imagenUrl!;
     }
     
-    // ✅ PRIORIDAD 2: reconstruir desde photos de Google
+    // PRIORIDAD 2: reconstruir desde photos de Google
     if (lugar != null && lugar!['photos'] != null) {
       final fotos = lugar!['photos'];
 
@@ -52,13 +49,13 @@ class TarjetaLugar extends StatelessWidget {
       }
     }
 
-    // ✅ PRIORIDAD 3: PLAN B TURÍSTICO REAL
+    //  PRIORIDAD 3: PLAN B TURÍSTICO REAL
     // Si Google no tiene foto, devolvemos la imagen HD de Wikipedia de la categoría
     return _obtenerImagenRespaldoWikipedia(categoria ?? 'otro'); 
   }
 
   // -------------------------------------------------------------------------
-  // 🌍 BANCO DE IMÁGENES DE RESPALDO HD (Wikipedia / Commons)
+  // BANCO DE IMÁGENES DE RESPALDO HD (Wikipedia / Commons)
   // -------------------------------------------------------------------------
   String _obtenerImagenRespaldoWikipedia(String cat) {
     switch (cat.toLowerCase()) {
@@ -90,7 +87,7 @@ class TarjetaLugar extends StatelessWidget {
   }
 
  // -------------------------------------------------------------------------
-  // RESPALDO VISUAL ESTILO GOOGLE MAPS (100% Sin Internet)
+  // RESPALDO VISUAL ESTILO GOOGLE MAPS (Sin Internet)
   // -------------------------------------------------------------------------
   Widget obtenerRespaldoVisual(String categoria) {
     Color colorFondo;
@@ -158,9 +155,7 @@ class TarjetaLugar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-        // Aquí mandas llamar tu función ya reparada
     final fotoDefinitiva = _obtenerFotoFinal(); 
-    // Y proteges tu categoría por si acaso
     final categoria = this.categoria ?? 'otro';
 
     return GestureDetector(
@@ -230,7 +225,6 @@ class TarjetaLugar extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     
-                    // 🔥 AQUÍ ESTÁ LA FILA QUE EMPUJA LA CATEGORÍA Y EL SEMÁFORO
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

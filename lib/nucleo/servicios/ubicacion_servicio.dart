@@ -6,19 +6,19 @@ class UbicacionServicio {
   static String? _cachedCiudad;
 
   /// ===============================
-  /// 📍 OBTENER UBICACIÓN ACTUAL
+  /// OBTENER UBICACIÓN ACTUAL
   /// ===============================
   Future<Position?> obtenerUbicacionActual() async {
-    // 🔥 USAR CACHE
+    // USAR CACHE
     if (_cachedPosition != null) {
-      print("⚡ Usando ubicación cacheada");
+      print(" Usando ubicación cacheada");
       return _cachedPosition;
     }
 
     bool servicioActivo = await Geolocator.isLocationServiceEnabled();
 
     if (!servicioActivo) {
-      print("❌ GPS desactivado");
+      print(" GPS desactivado");
       return null;
     }
 
@@ -28,13 +28,13 @@ class UbicacionServicio {
       permiso = await Geolocator.requestPermission();
 
       if (permiso == LocationPermission.denied) {
-        print("❌ Permiso denegado");
+        print(" Permiso denegado");
         return null;
       }
     }
 
     if (permiso == LocationPermission.deniedForever) {
-      print("🚫 Permiso denegado permanentemente");
+      print("Permiso denegado permanentemente");
       return null;
     }
 
@@ -43,7 +43,7 @@ class UbicacionServicio {
         desiredAccuracy: LocationAccuracy.medium,
       );
 
-      // 🔥 GUARDAR CACHE
+      //  GUARDAR CACHE
       _cachedPosition = posicion;
 
       print("📍 Nueva ubicación obtenida");
@@ -52,13 +52,13 @@ class UbicacionServicio {
 
       return posicion;
     } catch (e) {
-      print("❌ Error ubicación: $e");
+      print("Error ubicación: $e");
       return null;
     }
   }
 
   /// ===============================
-  /// 📦 COORDENADAS
+  ///  COORDENADAS
   /// ===============================
   Future<Map<String, double>?> obtenerCoordenadas() async {
     final posicion = await obtenerUbicacionActual();
@@ -69,12 +69,12 @@ class UbicacionServicio {
   }
 
   /// ===============================
-  /// 🏙️ CIUDAD ACTUAL
+  ///  CIUDAD ACTUAL
   /// ===============================
   Future<String?> obtenerCiudadActual() async {
-    // 🔥 CACHE CIUDAD
+    // CACHE CIUDAD
     if (_cachedCiudad != null) {
-      print("⚡ Usando ciudad cacheada");
+      print(" Usando ciudad cacheada");
       return _cachedCiudad;
     }
 
@@ -92,17 +92,17 @@ class UbicacionServicio {
 
       _cachedCiudad = ciudad;
 
-      print("🏙️ Ciudad detectada: $ciudad");
+      print(" Ciudad detectada: $ciudad");
 
       return ciudad;
     } catch (e) {
-      print("❌ Error ciudad: $e");
+      print(" Error ciudad: $e");
       return null;
     }
   }
 
   /// ===============================
-  /// 📏 DISTANCIA
+  /// DISTANCIA
   /// ===============================
   double calcularDistanciaEnKm({
     required double origenLat,
@@ -121,14 +121,14 @@ class UbicacionServicio {
   }
 
   /// ===============================
-  /// 🚗 VALIDAR CARRO
+  /// VALIDAR CARRO
   /// ===============================
   bool esRutaValidaEnCarro(double distanciaKm) {
     return distanciaKm <= 500;
   }
 
   /// ===============================
-  /// 🧹 LIMPIAR CACHE
+  /// LIMPIAR CACHE
   /// ===============================
   static void limpiarCache() {
     _cachedPosition = null;

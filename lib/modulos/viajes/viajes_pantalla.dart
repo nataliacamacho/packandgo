@@ -44,14 +44,14 @@ class ViajesPantalla extends StatelessWidget {
             return const Center(child: Text("Error al cargar los viajes"));
           }
 
-          // 🔥 FILTRAMOS AQUÍ (NO EN EL BUILDER)
+          //FILTRAMOS AQUÍ
           final viajes = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             return data['eliminado'] != true;
           }).toList();
 
           // =========================
-          // 🚨 SIN VIAJES
+          //  SIN VIAJES
           // =========================
           if (viajes.isEmpty) {
             return Center(
@@ -111,7 +111,7 @@ class ViajesPantalla extends StatelessWidget {
           }
 
           // =========================
-          // 📦 LISTA
+          //  LISTA
           // =========================
           return ListView.builder(
             itemCount: viajes.length,
@@ -135,7 +135,7 @@ class ViajesPantalla extends StatelessWidget {
                     children: [
                       Expanded(child: Text(destinoFormateado)),
 
-                      // 🔥 ETIQUETA CANCELADO
+                      // ETIQUETA CANCELADO
                       if (cancelado)
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -163,7 +163,7 @@ class ViajesPantalla extends StatelessWidget {
                     "${fechaFin.day}/${fechaFin.month}/${fechaFin.year}",
                   ),
 
-                  // ❌ SIN BOTÓN
+                  // SIN BOTÓN
                   trailing: null,
 
                   onTap: () {
