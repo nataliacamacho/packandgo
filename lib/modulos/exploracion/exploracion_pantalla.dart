@@ -182,7 +182,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
           ..sort((a, b) => b.value.compareTo(a.value));
 
         final categorias = topCategorias.take(4).map((e) => e.key).toList();
-        debugPrint("🎯 Buscando categorías del perfil: $categorias");
+        debugPrint(" Buscando categorías del perfil: $categorias");
 
         lugares = await GooglePlacesServicio.buscarPorCategorias(
           pos.latitude,
@@ -225,7 +225,6 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
 
   double _score(Map l) {
     final rating = (l['rating'] ?? 0).toDouble();
-    // 🔥 FIX: usa 'popularity' que es el campo que devuelve el servicio
     final pop = (l['popularity'] ?? 0).toDouble();
     final categoria = (l['categoriaPrincipal'] ?? '').toString().toLowerCase();
 
@@ -384,7 +383,7 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
       final similitud = _cosine(perfilUsuario, perfilOtro);
 
       debugPrint(
-        "👥 Usuario: ${d.id} -> similitud = ${similitud.toStringAsFixed(3)}",
+        " Usuario: ${d.id} -> similitud = ${similitud.toStringAsFixed(3)}",
       );
 
       if (similitud >= 0.3) {
@@ -423,19 +422,19 @@ class _ExploracionPantallaState extends State<ExploracionPantalla> {
           lugar['esDestino'] = true;
           destinosSimilares.add(lugar);
           debugPrint(
-            "✅ RQF30: Destino similar cargado -> ${ciudad['name']} (foto: ${lugar['foto'] != null})",
+            " RQF30: Destino similar cargado -> ${ciudad['name']} (foto: ${lugar['foto'] != null})",
           );
         }
       }
     }
 
     debugPrint(
-      "📊 RQF30: Total destinos similares cargados: ${destinosSimilares.length}",
+      "RQF30: Total destinos similares cargados: ${destinosSimilares.length}",
     );
 
     indiceDestinoSimilar = (destinosSimilares.length / 2).floor();
 
-    debugPrint("📍 Destinos encontrados: $destinosContador");
+    debugPrint("Destinos encontrados: $destinosContador");
   }
 
   void _siguienteLugar() {

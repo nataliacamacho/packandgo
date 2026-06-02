@@ -163,44 +163,31 @@ class GooglePlacesServicio {
     final texto = types.join(' ').toLowerCase();
     final n = nombre.toLowerCase();
 
-    // 1. ESPECÍFICOS PRIMERO (Para que "food" no se los robe)
-    if (texto.contains('cafe') ||
-        texto.contains('coffee') ||
-        texto.contains('bakery') ||
-        n.contains('cafe'))
-      return 'cafeteria';
-    if (texto.contains('bar') ||
-        texto.contains('night_club') ||
-        texto.contains('pub') ||
-        n.contains('bar'))
-      return 'bar';
+    // 1. ESCUDO ANTI-FALSOS POSITIVOS DESDE GOOGLE
+    if (texto.contains('store') || texto.contains('travel_agency') || 
+        texto.contains('liquor') || texto.contains('clothing') || 
+        texto.contains('real_estate') || n.contains('bodega') || 
+        n.contains('agencia') || n.contains('sucursal') || n.contains('rancho')) {
+      return 'comercio'; 
+    }
 
-    // 2. GENERALES DESPUÉS
-    if (texto.contains('restaurant') ||
-        texto.contains('food') ||
-        texto.contains('meal'))
-      return 'restaurante';
+    if (texto.contains('cafe') || texto.contains('coffee') || texto.contains('bakery') || n.contains('cafe')) return 'cafeteria';
+    if (texto.contains('bar') || texto.contains('night_club') || texto.contains('pub') || n.contains('bar')) return 'bar';
+    if (texto.contains('restaurant') || texto.contains('food') || texto.contains('meal')) return 'restaurante';
 
-    if (texto.contains('park') || texto.contains('garden')) return 'parque';
-    if (texto.contains('museum') || texto.contains('art_gallery'))
-      return 'museo';
+    // 2. NATURALEZA HOMOLOGADA
+    if (texto.contains('park') || texto.contains('garden') || texto.contains('natural_feature') || n.contains('presa') || n.contains('cerro') || n.contains('bosque') || n.contains('lago')) return 'parque';
+    
+    if (texto.contains('museum') || texto.contains('art_gallery')) return 'museo';
+    
+    // 3. PLAYA SEGURA
     if (texto.contains('beach') || n.contains('playa')) return 'playa';
-    if (texto.contains('shopping') || texto.contains('mall'))
-      return 'centro_comercial';
+    
+    if (texto.contains('shopping') || texto.contains('mall')) return 'centro_comercial';
     if (texto.contains('viewpoint') || n.contains('mirador')) return 'mirador';
-    if (texto.contains('archaeological') ||
-        n.contains('ruinas') ||
-        n.contains('maya'))
-      return 'zona_arqueologica';
-    if (texto.contains('amusement_park') ||
-        n.contains('xcaret') ||
-        n.contains('extremo'))
-      return 'actividades_extremas';
-    if (texto.contains('tourist_attraction') ||
-        texto.contains('historic') ||
-        n.contains('monumento') ||
-        n.contains('catedral'))
-      return 'monumento';
+    if (texto.contains('archaeological') || n.contains('ruinas') || n.contains('maya')) return 'zona_arqueologica';
+    if (texto.contains('amusement_park') || n.contains('xcaret') || n.contains('extremo')) return 'actividades_extremas';
+    if (texto.contains('tourist_attraction') || texto.contains('historic') || n.contains('monumento') || n.contains('catedral')) return 'monumento';
 
     return 'otro';
   }
@@ -278,10 +265,10 @@ class GooglePlacesServicio {
         tipo: googleType != null ? googleType : cat,
         radio: radio,
       );
-      // 🔥 FIX: fuerza la categoría del perfil a los resultados de esa búsqueda
-      for (final lugar in resultados) {
-        lugar['categoriaPrincipal'] = cat;
-      }
+      
+      // Eliminamos la sobreescritura forzada. 
+      // Ahora respetamos la 'categoriaPrincipal' que asignó _mapearCategoria internamente.
+      
       return resultados;
     });
 

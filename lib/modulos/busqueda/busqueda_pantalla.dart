@@ -290,7 +290,7 @@ Future<void> _resolverCoordenadas() async {
   }
 
   // -------------------------------------------------------------------------
-  // BÚSQUEDA
+  // BÚSQUEDA (CATEGORÍAS HOMÓLOGAS E IDENTIDAD REAL)
   // -------------------------------------------------------------------------
   Future<void> _buscar({String texto = ''}) async {
     if (!mounted) return;
@@ -325,60 +325,54 @@ Future<void> _resolverCoordenadas() async {
     try {
       await _resolverCoordenadas();
 
-    // 3. PREPARAR TEXTO Y CIUDAD
+      // 3. PREPARAR TEXTO Y CIUDAD
       String nombreCiudad = "";
       try {
         final ciudad = _ciudadesMexico.firstWhere((c) => c['id'] == destinoSeleccionado);
         nombreCiudad = ciudad['nombre'];
       } catch (_) { nombreCiudad = destinoSeleccionado ?? ''; }
+      
       // ====================================================================
       // CONFIGURACIÓN UNIFICADA Y LIMPIEZA DE TEXTO DE CONSULTA
       // ====================================================================
-String textoConsultaApi = texto.trim();
+      String textoConsultaApi = texto.trim();
 
-// 1. Validamos si es una categoría que Google entiende nativamente
-bool esCategoriaEstricta = false;
-if (tipoSeleccionado != null) {
-  String t = tipoSeleccionado!.toLowerCase();
-  if (t.contains('cafe') || t.contains('rest') || t.contains('bar') || 
-      t.contains('parq') || t.contains('muse') || t.contains('cent')) {
-    esCategoriaEstricta = true;
-  }
-}
+      // 1. Validamos si es una categoría que Google entiende nativamente
+      bool esCategoriaEstricta = false;
+      if (tipoSeleccionado != null) {
+        String t = tipoSeleccionado!.toLowerCase();
+        if (t.contains('cafe') || t.contains('rest') || t.contains('bar') || 
+            t.contains('parq') || t.contains('muse') || t.contains('cent')) {
+          esCategoriaEstricta = true;
+        }
+      }
 
-// 2. Si el usuario no escribió nada, asignamos el texto inteligente sin duplicar ifs
-if (textoConsultaApi.isEmpty) {
-  if (tipoSeleccionado != null) {
-    if (esCategoriaEstricta) {
-      // Si es restaurante, café, bar, etc., el texto debe ser idéntico al tipo
-      // para que no choque con el parámetro &type de la API de Google
-      textoConsultaApi = tipoSeleccionado!;
-    } else {
-      // Truco maestro para zonas arqueológicas, miradores, playas y actividades extremas:
-      // Forzamos la búsqueda por texto explícito agregando la ciudad si existe
-      textoConsultaApi = (destinoSeleccionado != null)
-          ? "${tipoSeleccionado!} en $destinoSeleccionado"
-          : tipoSeleccionado!;
-    }
-  } else {
-    // Si no hay ningún chip seleccionado
-    if (destinoSeleccionado != null) {
-      textoConsultaApi = "puntos de interes historicos, atracciones locales, monumentos";
-    } else {
-      // Si tampoco hay destino (Modo GPS local en tu ubicación real)
-      textoConsultaApi = "atracciones populares, lugares de interes";
-    }
-  }
-}
+      // 2. Si el usuario no escribió nada, asignamos el texto inteligente
+      if (textoConsultaApi.isEmpty) {
+        if (tipoSeleccionado != null) {
+          if (esCategoriaEstricta) {
+            textoConsultaApi = tipoSeleccionado!;
+          } else {
+            textoConsultaApi = (destinoSeleccionado != null)
+                ? "${tipoSeleccionado!} en $destinoSeleccionado"
+                : tipoSeleccionado!;
+          }
+        } else {
+          if (destinoSeleccionado != null) {
+            textoConsultaApi = "puntos de interes historicos, atracciones locales, monumentos";
+          } else {
+            textoConsultaApi = "atracciones populares, lugares de interes";
+          }
+        }
+      }
 
-// 3. Excepción de control geográfico para La Paz
-if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz') {
-  textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
-}
+      // 3. Excepción de control geográfico para La Paz
+      if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCase() == 'la paz') {
+        textoConsultaApi = "La Paz, Baja California Sur, Mexico turismo";
+      }
 
       // 4. TRADUCTOR PARA APIS
       String? tipoParaApi;
-      // Solo le mandamos el "tipo" a Google si es una categoría estricta
       if (tipoSeleccionado != null && esCategoriaEstricta) {
         String t = tipoSeleccionado!.toLowerCase();
         if (t.contains('cafe') || t.contains('panaderia')) tipoParaApi = 'cafe';
@@ -389,7 +383,7 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
         else if (t.contains('cent')) tipoParaApi = 'shopping_mall';
       }
 
-      // 5. LLAMADAS (Con limitador desde el servicio)
+      // 5. LLAMADAS
       final google = await GooglePlacesServicio.buscarLugares(_latActual, _lngActual, query: textoConsultaApi, tipo: tipoParaApi);
       final open = await OpenTripMapServicio.buscarLugaresCulturales(_latActual, _lngActual, query: textoConsultaApi, tipo: tipoParaApi);
 
@@ -410,12 +404,6 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
               categoriaHomologada = FiltrosEtiquetasServicio.normalizarTipoParaBuscador([...types, kinds], name);
             }
             
-            // Si la categoría ES ESTRICTA (Cafetería, Restaurante), no hacemos trampa.
-            // Si la categoría NO ES ESTRICTA (Zona Arqueológica, Mirador), confiamos en la 
-            // búsqueda de texto de Google y forzamos la etiqueta para que no se elimine.
-            if (tipoSeleccionado != null && !esCategoriaEstricta) {
-              categoriaHomologada = tipoSeleccionado!;
-            }
 
             final priceLevel = l["price_level"] ?? l["price"] ?? l["precio"] ?? -1;
             String precioRealMapeado = FiltrosEtiquetasServicio.calcularPrecioSimulado(priceLevel, name);
@@ -442,57 +430,27 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
             }
 
             Lugar lugarTemporal = Lugar(id: name, nombre: name, tipo: categoriaHomologada, precio: precioRealMapeado, rating: _toDouble(l['rating'], fb: 5), numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(), latitud: latGoogle, longitud: lngGoogle, resenasTexto: const ["lugar muy divertido"], fotoUrl: urlImagen, direccion: l['vicinity'] ?? 'Sin dirección', horario: l['horario'] ?? 'Horario no disponible',);
-            // DISTRIBUCIÓN  DE EXPERIENCIAS (Ajustada a la realidad)
+            
+            // DISTRIBUCIÓN DE EXPERIENCIAS
             List<String> etiquetasNLP = [];
             final nombreMinuscula = name.toLowerCase();
-            
-            // 1. Extraemos los datos reales que nos manda Google
             final typesList = (l['types'] as List<dynamic>? ?? []).map((e) => e.toString().toLowerCase()).toList();
             final priceLvl = l['price_level'] ?? l['price'] ?? -1; 
             final ratingReal = double.tryParse(l['rating']?.toString() ?? '4.0') ?? 4.0;
 
-            // 2. REGLA PARA PAREJAS 
-            if (priceLvl >= 3 || 
-                nombreMinuscula.contains('bistro') || 
-                nombreMinuscula.contains('gourmet') || 
-                nombreMinuscula.contains('cava') ||
-                nombreMinuscula.contains('bella') ||
-                typesList.contains('spa') ||
-                (typesList.contains('restaurant') && ratingReal >= 4.3)) {
+            if (priceLvl >= 3 || nombreMinuscula.contains('bistro') || nombreMinuscula.contains('gourmet') || nombreMinuscula.contains('cava') || nombreMinuscula.contains('bella') || typesList.contains('spa') || (typesList.contains('restaurant') && ratingReal >= 4.3)) {
               etiquetasNLP.add('pareja');
             }
-
-            // 3. REGLA PARA AMIGOS 
-            if (typesList.contains('bar') || 
-                typesList.contains('night_club') || 
-                nombreMinuscula.contains('taco') || 
-                nombreMinuscula.contains('cerve') || 
-                nombreMinuscula.contains('pizza') || 
-                nombreMinuscula.contains('cantina')) {
+            if (typesList.contains('bar') || typesList.contains('night_club') || nombreMinuscula.contains('taco') || nombreMinuscula.contains('cerve') || nombreMinuscula.contains('pizza') || nombreMinuscula.contains('cantina')) {
               etiquetasNLP.add('amigos');
             }
-
-            // 4. REGLA PARA FAMILIA 
-            if (typesList.contains('park') || 
-                typesList.contains('museum') || 
-                typesList.contains('amusement_park') ||
-                nombreMinuscula.contains('marisco') || 
-                nombreMinuscula.contains('hacienda') ||
-                nombreMinuscula.contains('parrilla')) {
+            if (typesList.contains('park') || typesList.contains('museum') || typesList.contains('amusement_park') || nombreMinuscula.contains('marisco') || nombreMinuscula.contains('hacienda') || nombreMinuscula.contains('parrilla')) {
               etiquetasNLP.add('familiar');
             }
-
-            // 5. REGLA PARA SOLO 
-            if (typesList.contains('cafe') || 
-                typesList.contains('art_gallery') || 
-                typesList.contains('library') ||
-                nombreMinuscula.contains('cafe') || 
-                priceLvl == 1 || priceLvl == 2 ||
-                (typesList.contains('restaurant') && ratingReal <= 4.2)) {
+            if (typesList.contains('cafe') || typesList.contains('art_gallery') || typesList.contains('library') || nombreMinuscula.contains('cafe') || priceLvl == 1 || priceLvl == 2 || (typesList.contains('restaurant') && ratingReal <= 4.2)) {
               etiquetasNLP.add('solo');
             }
 
-            // 6. EL COMODÍN INTELIGENTE REPARADO
             if (etiquetasNLP.isEmpty) {
                if (categoriaHomologada.toLowerCase() == 'restaurante') {
                  if (ratingReal >= 4.2) {
@@ -509,9 +467,6 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
                }
             }
 
-            //  ESCUDO ANTI-VACÍOS 
-            // Si después de toda la inteligencia, la etiqueta Pareja y Familiar no se 
-            // asignaron a suficientes lugares, forzamos la repartición equitativa
             int codigoHashSeguridad = name.length;
             if (codigoHashSeguridad % 2 == 0) {
               etiquetasNLP.add('pareja');
@@ -522,7 +477,6 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
               etiquetasNLP.add('amigos');
             }
             
-            // Aseguramos que no haya duplicados 
             etiquetasNLP = etiquetasNLP.toSet().toList();
 
             return {
@@ -532,7 +486,7 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
               'experiencias': etiquetasNLP,              
               'rating': _toDouble(l['rating'], fb: 5),
               'popularity': _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5),
-              'precio': precioRealMapeado,               
+              'precio': precioRealMapeado,              
               'lat': latGoogle,
               'lng': lngGoogle,
               'distancia': calcularDistancia(_latActual, _lngActual, latGoogle, lngGoogle),
@@ -546,31 +500,36 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
           .cast<Map<String, dynamic>>()
           .toList(); 
 
-              // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
-        listaProcesada = listaProcesada.where((l) {
-          final nombreMin = (l['name'] ?? '').toString().toLowerCase();
-          final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
-          
+      // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
+      listaProcesada = listaProcesada.where((l) {
+        final nombreMin = (l['name'] ?? '').toString().toLowerCase();
+        final distanciaKM = double.tryParse(l['distancia'].toString()) ?? 0.0;
+        final categoriaActual = (l['categoriaPrincipal'] ?? '').toString().toLowerCase();
+        
         double limiteMaximoKM = (destinoSeleccionado == null) ? 15.0 : 80.0;
-          if (distanciaKM > limiteMaximoKM) return false;
-          final esBasura = nombreMin.contains("walmart") || 
+        if (distanciaKM > limiteMaximoKM) return false;
+        
+        //  Si nuestro motor de normalización dijo que es Comercio, lo sacamos aquí mismo.
+        if (categoriaActual == 'comercio') return false;
+
+        final esBasura = nombreMin.contains("walmart") || 
                           nombreMin.contains("oxxo") || 
                           nombreMin.contains("soriana") || 
                           nombreMin.contains("bodega aurrera") || 
                           nombreMin.contains("honda") || 
                           nombreMin.contains("hospital");
 
-          return !esBasura;
-        }).toList();
+        return !esBasura;
+      }).toList();
 
-        if (listaProcesada.isEmpty && destinoSeleccionado != null) {
-          setState(() { 
-            error = "Por ahora, solo trabajamos con destinos dentro de México."; 
-            lugares = []; 
-            cargando = false; 
-          });
-          return;
-        }
+      if (listaProcesada.isEmpty && destinoSeleccionado != null) {
+        setState(() { 
+          error = "Por ahora, solo trabajamos con destinos dentro de México."; 
+          lugares = []; 
+          cargando = false; 
+        });
+        return;
+      }
 
       // 8. ELIMINAR DUPLICADOS
       final Map<String, Map<String, dynamic>> unicos = {};
@@ -583,7 +542,7 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
       final conPesos = _aplicarPesos(listaProcesada);
       final ordenados = _quickSort(conPesos);
 
-      // 10. EL FILTRO MAESTRO 
+      // 10. EL FILTRO MAESTRO
       List<Map<String, dynamic>> filtrados = FiltrosEtiquetasServicio.filtrarYObtenerTop5(
         listaCompleta: ordenados,
         tipo: tipoSeleccionado,
@@ -592,30 +551,20 @@ if (textoConsultaApi.toLowerCase() == 'la_paz' || destinoSeleccionado?.toLowerCa
         queryTexto: texto,
       );
 
-      // 11. PLAN B RECARGADO: Garantizar 5 tarjetas (RQF36)
+      // 11. PLAN B RECARGADO: Garantizar 5 tarjetas usando homólogos reales
       if (filtrados.length < 5) {
-        // Pedimos más resultados explícitamente y sin limitarnos a la palabra "turismo"
         final extraGoogle = await GooglePlacesServicio.buscarLugares(
           _latActual, 
           _lngActual, 
           query: "atracciones lugares populares" 
         );
         
-        for (var lugarExtra in extraGoogle) {
-          if (filtrados.length >= 5) break; // Si ya llegamos a 5, paramos
-          
-          // Verificamos que no sea basura y no esté repetido
-          final nombreLugar = (lugarExtra['name'] ?? '').toString();
-          bool esBasura = nombreLugar.toLowerCase().contains("walmart") || 
-                          nombreLugar.toLowerCase().contains("oxxo");
-          bool yaExiste = filtrados.any((f) => f['name'] == nombreLugar);
-          
-          if (!esBasura && !yaExiste) {
-             final lExtraMap = Map<String, dynamic>.from(lugarExtra);
-             // Le asignamos categoría 'Recomendación' para que el usuario sepa por qué salió
-             filtrados.add({...lExtraMap, 'categoriaPrincipal': 'Recomendación extra'});
-          }
-        }
+        //Llamamos al método que creamos en FiltrosEtiquetasServicio
+        filtrados = FiltrosEtiquetasServicio.rellenarGarantiaCincoTarjetas(
+          listaActual: filtrados,
+          tipoFiltro: tipoSeleccionado,
+          lugaresExtraDescargados: extraGoogle,
+        );
       }
 
       // 12. CACHÉ Y SUGERENCIAS

@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:math'; // 🧠 SOLUCIÓN ERROR 2: Ya reconoce min() y pow()
+import 'dart:math'; 
 import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Modelo de datos estructurado para la transferencia de información de las APIs
 class Lugar {
   final String id;
   final String nombre;
@@ -70,6 +69,22 @@ class FiltrosEtiquetasServicio {
       'en pareja': {'romántico': 5, 'relajante': 4, 'vista': 5, 'especial': 4, 'íntimo': 5},
     },
   };
+
+  
+  // Diccionario de respaldo: Si no hay la categoría principal, busca estas alternativas.
+  static const Map<String, List<String>> categoriasHomologas = {
+    'playa': ['Parque', 'Mirador', 'Actividades extremas'],
+    'museo': ['Monumento', 'Zona arqueológica', 'Centro comercial'],
+    'monumento': ['Museo', 'Zona arqueológica', 'Parque'],
+    'bar': ['Restaurante', 'Cafetería'],
+    'cafetería': ['Restaurante', 'Centro comercial'],
+    'restaurante': ['Cafetería', 'Bar'],
+    'parque': ['Mirador', 'Zona arqueológica', 'Actividades extremas'],
+    'zona arqueológica': ['Museo', 'Monumento', 'Parque'],
+    'actividades extremas': ['Parque', 'Mirador', 'Playa'],
+    'centro comercial': ['Cafetería', 'Restaurante', 'Mirador'],
+  };
+
 
   double _toDouble(dynamic v, {double fb = 0}) {
     if (v == null) return fb;
@@ -257,23 +272,39 @@ class FiltrosEtiquetasServicio {
   }
 
   static String normalizarTipoParaBuscador(List<dynamic> categoriesFromApi, String placeName) {
-  final nameLower = placeName.toLowerCase().trim();
-  final todoElTexto = categoriesFromApi.map((e) => e.toString().toLowerCase()).join(",");
+    final nameLower = placeName.toLowerCase().trim();
+    final todoElTexto = categoriesFromApi.map((e) => e.toString().toLowerCase()).join(",");
 
-  // Mapeo Estándar (Los nombres aquí DEBEN coincidir con los de los botones de filtro)
-  if (nameLower.contains("café") || nameLower.contains("coffee") || nameLower.contains("panaderia") || todoElTexto.contains("cafe") || todoElTexto.contains("coffee") || todoElTexto.contains("bakery") || todoElTexto.contains("pastry")) return "Cafetería";  if (nameLower.contains("bar") || todoElTexto.contains("bar") || todoElTexto.contains("night_club")) return "Bar";
-  if (nameLower.contains("parque") || todoElTexto.contains("garden") || todoElTexto.contains("park")) return "Parque";
-  if (nameLower.contains("museo") || todoElTexto.contains("museum")) return "Museo";
-  if (nameLower.contains("playa") || todoElTexto.contains("beach") || todoElTexto.contains("sea")) return "Playa";
-  if (nameLower.contains("monumento") || nameLower.contains("iglesia") || todoElTexto.contains("monument") || todoElTexto.contains("church")) return "Monumento";
-  if (nameLower.contains("arqueológica") || todoElTexto.contains("ruins") || todoElTexto.contains("archaeolog")) return "Zona arqueológica";
-  if (nameLower.contains("mirador") || todoElTexto.contains("viewpoint")) return "Mirador";
-  if (nameLower.contains("mall") || nameLower.contains("plaza") || todoElTexto.contains("shopping")) return "Centro comercial";
-  if (nameLower.contains("extremo") || nameLower.contains("aventura") || todoElTexto.contains("extreme")) return "Actividades extremas";
-  if (nameLower.contains("restaurante") || nameLower.contains("tacos") || todoElTexto.contains("restaurant") || todoElTexto.contains("food")) return "Restaurante";
+    // 1. ESCUDO ANTI-FALSOS POSITIVOS (Bloquea negocios con nombres engañosos)
+    bool esNegocio = todoElTexto.contains("store") || todoElTexto.contains("liquor") || 
+                     todoElTexto.contains("travel_agency") || todoElTexto.contains("clothing") || 
+                     todoElTexto.contains("real_estate") || todoElTexto.contains("grocery") ||
+                     nameLower.contains("bodega") || nameLower.contains("agencia") || 
+                     nameLower.contains("sucursal") || nameLower.contains("rancho");
+                     
+    if (esNegocio) return "Comercio"; // Al darle esta categoría, tus filtros lo van a ignorar
 
-  return "Otro";
-}
+    // 2. MAPEO ESTÁNDAR
+    if (nameLower.contains("café") || nameLower.contains("coffee") || nameLower.contains("panaderia") || todoElTexto.contains("cafe") || todoElTexto.contains("coffee") || todoElTexto.contains("bakery") || todoElTexto.contains("pastry")) return "Cafetería";  
+    if (nameLower.contains("bar") || todoElTexto.contains("bar") || todoElTexto.contains("night_club")) return "Bar";
+    
+    // 3. HOMOLOGACIÓN DE NATURALEZA (Presas, cerros y bosques ahora serán Parque en lugar de "Otro")
+    if (nameLower.contains("parque") || nameLower.contains("presa") || nameLower.contains("cerro") || nameLower.contains("bosque") || nameLower.contains("lago") || todoElTexto.contains("garden") || todoElTexto.contains("park") || todoElTexto.contains("natural_feature")) return "Parque";
+    
+    if (nameLower.contains("museo") || todoElTexto.contains("museum")) return "Museo";
+    
+    // 4. PLAYA PROTEGIDA (Solo entra aquí si superó el escudo anti-negocios)
+    if (nameLower.contains("playa") || todoElTexto.contains("beach") || todoElTexto.contains("sea")) return "Playa";
+    
+    if (nameLower.contains("monumento") || nameLower.contains("iglesia") || todoElTexto.contains("monument") || todoElTexto.contains("church")) return "Monumento";
+    if (nameLower.contains("arqueológica") || todoElTexto.contains("ruins") || todoElTexto.contains("archaeolog")) return "Zona arqueológica";
+    if (nameLower.contains("mirador") || todoElTexto.contains("viewpoint")) return "Mirador";
+    if (nameLower.contains("mall") || nameLower.contains("plaza") || todoElTexto.contains("shopping")) return "Centro comercial";
+    if (nameLower.contains("extremo") || nameLower.contains("aventura") || todoElTexto.contains("extreme")) return "Actividades extremas";
+    if (nameLower.contains("restaurante") || nameLower.contains("tacos") || todoElTexto.contains("restaurant") || todoElTexto.contains("food")) return "Restaurante";
+
+    return "Otro";
+  }
 
   /// ASIGNADOR DE PRECIO SIMULADO (Para que los filtros de precio tengan datos variados)
   static String calcularPrecioSimulado(dynamic apiPrice, String placeName) {
@@ -302,10 +333,11 @@ class FiltrosEtiquetasServicio {
     final textoBusqueda = queryTexto.toLowerCase().trim();
 
     // Aplicamos el filtrado inteligente
-    final procesados = listaCompleta.where((lugar) {
+    List<Map<String, dynamic>> procesados = listaCompleta.where((lugar) {
       final nombre = (lugar["name"] ?? "").toString().toLowerCase();
       final direccion = (lugar["direccion"] ?? lugar["vicinity"] ?? "").toString().toLowerCase();
       
+      // 1. Candado internacional original intacto
       if (direccion.contains("miami") || 
           direccion.contains("houston") || 
           direccion.contains("fl ") || 
@@ -314,53 +346,121 @@ class FiltrosEtiquetasServicio {
         return false; 
       }
 
-      // Relajamos a 3000 km para que no bloquee Cancún ni Tijuana
+      // 2. Limitador de distancia original a 3000 km
       final distanciaKM = double.tryParse(lugar["distancia"].toString()) ?? 0.0;
       if (distanciaKM > 3000.0) {
         return false;
       }
 
-      //FILTRO DE TEXTO INTELIGENTE 
-      // Si escribió algo, buscamos en el nombre O en la dirección
+      // 3. Filtro de texto inteligente original
       final coincideBusqueda = textoBusqueda.isEmpty || 
                                nombre.contains(textoBusqueda) || 
                                direccion.contains(textoBusqueda);
 
-      // Función auxiliar rápida para quitar acentos
+      // Función auxiliar rápida original para quitar acentos
       String quitarAcentos(String s) {
         return s.toLowerCase().trim()
           .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
           .replaceAll('ó', 'o').replaceAll('ú', 'u');
       }
 
-      
-
-      // Filtro Determinante: TIPO DE LUGAR (A prueba de acentos)
+      // ====================================================================
+      // REPARACIÓN MAESTRA DEL FILTRO DETERMINANTE: TIPO DE LUGAR
+      // ====================================================================
       final tipoLugar = quitarAcentos((lugar["categoriaPrincipal"] ?? "").toString());
       final tipoFiltro = tipo != null ? quitarAcentos(tipo) : null;
-      final coincideTipo = tipo == null || tipoLugar == tipoFiltro;
+      
+      bool coincideTipo = false;
 
-      // Filtro Secundario 1: PRECIO
+      if (tipo == null) {
+        coincideTipo = true; // Si no hay chip seleccionado, todo pasa
+      } else {
+        // Validación semántica para categorías no estrictas de naturaleza/aventura
+        if (tipoFiltro!.contains('playa')) {
+          // Es una playa real o un cuerpo de agua natural de interior válido (Chihuahua/Ajijic)
+          bool esCuerpoAgua = tipoLugar.contains('beach') || tipoLugar.contains('playa') || 
+                              tipoLugar.contains('natural') || nombre.contains('presa') || 
+                              nombre.contains('laguna') || nombre.contains('rio');
+          
+          // Bloqueo estricto: Prohibido restaurantes, neverías, templos o tiendas con nombre "playa"
+          bool esFalsoPositivo = tipoLugar.contains('restaurante') || tipoLugar.contains('cafe') || 
+                                 tipoLugar.contains('iglesia') || tipoLugar.contains('templo') ||
+                                 nombre.contains('helado') || nombre.contains('neveria') || 
+                                 nombre.contains('pizza') || nombre.contains('caesars');
+
+          coincideTipo = esCuerpoAgua && !esFalsoPositivo;
+        } 
+        else if (tipoFiltro.contains('arqueo')) {
+          // Acepta zonas arqueológicas explícitas, ruinas, sitios históricos o museos de sitio
+          coincideTipo = tipoLugar.contains('arqueo') || tipoLugar.contains('historic') || 
+                         tipoLugar.contains('monumento') || nombre.contains('zona arqueo') || 
+                         nombre.contains('ruinas') || nombre.contains('paquime');
+        } 
+        else if (tipoFiltro.contains('extrem')) {
+          coincideTipo = tipoLugar.contains('extrem') || tipoLugar.contains('parque') || 
+                         tipoLugar.contains('adventure') || nombre.contains('paragliding') || 
+                         nombre.contains('bungee');
+        } 
+        else {
+          // Filtro exacto original para categorías urbanas (Café, Restaurante, Bar, Museo)
+          coincideTipo = tipoLugar == tipoFiltro;
+        }
+      }
+
+      // 4. Filtro secundario 1: Precio original
       final precioLugar = (lugar["precio"] ?? "").toString().trim();
       final precioFiltro = precio != null ? precio.trim() : null;
       final coincidePrecio = precio == null || precioLugar == precioFiltro;
 
-     // Filtro Secundario 2: EXPERIENCIA (Blindado contra textos como "En pareja")
+      // 5. Filtro secundario 2: Experiencia original
       final listadoExperiencias = lugar["experiencias"] as List<dynamic>? ?? [];
       final experienciasLimpias = listadoExperiencias.map((e) => e.toString().toLowerCase().trim()).toList();
-      
       final expFiltro = experiencia != null ? experiencia.toLowerCase().trim() : '';
       
-      //  Verificamos si la etiqueta (ej. "pareja") está adentro del texto 
-      // del botón (ej. "en pareja") o viceversa. Así nunca fallará.
       final coincideExperiencia = experiencia == null || experiencia.isEmpty || 
           experienciasLimpias.any((etiqueta) => expFiltro.contains(etiqueta) || etiqueta.contains(expFiltro));
-      // Solo sobreviven los lugares que cumplan TODOS los filtros activos
+
+      // Retorna verdadero solo si el lugar supera todas las compuertas
       return coincideBusqueda && coincideTipo && coincidePrecio && coincideExperiencia;
     }).toList();
 
-    return procesados.take(5).toList();
+    // ====================================================================
+    // CANDADO DE GARANTÍA DE CONTROL DE CUOTA: 5 TARJETAS SIN DISFRAZ
+    // ====================================================================
+    if (procesados.length < 5) {
+      for (var lugarGen in listaCompleta) {
+        if (procesados.length >= 5) break;
 
+        // Verificamos que no esté ya metido en la lista limpia
+        bool yaExiste = procesados.any((element) => element['name'] == lugarGen['name']);
+        
+        if (!yaExiste) {
+          // REGLA CLAVE: Lo metemos para cumplir las 5 tarjetas obligatorias,
+          // pero conservando sus datos reales intactos para que NO se disfrace con el icono del filtro.
+          procesados.add(lugarGen);
+        }
+      }
+    }
+    // ====================================================================
+    // CANDADO DE GARANTÍA DE CONTROL DE CUOTA CORREGIDO
+    // ====================================================================
+    if (procesados.length < 5) {
+      for (var lugarGen in listaCompleta) {
+        if (procesados.length >= 5) break;
+
+        bool yaExiste = procesados.any((element) => element['name'] == lugarGen['name']);
+        
+        // Obtenemos la categoría real del lugar
+        final catActual = (lugarGen["categoriaPrincipal"] ?? "").toString().toLowerCase();
+        
+        // ¡LA CLAVE!: Solo lo agregamos si no existe y si NO es un comercio basura
+        if (!yaExiste && catActual != 'comercio') {
+          procesados.add(lugarGen);
+        }
+      }
+    }
+
+    return procesados.take(5).toList();
   }
 
   // MOTOR DE AUTOCOMPLETADO (RQF34 y RQF35)
@@ -452,5 +552,75 @@ class FiltrosEtiquetasServicio {
     return candidatosConPuntaje.map((e) => e['destino'] as String).take(4).toList();
   }
 
+  /// Rellena de forma inteligente una lista turística para garantizar 5 tarjetas
+  /// utilizando categorías homólogas si la principal no está disponible.
+  static List<Map<String, dynamic>> rellenarGarantiaCincoTarjetas({
+    required List<Map<String, dynamic>> listaActual,
+    required String? tipoFiltro,
+    required List<dynamic> lugaresExtraDescargados,
+  }) {
+    if (listaActual.length >= 5) return listaActual;
+
+    List<Map<String, dynamic>> listaResultado = List.from(listaActual);
+    String filtro = (tipoFiltro ?? '').toLowerCase();
+    
+    // Obtenemos la lista de categorías permitidas como respaldo para este filtro
+    List<String> respaldosPermitidos = categoriasHomologas[filtro] ?? [];
+
+    for (var lugarCrudo in lugaresExtraDescargados) {
+      if (listaResultado.length >= 5) break;
+
+      final lugar = Map<String, dynamic>.from(lugarCrudo);
+      final nombre = (lugar['name'] ?? '').toLowerCase();
+      final types = (lugar['types'] as List<dynamic>? ?? []);
+      
+      // Calculamos la categoría REAL del lugar usando tu propio normalizador
+      String categoriaReal = normalizarTipoParaBuscador(types, nombre);
+
+      // Identificadores de basura
+      bool esReligioso = types.contains('place_of_worship') || nombre.contains('santuario') || 
+                         nombre.contains('templo') || nombre.contains('parroquia') || 
+                         nombre.contains('catedral') || nombre.contains('capilla');
+
+      // Si no hay filtro, o si la categoría real del lugar coincide con los respaldos permitidos
+      if (tipoFiltro == null || (respaldosPermitidos.contains(categoriaReal) && !esReligioso)) {
+        bool yaExiste = listaResultado.any((l) => l['name'] == lugar['name']);
+        
+        if (!yaExiste) {
+          listaResultado.add({
+            ...lugar,
+            // AQUI ESTA LA MAGIA: Asignamos su categoría real, no la forzamos.
+            'categoriaPrincipal': categoriaReal, 
+            'notaRelleno': 'Sugerencia similar'
+          });
+        }
+      }
+    }
+
+    // Si después del filtrado estricto homólogo aún no llegamos a 5, rellenamos con lo que sea que no sea iglesia
+    if (listaResultado.length < 5) {
+      for (var lugarCrudo in lugaresExtraDescargados) {
+        if (listaResultado.length >= 5) break;
+        final lugar = Map<String, dynamic>.from(lugarCrudo);
+        final nombre = (lugar['name'] ?? '').toLowerCase();
+        final types = (lugar['types'] as List<dynamic>? ?? []);
+        String categoriaReal = normalizarTipoParaBuscador(types, nombre);
+        
+        bool esReligioso = types.contains('place_of_worship') || nombre.contains('santuario') || 
+                           nombre.contains('templo');
+
+        bool yaExiste = listaResultado.any((l) => l['name'] == lugar['name']);
+        if (!yaExiste && !esReligioso) {
+           listaResultado.add({
+            ...lugar,
+            'categoriaPrincipal': categoriaReal, 
+            'notaRelleno': 'Sugerencia adicional'
+          });
+        }
+      }
+    }
+
+    return listaResultado;
+  }
 
 }
