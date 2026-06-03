@@ -157,7 +157,7 @@ class GooglePlacesServicio {
   }
 
   // ---------------------------------------------------------------------------
-  // MAPEAR CATEGORÍAS (Corregido: Específicos primero, Generales después)
+  // MAPEAR CATEGORÍAS (Específicos primero, Generales después)
   // ---------------------------------------------------------------------------
   static String _mapearCategoria(List<String> types, {String nombre = ''}) {
     final texto = types.join(' ').toLowerCase();

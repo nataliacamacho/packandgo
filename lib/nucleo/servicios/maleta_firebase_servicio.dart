@@ -85,14 +85,12 @@ class MaletaFirebaseServicio {
 
     final doc = await ref.get();
 
-    // 🔥 SI YA EXISTE
     if (doc.exists) {
       await ref.update({
         'veces_usado': FieldValue.increment(1),
         'ultima_fecha': Timestamp.now(),
       });
     }
-    // 🔥 SI NO EXISTE
     else {
       await ref.set({
         'nombre': item.nombre,
