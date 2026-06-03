@@ -104,14 +104,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
         fechasFotos.add(DateTime.now());
       });
 
-      // ✅ Guardado automático
       await guardarDiario();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Foto guardada correctamente")),
-        );
-      }
     } catch (e) {
       debugPrint("❌ Error al obtener foto: $e");
     }
@@ -194,6 +187,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
               captionsControllers.add(
                 TextEditingController(text: item['descripcion'] ?? ''),
               );
+
               actividadControllers.add(
                 TextEditingController(text: item['actividad'] ?? ''),
               );
@@ -201,6 +195,8 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
               lugarControllers.add(
                 TextEditingController(text: item['lugar'] ?? ''),
               );
+
+              fechasFotos.add((item['fechaAgregado'] as Timestamp).toDate());
             }
           }
         }
@@ -209,10 +205,6 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
         setState(() {
           diarioController.text = data['texto'] ?? '';
           fotosLocales = fotosRecuperadas;
-          fechasFotos = [];
-          for (var item in data['fotos_locales'] ?? []) {
-            fechasFotos.add((item['fechaAgregado'] as Timestamp).toDate());
-          }
         });
       }
     } catch (e) {
@@ -349,11 +341,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: () async {
-                          final permitido = await _solicitarPermisoGaleria();
-
-                          if (permitido) {
-                            _obtenerFoto(ImageSource.gallery);
-                          }
+                          _obtenerFoto(ImageSource.gallery);
                         },
                         icon: const Icon(
                           Icons.photo_library,
@@ -412,85 +400,94 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
                                           child: GestureDetector(
                                             onTap: () async {
-                                              final confirmar =
-                                                  await showDialog<bool>(
-                                                    context: context,
-                                                    builder: (context) {
-                                                      return AlertDialog(
-                                                        title: const Text(
-                                                          "Eliminar foto",
-                                                        ),
-
-                                                        content: const Text(
-                                                          "¿Deseas eliminar esta foto?",
-                                                        ),
-
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed: () {
-                                                              Navigator.pop(
-                                                                context,
-                                                                false,
-                                                              );
-                                                            },
-
-                                                            child: const Text(
-                                                              "Cancelar",
-                                                            ),
+                                              final confirmar = await showDialog<bool>(
+                                                context: context,
+                                                builder: (context) {
+                                                  return AlertDialog(
+                                                    backgroundColor:
+                                                        Colors.white,
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            16,
                                                           ),
-
-                                                          ElevatedButton(
-                                                            onPressed: () {
-                                                              Navigator.pop(
-                                                                context,
-                                                                true,
-                                                              );
-                                                            },
-
-                                                            child: const Text(
-                                                              "Eliminar",
-                                                            ),
+                                                    ),
+                                                    title: const Row(
+                                                      children: [
+                                                        SizedBox(width: 8),
+                                                        Text("Eliminar foto"),
+                                                      ],
+                                                    ),
+                                                    content: const Text(
+                                                      "¿Deseas eliminar esta foto del diario?",
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () {
+                                                          Navigator.pop(
+                                                            context,
+                                                            false,
+                                                          );
+                                                        },
+                                                        child: const Text(
+                                                          "Cancelar",
+                                                          style: TextStyle(
+                                                            color: Colors.grey,
                                                           ),
-                                                        ],
-                                                      );
-                                                    },
+                                                        ),
+                                                      ),
+                                                      ElevatedButton.icon(
+                                                        onPressed: () {
+                                                          Navigator.pop(
+                                                            context,
+                                                            true,
+                                                          );
+                                                        },
+
+                                                        label: const Text(
+                                                          "Eliminar",
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              const Color(
+                                                                0xFFF6A230,
+                                                              ),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  12,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   );
-
+                                                },
+                                              );
                                               if (confirmar != true) return;
 
-                                              final foto = fotosLocales[index];
+                                              final captionController =
+                                                  captionsControllers.removeAt(
+                                                    index,
+                                                  );
+                                              final actividadController =
+                                                  actividadControllers.removeAt(
+                                                    index,
+                                                  );
+                                              final lugarController =
+                                                  lugarControllers.removeAt(
+                                                    index,
+                                                  );
 
-                                              if (await foto.exists()) {
-                                                await foto.delete();
-                                              }
-
-                                              captionsControllers[index]
-                                                  .dispose();
+                                              captionController.dispose();
+                                              actividadController.dispose();
+                                              lugarController.dispose();
 
                                               setState(() {
                                                 fotosLocales.removeAt(index);
-
-                                                captionsControllers[index]
-                                                    .dispose();
-
-                                                captionsControllers[index]
-                                                    .dispose();
-                                                captionsControllers.removeAt(
-                                                  index,
-                                                );
-
-                                                actividadControllers[index]
-                                                    .dispose();
-                                                actividadControllers.removeAt(
-                                                  index,
-                                                );
-
-                                                lugarControllers[index]
-                                                    .dispose();
-                                                lugarControllers.removeAt(
-                                                  index,
-                                                );
-
                                                 fechasFotos.removeAt(index);
                                               });
 
