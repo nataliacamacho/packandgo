@@ -197,6 +197,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
   //para el algoritmo de filtros
   final FiltrosEtiquetasServicio _servicioFiltros = FiltrosEtiquetasServicio();
+  
   @override
   void initState() {
     super.initState();
@@ -336,7 +337,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       await _resolverCoordenadas();
 
       // 3. PREPARAR TEXTO Y CIUDAD
-      // 3. PREPARAR TEXTO Y CIUDAD
       String nombreCiudad = "";
       try {
         final ciudad = _ciudadesMexico.firstWhere(
@@ -346,6 +346,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       } catch (_) {
         nombreCiudad = destinoSeleccionado ?? '';
       }
+
       // ====================================================================
       // CONFIGURACIÓN UNIFICADA Y LIMPIEZA DE TEXTO DE CONSULTA
       // ====================================================================
@@ -452,7 +453,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                     kinds,
                   ], name);
             }
-            
 
             final priceLevel =
                 l["price_level"] ?? l["price"] ?? l["precio"] ?? -1;
@@ -485,24 +485,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
               urlImagen = _obtenerImagenRespaldo(categoriaHomologada);
             }
 
-            Lugar lugarTemporal = Lugar(
-              id: name,
-              nombre: name,
-              tipo: categoriaHomologada,
-              precio: precioRealMapeado,
-              rating: _toDouble(l['rating'], fb: 5),
-              numResenas: _toDouble(
-                l['user_ratings_total'] ?? l['popularity'],
-                fb: 5,
-              ).toInt(),
-              latitud: latGoogle,
-              longitud: lngGoogle,
-              resenasTexto: const ["lugar muy divertido"],
-              fotoUrl: urlImagen,
-              direccion: l['vicinity'] ?? 'Sin dirección',
-              horario: l['horario'] ?? 'Horario no disponible',
-            );
-            // DISTRIBUCIÓN  DE EXPERIENCIAS (Ajustada a la realidad)
+            // DISTRIBUCIÓN DE EXPERIENCIAS (Ajustada a la realidad)
             List<String> etiquetasNLP = [];
             final nombreMinuscula = name.toLowerCase();
 
@@ -572,7 +555,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
               }
             }
 
-            //  ESCUDO ANTI-VACÍOS
+            // ESCUDO ANTI-VACÍOS
             // Si después de toda la inteligencia, la etiqueta Pareja y Familiar no se
             // asignaron a suficientes lugares, forzamos la repartición equitativa
             int codigoHashSeguridad = name.length;
@@ -633,7 +616,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
         double limiteMaximoKM = (destinoSeleccionado == null) ? 15.0 : 80.0;
         if (distanciaKM > limiteMaximoKM) return false;
         
-        //  Si nuestro motor de normalización dijo que es Comercio, lo sacamos aquí mismo.
+        // Si nuestro motor de normalización dijo que es Comercio, lo sacamos aquí mismo.
         if (categoriaActual == 'comercio') return false;
 
         final esBasura = nombreMin.contains("walmart") || 
@@ -643,8 +626,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                           nombreMin.contains("honda") || 
                           nombreMin.contains("hospital");
 
-        return !esBasura;
-      }).toList();
         return !esBasura;
       }).toList();
 
@@ -685,7 +666,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           query: "atracciones lugares populares",
         );
         
-        //Llamamos al método que creamos en FiltrosEtiquetasServicio
+        // Llamamos al método que creamos en FiltrosEtiquetasServicio
         filtrados = FiltrosEtiquetasServicio.rellenarGarantiaCincoTarjetas(
           listaActual: filtrados,
           tipoFiltro: tipoSeleccionado,
@@ -776,9 +757,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
     final texto = input.toString().toLowerCase();
 
-    // =====================================================
-    // RESTAURANTES
-    // =====================================================
     if (texto.contains('restaurant') ||
         texto.contains('meal_takeaway') ||
         texto.contains('meal_delivery') ||
@@ -793,9 +771,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'restaurante';
     }
 
-    // =====================================================
-    // CAFETERÍAS
-    // =====================================================
     if (texto.contains('cafe') ||
         texto.contains('coffee') ||
         texto.contains('cafeteria') ||
@@ -806,9 +781,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'cafeteria';
     }
 
-    // =====================================================
-    // BARES
-    // =====================================================
     if (texto.contains('bar') ||
         texto.contains('night_club') ||
         texto.contains('pub') ||
@@ -819,9 +791,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'bar';
     }
 
-    // =====================================================
-    // PARQUES
-    // =====================================================
     if (texto.contains('park') ||
         texto.contains('garden') ||
         texto.contains('nature') ||
@@ -833,9 +802,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'parque';
     }
 
-    // =====================================================
-    // PLAYAS
-    // =====================================================
     if (texto.contains('beach') ||
         texto.contains('sea') ||
         texto.contains('coast') ||
@@ -844,9 +810,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'playa';
     }
 
-    // =====================================================
-    // MUSEOS
-    // =====================================================
     if (texto.contains('museum') ||
         texto.contains('art_gallery') ||
         texto.contains('gallery') ||
@@ -856,9 +819,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'museo';
     }
 
-    // =====================================================
-    // ZONAS ARQUEOLÓGICAS
-    // =====================================================
     if (texto.contains('archaeological') ||
         texto.contains('archaeology') ||
         texto.contains('ruins') ||
@@ -870,9 +830,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'zona_arqueologica';
     }
 
-    // =====================================================
-    // MONUMENTOS
-    // =====================================================
     if (texto.contains('monument') ||
         texto.contains('historic') ||
         texto.contains('church') ||
@@ -885,9 +842,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'monumento';
     }
 
-    // =====================================================
-    // MIRADORES
-    // =====================================================
     if (texto.contains('viewpoint') ||
         texto.contains('observation') ||
         texto.contains('scenic') ||
@@ -896,9 +850,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'mirador';
     }
 
-    // =====================================================
-    // CENTROS COMERCIALES
-    // =====================================================
     if (texto.contains('shopping_mall') ||
         texto.contains('department_store') ||
         texto.contains('mall') ||
@@ -908,9 +859,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       return 'centro_comercial';
     }
 
-    // =====================================================
-    // ACTIVIDADES EXTREMAS
-    // =====================================================
     if (texto.contains('amusement_park') ||
         texto.contains('stadium') ||
         texto.contains('sports_complex') ||
@@ -975,11 +923,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
 
       // GPS LOCAL
       if (destinoSeleccionado == null) {
-        // Si es búsqueda local en su ubicación real, ignoramos la popularidad de internet
-        // y ordenamos los lugares puramente por el que el usuario tenga más cerca
         lugar['relevancia'] = distanciaPeso * 10.0;
       } else {
-        // Si el usuario buscó un destino turístico, aplicamos la fórmula polinomial base
         double interes = 0;
         if (_intereses.containsKey(categoria)) {
           final puntos = _intereses[categoria];
@@ -1029,7 +974,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     final Map<String, Map<String, dynamic>> categorias = {};
     final List<Map<String, dynamic>> res = [];
 
-    // Paso 1: Intentamos meter uno de cada categoría para cumplir la variedad
     for (final l in lista) {
       final categoria = l['categoriaPrincipal']?.toString() ?? 'otro';
       if (!categorias.containsKey(categoria)) {
@@ -1038,8 +982,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     }
     res.addAll(categorias.values);
 
-    // Paso 2: Si no se juntaron los 5 porque la API mandó categorías repetidas,
-    // rellenamos con los mejores lugares ordenados por QuickSort hasta llegar a 5
     for (final l in lista) {
       if (res.length >= 5) break;
       if (!res.any(
@@ -1052,14 +994,12 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   }
 
   List<Map<String, dynamic>> get _lugaresFiltrados {
-    // 1. Validamos si escribió una ciudad
     bool esCiudad = _ciudadesMexico.any(
       (c) =>
           c['nombre'].toString().toLowerCase() == query.toLowerCase().trim() ||
           c['id'].toString().toLowerCase() == query.toLowerCase().trim(),
     );
 
-    // 2. Validamos si escribió exactamente lo mismo que el botón (ej. "cafeteria")
     bool esCategoria =
         query.toLowerCase().trim() ==
         (tipoSeleccionado ?? '').toLowerCase().trim();
@@ -1069,7 +1009,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
       tipo: tipoSeleccionado,
       precio: precioSeleccionado,
       experiencia: estiloSeleccionado,
-      // Si escribió la ciudad o la categoría, vaciamos el texto para no asfixiar el filtro
       queryTexto: (esCiudad || esCategoria) ? '' : query,
     );
   }
@@ -1122,7 +1061,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   // -------------------------------------------------------------------------
   String _traducirNombre(String nombreOriginal) {
     String nombre = nombreOriginal;
-    // Diccionario para forzar los lugares que la API manda en inglés
     final traducciones = {
       'temple of immaculate': 'Templo de la Inmaculada',
       'temple of the immaculate': 'Templo de la Inmaculada',
@@ -1140,7 +1078,6 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     String nombreMin = nombre.toLowerCase();
     traducciones.forEach((ingles, espanol) {
       if (nombreMin.contains(ingles)) {
-        // Reemplaza el texto sin importar si viene en mayúsculas o minúsculas
         nombre = nombre.replaceAll(
           RegExp(ingles, caseSensitive: false),
           espanol,
@@ -1182,14 +1119,12 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                       children: [
                         const SizedBox(height: 16),
 
-                        //  BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
+                        // BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
                         BarraBusqueda(
                           onChanged: (v) {
                             final textoLimpio = v.trim();
                             setState(() {
-                              // Cambiamos el texto usando la función interna que limpia/actualiza tu buscador
                               _buscar(texto: textoLimpio);
-                              // Calcula las sugerencias usando el motor Levenshtein centralizado
                               sugerenciasAutocompletado =
                                   FiltrosEtiquetasServicio.autocompletarDestinos(
                                     textoLimpio,
@@ -1226,14 +1161,9 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                                   title: Text(destinoSugerido),
                                   onTap: () {
                                     setState(() {
-                                      // 1. Asignamos de forma oficial el destino correcto al filtro superior
                                       destinoSeleccionado = destinoSugerido;
-
-                                      // 2. Cerramos el menú flotante para que no estorbe en la UI
                                       sugerenciasAutocompletado = [];
                                     });
-
-                                    // 3. Ejecuta la función de búsqueda original de tu pantalla
                                     _buscar(texto: destinoSugerido);
                                   },
                                 );
@@ -1251,22 +1181,18 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
                             tipoSeleccionado: tipoSeleccionado,
                             estiloSeleccionado: estiloSeleccionado,
                             precioSeleccionado: precioSeleccionado,
-
                             onDestinoChanged: (v) {
                               setState(() => destinoSeleccionado = v);
                               _buscar(texto: query);
                             },
-
                             onTipoChanged: (v) {
                               setState(() => tipoSeleccionado = v);
                               _buscar(texto: query);
                             },
-
                             onEstiloChanged: (v) {
                               setState(() => estiloSeleccionado = v);
                               _buscar(texto: query);
                             },
-
                             onPrecioChanged: (v) {
                               setState(() => precioSeleccionado = v);
                               _buscar(texto: query);
@@ -1411,32 +1337,22 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           imagenUrl: l['foto'] ?? l['imagen'],
           lugar: l, // EL PUENTE QUE LE MANDA LOS DATOS A LA TARJETA
           onTap: () {
+            // Manejo correcto de la selección de lugares
             if (widget.esSeleccion) {
-              // Extraemos opening_hours.weekday_text de Google Places (List → String)
-              // o el campo hours si ya viene como string.
-              String hoursStr = '';
-              final openingHours = l['opening_hours'];
-              if (openingHours != null && openingHours is Map) {
-                final weekday = openingHours['weekday_text'];
-                if (weekday is List && weekday.isNotEmpty) {
-                  hoursStr = weekday.join(', ');
-                }
-              }
-              if (hoursStr.isEmpty) {
-                final h = l['hours'];
-                if (h is List && h.isNotEmpty) {
-                  hoursStr = h.join(', ');
-                } else if (h is String && h.trim().isNotEmpty) {
-                  hoursStr = h.trim();
-                }
-              }
-
-              if (widget.esSeleccion) {
-                Navigator.pop(context, l);
-                return;
-              }
+              Navigator.pop(context, {
+                "nombre": l['name'],
+                "categoria": l['categoriaPrincipal'],
+                "lat": l['lat'],
+                "lng": l['lng'],
+                "hours": l['hours'] ?? l['horario'],
+                "foto": l['foto'] ?? l['imagen'],
+                "direccion": l['direccion'],
+                "rating": l['rating'],
+              });
+              return;
             }
 
+            // Modo de exploración normal (Navega a Lugar Detalle)
             Navigator.push(
               context,
               MaterialPageRoute(
