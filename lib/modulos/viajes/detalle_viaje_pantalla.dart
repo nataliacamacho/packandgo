@@ -206,7 +206,6 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: const [
-            Icon(Icons.cancel_outlined, color: Color(0xFFF6A230)),
             SizedBox(width: 8),
             Text(
               "Cancelar viaje",
@@ -220,11 +219,12 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("No"),
+            child: const Text("No", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF6A230),
+
             ),
             onPressed: () async {
               await FirebaseFirestore.instance
@@ -238,7 +238,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
                 context,
               ).showSnackBar(const SnackBar(content: Text("Viaje cancelado")));
             },
-            child: const Text("Cancelar"),
+            child: const Text("Cancelar", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -767,7 +767,7 @@ class _DetalleViajePantallaState extends State<DetalleViajePantalla> {
                             .update({'realizado': false});
 
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("No se realizó")),
+                          const SnackBar(content: Text("Viaje no realizado")),
                         );
 
                         Navigator.pop(context);

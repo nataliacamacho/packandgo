@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:proyecto/modulos/busqueda/busqueda_pantalla.dart';
 import 'package:proyecto/modulos/busqueda/lugar_detalle_pantalla.dart';
 import 'package:proyecto/nucleo/servicios/itinerario_servicio.dart';
+import 'package:proyecto/nucleo/servicios/google_places_servicio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -23,9 +24,7 @@ class ItinerarioPantalla extends StatefulWidget {
 
 class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
   late List<DateTime> diasDelViaje;
-
   Map<String, List<Map<String, dynamic>>> itinerarioPorDia = {};
-
   String destinoViaje = "";
 
   @override
@@ -38,22 +37,38 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
     cargarItinerario();
   }
 
-  void agregarLugarADia(DateTime dia, Map<String, dynamic> lugar) {
-    String fechaKey = dia.toString().split(' ')[0];
+  // ---------------------------------------------------------------------------
+  // Determina si el lugar está cerrado el día indicado.
+  // weekdayText es la lista que devuelve Place Details:
+  //   ["Monday: Closed", "Tuesday: 9:00 AM – 6:00 PM", ...]
+  // ---------------------------------------------------------------------------
+  bool _estaCerradoEseDia(List<String> weekdayText, int weekday) {
+    // DateTime.monday = 1 ... DateTime.sunday = 7
+    // weekday_text de Google: índice 0 = lunes, 6 = domingo
+    final indice = weekday - 1; // lunes→0, martes→1 ... domingo→6
+    if (indice < 0 || indice >= weekdayText.length) return false;
+
+    final lineaDia = weekdayText[indice].toLowerCase();
+    return lineaDia.contains('closed') || lineaDia.contains('cerrado');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Flujo completo al agregar un lugar:
+  // 1. Validar máximo 5 (RQNF40)
+  // 2. Si viene de Google (tiene place_id) → llamar Place Details para weekday_text
+  //    Si viene de OpenTripMap → no tiene horarios, avisar y permitir
+  // 3. Comparar día del itinerario con weekday_text (RQNF43)
+  // 4. Bloquear si cerrado (RQNF44) o avisar si sin horarios
+  // 5. Agregar y guardar (RQF126 / RQF129)
+  // ---------------------------------------------------------------------------
+  Future<void> agregarLugarADia(
+    DateTime dia,
+    Map<String, dynamic> lugar,
+  ) async {
+    final fechaKey = dia.toString().split(' ')[0];
     itinerarioPorDia.putIfAbsent(fechaKey, () => []);
 
-    final lugarNormalizado = {
-      "nombre": lugar["nombre"],
-      "categoria": (lugar["categoria"] ?? "").toString().trim(),
-      "lat": lugar["lat"],
-      "lng": lugar["lng"],
-      "hours": lugar["hours"],
-      "foto": lugar["foto"],
-      "direccion": lugar["direccion"],
-      "rating": lugar["rating"],
-    };
-
-    // Máximo 5 lugares
+    // RQNF40: máximo 5 lugares por día
     if (itinerarioPorDia[fechaKey]!.length >= 5) {
       ScaffoldMessenger.of(
         context,
@@ -61,163 +76,154 @@ class _ItinerarioPantallaState extends State<ItinerarioPantalla> {
       return;
     }
 
-    /// 🔥 CAMBIO CLAVE: si no hay hours, lo dejamos pasar
-    debugPrint("HORARIOS DEL LUGAR: ${lugar['hours']}");
-    debugPrint("================================");
-    debugPrint("NOMBRE: ${lugar['nombre']}");
-    debugPrint("HOURS: ${lugar['hours']}");
-    debugPrint("TIPO HOURS: ${lugar['hours'].runtimeType}");
-    debugPrint("HORARIO REAL RECIBIDO:");
-    debugPrint(lugar['hours'].toString());
-    debugPrint("HORARIO:");
-debugPrint(lugar['horario'].toString());
+    final placeId = lugar['place_id']?.toString() ?? '';
+    final esFuenteGoogle = lugar['fuente'] == 'google' || placeId.isNotEmpty;
 
-debugPrint("HOURS:");
-debugPrint(lugar['hours'].toString());
-    debugPrint("================================");
+    List<String> weekdayText = [];
+    bool? tieneHorarios;
 
-    bool horariosDisponibles =
-        lugar['hours'] != null && lugar['hours'].toString().trim().isNotEmpty;
-
-    if (horariosDisponibles) {
-      final fechaSeleccionada = dia.weekday;
-      final horarioLugar = lugar['hours'].toString().toLowerCase();
-
-      bool cerradoEseDia = false;
-
-      switch (fechaSeleccionada) {
-        case DateTime.monday:
-          cerradoEseDia =
-              horarioLugar.contains("monday: closed") ||
-              horarioLugar.contains("lunes: cerrado");
-          break;
-
-        case DateTime.tuesday:
-          cerradoEseDia =
-              horarioLugar.contains("tuesday: closed") ||
-              horarioLugar.contains("martes: cerrado");
-          break;
-
-        case DateTime.wednesday:
-          cerradoEseDia =
-              horarioLugar.contains("wednesday: closed") ||
-              horarioLugar.contains("miercoles: cerrado") ||
-              horarioLugar.contains("miércoles: cerrado");
-          break;
-
-        case DateTime.thursday:
-          cerradoEseDia =
-              horarioLugar.contains("thursday: closed") ||
-              horarioLugar.contains("jueves: cerrado");
-          break;
-
-        case DateTime.friday:
-          cerradoEseDia =
-              horarioLugar.contains("friday: closed") ||
-              horarioLugar.contains("viernes: cerrado");
-          break;
-
-        case DateTime.saturday:
-          cerradoEseDia =
-              horarioLugar.contains("saturday: closed") ||
-              horarioLugar.contains("sabado: cerrado") ||
-              horarioLugar.contains("sábado: cerrado");
-          break;
-
-        case DateTime.sunday:
-          cerradoEseDia =
-              horarioLugar.contains("sunday: closed") ||
-              horarioLugar.contains("domingo: cerrado");
-          break;
+    if (esFuenteGoogle && placeId.isNotEmpty) {
+      // RQF123: consultamos los horarios reales via Place Details
+      // Mostramos indicador de carga mientras llama a la API
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text("Verificando disponibilidad..."),
+              ],
+            ),
+            duration: Duration(seconds: 10),
+          ),
+        );
       }
 
-      if (cerradoEseDia) {
+      final detalles = await GooglePlacesServicio.obtenerDetallesHorario(
+        placeId,
+      );
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      final dias = detalles['dias'];
+      if (dias != null && dias is List && dias.isNotEmpty) {
+        weekdayText = List<String>.from(dias);
+        tieneHorarios = true;
+      } else {
+        tieneHorarios = false;
+      }
+    } else {
+      // OpenTripMap no provee horarios por diseño
+      tieneHorarios = false;
+    }
+
+    // RQNF42/43/44: validar disponibilidad con los horarios reales
+    if (tieneHorarios == true && weekdayText.isNotEmpty) {
+      if (_estaCerradoEseDia(weekdayText, dia.weekday)) {
+        // RQNF44 + RQF125: bloquear y mostrar mensaje exacto del requerimiento
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Este lugar no estará disponible el día seleccionado. ¿Deseas elegir otro día o lugar?",
+              ),
+
+              backgroundColor: Color.fromARGB(255, 150, 150, 150),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return; // No se agrega
+      }
+
+      // RQF124: detectar horario especial o festivo en el texto del día
+      final lineaDia = weekdayText[dia.weekday - 1].toLowerCase();
+      final tieneHorarioEspecial =
+          lineaDia.contains('hours might differ') ||
+          lineaDia.contains('holiday') ||
+          lineaDia.contains('festivo') ||
+          lineaDia.contains('horario especial');
+
+      if (tieneHorarioEspecial && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Este lugar no estará disponible el día seleccionado. ¿Deseas elegir otro día o lugar?",
+              "Aviso: este lugar puede tener horario especial ese día. Verifica antes de visitar.",
             ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
           ),
         );
-
-        return;
+      }
+    } else {
+      // Sin horarios (OpenTripMap o Google sin datos): avisar pero permitir
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "El horario de este lugar puede variar según el día seleccionado.",
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     }
 
-    /// Agregar siempre el lugar
+    // RQF127: normalizar campos para mostrar foto, nombre y categoría
+    final lugarNormalizado = {
+      "nombre": lugar["name"] ?? lugar["nombre"] ?? "Lugar",
+      "categoria": (lugar["categoriaPrincipal"] ?? lugar["categoria"] ?? "")
+          .toString()
+          .trim(),
+      "lat": lugar["lat"] ?? 0.0,
+      "lng": lugar["lng"] ?? 0.0,
+      "place_id": placeId,
+      // Guardamos weekday_text como string para poder revalidar en el futuro
+      "hours": weekdayText.isNotEmpty ? weekdayText.join(' | ') : '',
+      "foto": lugar["foto"] ?? lugar["imagen"] ?? "",
+      "direccion": lugar["direccion"] ?? "",
+      "rating": lugar["rating"] ?? 0.0,
+    };
+
+    // RQF126: agregar al final conservando orden de inserción
     setState(() {
       itinerarioPorDia[fechaKey]!.add(lugarNormalizado);
     });
 
+    // RQF129 / RQNF45: guardado automático
     ItinerarioServicio.guardarItinerarioEnFirebase(
       widget.idViaje,
       itinerarioPorDia,
     );
-
-    /// Mostrar aviso informativo si no hay horarios confiables
-    if (!horariosDisponibles) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "El horario de este lugar puede variar según el día seleccionado.",
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-
-    debugPrint("LUGAR SELECCIONADO: $lugar");
   }
 
-  String normalizarDestino(String destino) {
-    destino = destino.toLowerCase().trim();
-
-    // quitar todo después de coma (estado/país)
-    if (destino.contains(",")) {
-      destino = destino.split(",").first.trim();
-    }
-
-    // limpiar palabras comunes
-    final removibles = [
-      "heroica",
-      "de juárez",
-      "juarez",
-      "pueblo mágico",
-      "estado de",
-      "cdmx",
-      "ciudad de",
-    ];
-
-    for (final r in removibles) {
-      destino = destino.replaceAll(r, "");
-    }
-
-    destino = destino.trim();
-
-    // capitalizar
-    return destino
-        .split(" ")
-        .where((p) => p.isNotEmpty)
-        .map((p) => p[0].toUpperCase() + p.substring(1))
-        .join(" ");
-  }
-
+  // ---------------------------------------------------------------------------
+  // Carga itinerario desde Firebase
+  // ---------------------------------------------------------------------------
   Future<void> cargarItinerario() async {
     try {
-      String uid = FirebaseAuth.instance.currentUser!.uid;
+      final uid = FirebaseAuth.instance.currentUser!.uid;
 
       final viajeDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
           .collection('viajes')
           .doc(widget.idViaje)
           .get();
 
       if (viajeDoc.exists) {
-        final dataViaje = viajeDoc.data();
-
-        destinoViaje = dataViaje?['destino'] ?? "";
+        destinoViaje = viajeDoc.data()?['destino'] ?? "";
       }
 
-      DocumentSnapshot doc = await FirebaseFirestore.instance
+      final doc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(uid)
           .collection('viajes')
@@ -225,16 +231,13 @@ debugPrint(lugar['hours'].toString());
           .get();
 
       if (doc.exists && doc.data() != null) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
+        final data = doc.data() as Map<String, dynamic>;
         if (data['itinerario'] != null) {
-          Map<String, dynamic> itinerarioFirebase = data['itinerario'];
-          Map<String, List<Map<String, dynamic>>> mapaRecuperado = {};
+          final itinerarioFirebase = data['itinerario'] as Map<String, dynamic>;
+          final Map<String, List<Map<String, dynamic>>> mapaRecuperado = {};
 
           itinerarioFirebase.forEach((diaKey, lugares) {
-            List<dynamic> listaLugares = lugares as List<dynamic>;
-
-            mapaRecuperado[diaKey] = listaLugares
+            mapaRecuperado[diaKey] = (lugares as List<dynamic>)
                 .map((l) => Map<String, dynamic>.from(l))
                 .toList();
           });
@@ -249,10 +252,12 @@ debugPrint(lugar['hours'].toString());
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: false,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -287,8 +292,6 @@ debugPrint(lugar['hours'].toString());
                 ),
               ),
             ),
-
-            // Botón de regreso encima sin afectar el centrado
             Positioned(
               top: 0,
               left: 0,
@@ -307,29 +310,28 @@ debugPrint(lugar['hours'].toString());
         padding: const EdgeInsets.all(12),
         itemCount: diasDelViaje.length,
         itemBuilder: (context, index) {
-          DateTime dia = diasDelViaje[index];
-          String fechaStr = "${dia.day}/${dia.month}/${dia.year}";
-          String fechaKey = dia.toString().split(' ')[0];
+          final dia = diasDelViaje[index];
+          final fechaStr = "${dia.day}/${dia.month}/${dia.year}";
+          final fechaKey = dia.toString().split(' ')[0];
+          final cantidadLugares = itinerarioPorDia[fechaKey]?.length ?? 0;
 
           return Card(
             elevation: 1.5,
-            color: const Color.fromARGB(255, 255, 255, 255),
+            color: Colors.white,
             margin: const EdgeInsets.only(bottom: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
             child: Theme(
-              data: Theme.of(context).copyWith(
-                dividerColor:
-                    Colors.transparent, // quita línea fea del ExpansionTile
-              ),
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 tilePadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
                 ),
                 childrenPadding: const EdgeInsets.symmetric(horizontal: 16),
-
                 title: Text(
                   "Día ${index + 1}",
                   style: const TextStyle(
@@ -337,21 +339,45 @@ debugPrint(lugar['hours'].toString());
                     fontSize: 16,
                   ),
                 ),
-
-                subtitle: Text(
-                  fechaStr,
-                  style: const TextStyle(color: Colors.black54, fontSize: 13),
+                subtitle: Row(
+                  children: [
+                    Text(
+                      fechaStr,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (cantidadLugares > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF6A230),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          "$cantidadLugares/5",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-
                 children: [
                   const SizedBox(height: 8),
 
-                  /// Lugares agregados
-                  /// Lugares agregados
                   if (itinerarioPorDia[fechaKey] != null)
                     ...itinerarioPorDia[fechaKey]!.asMap().entries.map((entry) {
-                      int i = entry.key;
-                      Map<String, dynamic> lugar = entry.value;
+                      final i = entry.key;
+                      final lugar = entry.value;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -361,63 +387,44 @@ debugPrint(lugar['hours'].toString());
                         ),
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(10),
-
-                          /// FOTO
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: lugar['foto'] != null
+                            child:
+                                (lugar['foto'] != null &&
+                                    lugar['foto'].toString().isNotEmpty)
                                 ? Image.network(
                                     lugar['foto'],
                                     width: 60,
                                     height: 60,
                                     fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _iconoSinFoto(),
                                   )
-                                : Container(
-                                    width: 60,
-                                    height: 60,
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(Icons.image),
-                                  ),
+                                : _iconoSinFoto(),
                           ),
-
-                          /// NOMBRE
                           title: Text(
                             lugar['nombre'] ?? 'Lugar',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-
-                          /// CATEGORÍA
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(lugar['categoria'] ?? ''),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Orden #${i + 1}",
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
+                          subtitle: Text(
+                            lugar['categoria'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                            ),
                           ),
-
-                          /// BOTÓN ELIMINAR
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline),
                             onPressed: () {
                               setState(() {
                                 itinerarioPorDia[fechaKey]!.removeAt(i);
                               });
-
                               ItinerarioServicio.guardarItinerarioEnFirebase(
                                 widget.idViaje,
                                 itinerarioPorDia,
                               );
                             },
                           ),
-
-                          /// ABRIR DETALLES DEL LUGAR
                           onTap: () {
                             Navigator.push(
                               context,
@@ -433,42 +440,68 @@ debugPrint(lugar['hours'].toString());
 
                   const SizedBox(height: 6),
 
-                  /// Botón agregar
-                  InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () async {
-                      final lugarSeleccionado = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BusquedaPantalla(
-                            esSeleccion: true,
-                            destinoInicial: destinoViaje,
+                  Builder(
+                    builder: (context) {
+                      final lleno = cantidadLugares >= 5;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: lleno
+                            ? null
+                            : () async {
+                                final lugarSeleccionado = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BusquedaPantalla(
+                                      esSeleccion: true,
+                                      destinoInicial: destinoViaje,
+                                    ),
+                                  ),
+                                );
+                                if (lugarSeleccionado != null) {
+                                  await agregarLugarADia(
+                                    dia,
+                                    lugarSeleccionado,
+                                  );
+                                }
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: lleno ? Colors.grey.shade100 : null,
+                            border: Border.all(
+                              color: lleno
+                                  ? Colors.grey.shade200
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                lleno ? Icons.block : Icons.add_location_alt,
+                                size: 20,
+                                color: lleno
+                                    ? Colors.grey.shade400
+                                    : Colors.black87,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                lleno
+                                    ? "Máximo 5 lugares por día"
+                                    : "Agregar lugar",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: lleno
+                                      ? Colors.grey.shade400
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       );
-
-                      if (lugarSeleccionado != null) {
-                        agregarLugarADia(dia, lugarSeleccionado);
-                      }
                     },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_location_alt, size: 20),
-                          SizedBox(width: 6),
-                          Text(
-                            "Agregar lugar",
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
 
                   const SizedBox(height: 10),
@@ -478,33 +511,18 @@ debugPrint(lugar['hours'].toString());
           );
         },
       ),
+    );
+  }
 
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await ItinerarioServicio.guardarItinerarioEnFirebase(
-            widget.idViaje,
-            itinerarioPorDia,
-          );
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("¡Itinerario guardado!"),
-                backgroundColor: Color.fromARGB(255, 150, 150, 150),
-              ),
-            );
-          }
-        },
-        icon: const Icon(
-          Icons.cloud_upload,
-          color: Color.fromARGB(255, 255, 255, 255),
-        ),
-        label: const Text(
-          "Guardar",
-          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        ),
-        backgroundColor: Color(0xFF0066D2),
+  Widget _iconoSinFoto() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
       ),
+      child: const Icon(Icons.image_not_supported, color: Colors.grey),
     );
   }
 }

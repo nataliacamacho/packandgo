@@ -114,7 +114,7 @@ class _HospedajePantallaState extends State<HospedajePantalla> {
   double _distancia(double lat, double lng) {
     final dlat = lat - widget.lat;
     final dlng = lng - widget.lng;
-    return dlat * dlat + dlng * dlng; // distancia euclidiana simple
+    return dlat * dlat + dlng * dlng; 
   }
 
   @override

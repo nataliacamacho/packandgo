@@ -152,7 +152,6 @@ const List<Map<String, dynamic>> _ciudadesMexico = [
 class BusquedaPantalla extends StatefulWidget {
   final bool esSeleccion;
   final String? destinoInicial;
-  
 
   const BusquedaPantalla({
     super.key,
@@ -246,26 +245,35 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
     } catch (_) {}
   }
 
-Future<void> _resolverCoordenadas() async {
+  Future<void> _resolverCoordenadas() async {
     // 1. Intentamos sacar las coordenadas del destino seleccionado o del texto escrito
     String posibleDestino = destinoSeleccionado ?? query;
-    
+
     if (posibleDestino.isNotEmpty) {
       // Quitamos mayúsculas y acentos
-      final destinoLimpio = posibleDestino.toLowerCase().trim()
-          .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
-          .replaceAll('ó', 'o').replaceAll('ú', 'u');
+      final destinoLimpio = posibleDestino
+          .toLowerCase()
+          .trim()
+          .replaceAll('á', 'a')
+          .replaceAll('é', 'e')
+          .replaceAll('í', 'i')
+          .replaceAll('ó', 'o')
+          .replaceAll('ú', 'u');
 
-      final ciudad = _ciudadesMexico.firstWhere(
-        (c) {
-          String nombreNorm = c['nombre'].toString().toLowerCase()
-              .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
-              .replaceAll('ó', 'o').replaceAll('ú', 'u');
-              
-          return c['id'] == destinoLimpio || nombreNorm.contains(destinoLimpio) || destinoLimpio.contains(nombreNorm);
-        },
-        orElse: () => {},
-      );
+      final ciudad = _ciudadesMexico.firstWhere((c) {
+        String nombreNorm = c['nombre']
+            .toString()
+            .toLowerCase()
+            .replaceAll('á', 'a')
+            .replaceAll('é', 'e')
+            .replaceAll('í', 'i')
+            .replaceAll('ó', 'o')
+            .replaceAll('ú', 'u');
+
+        return c['id'] == destinoLimpio ||
+            nombreNorm.contains(destinoLimpio) ||
+            destinoLimpio.contains(nombreNorm);
+      }, orElse: () => {});
 
       if (ciudad.isNotEmpty) {
         // ¡Encontró la ciudad! Centramos la búsqueda aquí
@@ -303,9 +311,11 @@ Future<void> _resolverCoordenadas() async {
 
     // 2. CANDADO DE CONTROL GEOGRÁFICO DEFINITIVO
     if (destinoAValidar.isNotEmpty) {
-      final esPalabraInternacional = 
-          destinoAValidar == "paris" || destinoAValidar == "bolivia" || 
-          destinoAValidar == "francia" || destinoAValidar == "europa";
+      final esPalabraInternacional =
+          destinoAValidar == "paris" ||
+          destinoAValidar == "bolivia" ||
+          destinoAValidar == "francia" ||
+          destinoAValidar == "europa";
 
       if (esPalabraInternacional) {
         setState(() {
@@ -326,12 +336,16 @@ Future<void> _resolverCoordenadas() async {
       await _resolverCoordenadas();
 
       // 3. PREPARAR TEXTO Y CIUDAD
+      // 3. PREPARAR TEXTO Y CIUDAD
       String nombreCiudad = "";
       try {
-        final ciudad = _ciudadesMexico.firstWhere((c) => c['id'] == destinoSeleccionado);
+        final ciudad = _ciudadesMexico.firstWhere(
+          (c) => c['id'] == destinoSeleccionado,
+        );
         nombreCiudad = ciudad['nombre'];
-      } catch (_) { nombreCiudad = destinoSeleccionado ?? ''; }
-      
+      } catch (_) {
+        nombreCiudad = destinoSeleccionado ?? '';
+      }
       // ====================================================================
       // CONFIGURACIÓN UNIFICADA Y LIMPIEZA DE TEXTO DE CONSULTA
       // ====================================================================
@@ -341,26 +355,37 @@ Future<void> _resolverCoordenadas() async {
       bool esCategoriaEstricta = false;
       if (tipoSeleccionado != null) {
         String t = tipoSeleccionado!.toLowerCase();
-        if (t.contains('cafe') || t.contains('rest') || t.contains('bar') || 
-            t.contains('parq') || t.contains('muse') || t.contains('cent')) {
+        if (t.contains('cafe') ||
+            t.contains('rest') ||
+            t.contains('bar') ||
+            t.contains('parq') ||
+            t.contains('muse') ||
+            t.contains('cent')) {
           esCategoriaEstricta = true;
         }
       }
 
-      // 2. Si el usuario no escribió nada, asignamos el texto inteligente
+      // 2. Si el usuario no escribió nada, asignamos el texto inteligente sin duplicar ifs
       if (textoConsultaApi.isEmpty) {
         if (tipoSeleccionado != null) {
           if (esCategoriaEstricta) {
+            // Si es restaurante, café, bar, etc., el texto debe ser idéntico al tipo
+            // para que no choque con el parámetro &type de la API de Google
             textoConsultaApi = tipoSeleccionado!;
           } else {
+            // Truco maestro para zonas arqueológicas, miradores, playas y actividades extremas:
+            // Forzamos la búsqueda por texto explícito agregando la ciudad si existe
             textoConsultaApi = (destinoSeleccionado != null)
                 ? "${tipoSeleccionado!} en $destinoSeleccionado"
                 : tipoSeleccionado!;
           }
         } else {
+          // Si no hay ningún chip seleccionado
           if (destinoSeleccionado != null) {
-            textoConsultaApi = "puntos de interes historicos, atracciones locales, monumentos";
+            textoConsultaApi =
+                "puntos de interes historicos, atracciones locales, monumentos";
           } else {
+            // Si tampoco hay destino (Modo GPS local en tu ubicación real)
             textoConsultaApi = "atracciones populares, lugares de interes";
           }
         }
@@ -375,17 +400,33 @@ Future<void> _resolverCoordenadas() async {
       String? tipoParaApi;
       if (tipoSeleccionado != null && esCategoriaEstricta) {
         String t = tipoSeleccionado!.toLowerCase();
-        if (t.contains('cafe') || t.contains('panaderia')) tipoParaApi = 'cafe';
-        else if (t.contains('rest') || t.contains('taco')) tipoParaApi = 'restaurant';
-        else if (t.contains('bar')) tipoParaApi = 'bar';
-        else if (t.contains('parq')) tipoParaApi = 'park';
-        else if (t.contains('muse')) tipoParaApi = 'museum';
-        else if (t.contains('cent')) tipoParaApi = 'shopping_mall';
+        if (t.contains('cafe') || t.contains('panaderia'))
+          tipoParaApi = 'cafe';
+        else if (t.contains('rest') || t.contains('taco'))
+          tipoParaApi = 'restaurant';
+        else if (t.contains('bar'))
+          tipoParaApi = 'bar';
+        else if (t.contains('parq'))
+          tipoParaApi = 'park';
+        else if (t.contains('muse'))
+          tipoParaApi = 'museum';
+        else if (t.contains('cent'))
+          tipoParaApi = 'shopping_mall';
       }
 
-      // 5. LLAMADAS
-      final google = await GooglePlacesServicio.buscarLugares(_latActual, _lngActual, query: textoConsultaApi, tipo: tipoParaApi);
-      final open = await OpenTripMapServicio.buscarLugaresCulturales(_latActual, _lngActual, query: textoConsultaApi, tipo: tipoParaApi);
+      // 5. LLAMADAS (Con limitador desde el servicio)
+      final google = await GooglePlacesServicio.buscarLugares(
+        _latActual,
+        _lngActual,
+        query: textoConsultaApi,
+        tipo: tipoParaApi,
+      );
+      final open = await OpenTripMapServicio.buscarLugaresCulturales(
+        _latActual,
+        _lngActual,
+        query: textoConsultaApi,
+        tipo: tipoParaApi,
+      );
 
       List<dynamic> combinados = [...google, ...open];
 
@@ -395,31 +436,46 @@ Future<void> _resolverCoordenadas() async {
           .map((lugarCrudo) {
             final l = Map<String, dynamic>.from(lugarCrudo);
             final name = l['name'] ?? 'Sin nombre';
-            
-            String categoriaHomologada = l['categoriaPrincipal']?.toString() ?? 'Otro';
+
+            String categoriaHomologada =
+                l['categoriaPrincipal']?.toString() ?? 'Otro';
 
             if (categoriaHomologada == 'Otro' || categoriaHomologada.isEmpty) {
-              final types = l["types"] as List<dynamic>? ?? l["tipos_raw"] as List<dynamic>? ?? [];
+              final types =
+                  l["types"] as List<dynamic>? ??
+                  l["tipos_raw"] as List<dynamic>? ??
+                  [];
               final kinds = (l["kinds"] ?? "").toString().toLowerCase();
-              categoriaHomologada = FiltrosEtiquetasServicio.normalizarTipoParaBuscador([...types, kinds], name);
+              categoriaHomologada =
+                  FiltrosEtiquetasServicio.normalizarTipoParaBuscador([
+                    ...types,
+                    kinds,
+                  ], name);
             }
             
 
-            final priceLevel = l["price_level"] ?? l["price"] ?? l["precio"] ?? -1;
-            String precioRealMapeado = FiltrosEtiquetasServicio.calcularPrecioSimulado(priceLevel, name);
+            final priceLevel =
+                l["price_level"] ?? l["price"] ?? l["precio"] ?? -1;
+            String precioRealMapeado =
+                FiltrosEtiquetasServicio.calcularPrecioSimulado(
+                  priceLevel,
+                  name,
+                );
             double latGoogle = _toDouble(l['lat']);
             double lngGoogle = _toDouble(l['lng']);
             if (l['geometry'] != null && l['geometry']['location'] != null) {
-              final locationMap = Map<String, dynamic>.from(l['geometry']['location']);
+              final locationMap = Map<String, dynamic>.from(
+                l['geometry']['location'],
+              );
               latGoogle = _toDouble(locationMap['lat']);
               lngGoogle = _toDouble(locationMap['lng']);
             }
-            
+
             if (latGoogle == 0 && lngGoogle == 0) return null;
-            
+
             String fotoAPI = l['foto']?.toString() ?? '';
             String imagenAPI = l['imagen']?.toString() ?? '';
-            
+
             String urlImagen;
             if (fotoAPI.isNotEmpty && fotoAPI != 'null') {
               urlImagen = fotoAPI;
@@ -429,44 +485,96 @@ Future<void> _resolverCoordenadas() async {
               urlImagen = _obtenerImagenRespaldo(categoriaHomologada);
             }
 
-            Lugar lugarTemporal = Lugar(id: name, nombre: name, tipo: categoriaHomologada, precio: precioRealMapeado, rating: _toDouble(l['rating'], fb: 5), numResenas: _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5).toInt(), latitud: latGoogle, longitud: lngGoogle, resenasTexto: const ["lugar muy divertido"], fotoUrl: urlImagen, direccion: l['vicinity'] ?? 'Sin dirección', horario: l['horario'] ?? 'Horario no disponible',);
-            
-            // DISTRIBUCIÓN DE EXPERIENCIAS
+            Lugar lugarTemporal = Lugar(
+              id: name,
+              nombre: name,
+              tipo: categoriaHomologada,
+              precio: precioRealMapeado,
+              rating: _toDouble(l['rating'], fb: 5),
+              numResenas: _toDouble(
+                l['user_ratings_total'] ?? l['popularity'],
+                fb: 5,
+              ).toInt(),
+              latitud: latGoogle,
+              longitud: lngGoogle,
+              resenasTexto: const ["lugar muy divertido"],
+              fotoUrl: urlImagen,
+              direccion: l['vicinity'] ?? 'Sin dirección',
+              horario: l['horario'] ?? 'Horario no disponible',
+            );
+            // DISTRIBUCIÓN  DE EXPERIENCIAS (Ajustada a la realidad)
             List<String> etiquetasNLP = [];
             final nombreMinuscula = name.toLowerCase();
-            final typesList = (l['types'] as List<dynamic>? ?? []).map((e) => e.toString().toLowerCase()).toList();
-            final priceLvl = l['price_level'] ?? l['price'] ?? -1; 
-            final ratingReal = double.tryParse(l['rating']?.toString() ?? '4.0') ?? 4.0;
 
-            if (priceLvl >= 3 || nombreMinuscula.contains('bistro') || nombreMinuscula.contains('gourmet') || nombreMinuscula.contains('cava') || nombreMinuscula.contains('bella') || typesList.contains('spa') || (typesList.contains('restaurant') && ratingReal >= 4.3)) {
+            // 1. Extraemos los datos reales que nos manda Google
+            final typesList = (l['types'] as List<dynamic>? ?? [])
+                .map((e) => e.toString().toLowerCase())
+                .toList();
+            final priceLvl = l['price_level'] ?? l['price'] ?? -1;
+            final ratingReal =
+                double.tryParse(l['rating']?.toString() ?? '4.0') ?? 4.0;
+
+            // 2. REGLA PARA PAREJAS
+            if (priceLvl >= 3 ||
+                nombreMinuscula.contains('bistro') ||
+                nombreMinuscula.contains('gourmet') ||
+                nombreMinuscula.contains('cava') ||
+                nombreMinuscula.contains('bella') ||
+                typesList.contains('spa') ||
+                (typesList.contains('restaurant') && ratingReal >= 4.3)) {
               etiquetasNLP.add('pareja');
             }
-            if (typesList.contains('bar') || typesList.contains('night_club') || nombreMinuscula.contains('taco') || nombreMinuscula.contains('cerve') || nombreMinuscula.contains('pizza') || nombreMinuscula.contains('cantina')) {
+
+            // 3. REGLA PARA AMIGOS
+            if (typesList.contains('bar') ||
+                typesList.contains('night_club') ||
+                nombreMinuscula.contains('taco') ||
+                nombreMinuscula.contains('cerve') ||
+                nombreMinuscula.contains('pizza') ||
+                nombreMinuscula.contains('cantina')) {
               etiquetasNLP.add('amigos');
             }
-            if (typesList.contains('park') || typesList.contains('museum') || typesList.contains('amusement_park') || nombreMinuscula.contains('marisco') || nombreMinuscula.contains('hacienda') || nombreMinuscula.contains('parrilla')) {
+
+            // 4. REGLA PARA FAMILIA
+            if (typesList.contains('park') ||
+                typesList.contains('museum') ||
+                typesList.contains('amusement_park') ||
+                nombreMinuscula.contains('marisco') ||
+                nombreMinuscula.contains('hacienda') ||
+                nombreMinuscula.contains('parrilla')) {
               etiquetasNLP.add('familiar');
             }
-            if (typesList.contains('cafe') || typesList.contains('art_gallery') || typesList.contains('library') || nombreMinuscula.contains('cafe') || priceLvl == 1 || priceLvl == 2 || (typesList.contains('restaurant') && ratingReal <= 4.2)) {
+
+            // 5. REGLA PARA SOLO
+            if (typesList.contains('cafe') ||
+                typesList.contains('art_gallery') ||
+                typesList.contains('library') ||
+                nombreMinuscula.contains('cafe') ||
+                priceLvl == 1 ||
+                priceLvl == 2 ||
+                (typesList.contains('restaurant') && ratingReal <= 4.2)) {
               etiquetasNLP.add('solo');
             }
 
             if (etiquetasNLP.isEmpty) {
-               if (categoriaHomologada.toLowerCase() == 'restaurante') {
-                 if (ratingReal >= 4.2) {
-                   etiquetasNLP.addAll(['familiar', 'pareja']); 
-                 } else {
-                   etiquetasNLP.addAll(['amigos', 'solo']);
-                 }
-               } else if (categoriaHomologada.toLowerCase() == 'cafeteria') {
-                 etiquetasNLP.addAll(['solo', 'amigos', 'pareja']);
-               } else if (categoriaHomologada.toLowerCase() == 'bar') {
-                 etiquetasNLP.addAll(['amigos', 'pareja']);
-               } else {
-                 etiquetasNLP.addAll(['familiar', 'solo', 'pareja']); 
-               }
+              if (categoriaHomologada.toLowerCase() == 'restaurante') {
+                if (ratingReal >= 4.2) {
+                  etiquetasNLP.addAll(['familiar', 'pareja']);
+                } else {
+                  etiquetasNLP.addAll(['amigos', 'solo']);
+                }
+              } else if (categoriaHomologada.toLowerCase() == 'cafeteria') {
+                etiquetasNLP.addAll(['solo', 'amigos', 'pareja']);
+              } else if (categoriaHomologada.toLowerCase() == 'bar') {
+                etiquetasNLP.addAll(['amigos', 'pareja']);
+              } else {
+                etiquetasNLP.addAll(['familiar', 'solo', 'pareja']);
+              }
             }
 
+            //  ESCUDO ANTI-VACÍOS
+            // Si después de toda la inteligencia, la etiqueta Pareja y Familiar no se
+            // asignaron a suficientes lugares, forzamos la repartición equitativa
             int codigoHashSeguridad = name.length;
             if (codigoHashSeguridad % 2 == 0) {
               etiquetasNLP.add('pareja');
@@ -476,29 +584,45 @@ Future<void> _resolverCoordenadas() async {
             if (codigoHashSeguridad % 3 == 0) {
               etiquetasNLP.add('amigos');
             }
-            
+
+            // Aseguramos que no haya duplicados
             etiquetasNLP = etiquetasNLP.toSet().toList();
 
             return {
               ...l,
-              'name': _traducirNombre(l['name'] ?? 'Sin nombre'),       
-              'categoriaPrincipal': categoriaHomologada, 
-              'experiencias': etiquetasNLP,              
+              'name': _traducirNombre(l['name'] ?? 'Sin nombre'),
+              'categoriaPrincipal': categoriaHomologada,
+              'experiencias': etiquetasNLP,
               'rating': _toDouble(l['rating'], fb: 5),
-              'popularity': _toDouble(l['user_ratings_total'] ?? l['popularity'], fb: 5),
-              'precio': precioRealMapeado,              
+              'popularity': _toDouble(
+                l['user_ratings_total'] ?? l['popularity'],
+                fb: 5,
+              ),
+              'precio': precioRealMapeado,
               'lat': latGoogle,
               'lng': lngGoogle,
-              'distancia': calcularDistancia(_latActual, _lngActual, latGoogle, lngGoogle),
+              'distancia': calcularDistancia(
+                _latActual,
+                _lngActual,
+                latGoogle,
+                lngGoogle,
+              ),
               'imagen': urlImagen,
-              'foto': urlImagen, 
+              'foto': urlImagen,
               'photos': l['photos'],
-              'horario': 'Horario sujeto a disponibilidad del lugar',
+              'horario':
+                  l['opening_hours']?['weekday_text']?.toString() ??
+                  l['hours']?.toString() ??
+                  '',
+              'hours':
+                  l['opening_hours']?['weekday_text']?.toString() ??
+                  l['hours']?.toString() ??
+                  '',
             };
           })
           .where((l) => l != null)
           .cast<Map<String, dynamic>>()
-          .toList(); 
+          .toList();
 
       // 7. FILTRAR BASURA Y GEOLOCALIZACIÓN
       listaProcesada = listaProcesada.where((l) {
@@ -521,12 +645,14 @@ Future<void> _resolverCoordenadas() async {
 
         return !esBasura;
       }).toList();
+        return !esBasura;
+      }).toList();
 
       if (listaProcesada.isEmpty && destinoSeleccionado != null) {
-        setState(() { 
-          error = "Por ahora, solo trabajamos con destinos dentro de México."; 
-          lugares = []; 
-          cargando = false; 
+        setState(() {
+          error = "Por ahora, solo trabajamos con destinos dentro de México.";
+          lugares = [];
+          cargando = false;
         });
         return;
       }
@@ -554,9 +680,9 @@ Future<void> _resolverCoordenadas() async {
       // 11. PLAN B RECARGADO: Garantizar 5 tarjetas usando homólogos reales
       if (filtrados.length < 5) {
         final extraGoogle = await GooglePlacesServicio.buscarLugares(
-          _latActual, 
-          _lngActual, 
-          query: "atracciones lugares populares" 
+          _latActual,
+          _lngActual,
+          query: "atracciones lugares populares",
         );
         
         //Llamamos al método que creamos en FiltrosEtiquetasServicio
@@ -568,25 +694,37 @@ Future<void> _resolverCoordenadas() async {
       }
 
       // 12. CACHÉ Y SUGERENCIAS
-      String hashQuery = _servicioFiltros.generarHashConsulta(destinoSeleccionado ?? 'gps', estiloSeleccionado ?? 'general', precioSeleccionado ?? 'libre');
+      String hashQuery = _servicioFiltros.generarHashConsulta(
+        destinoSeleccionado ?? 'gps',
+        estiloSeleccionado ?? 'general',
+        precioSeleccionado ?? 'libre',
+      );
       await _servicioFiltros.guardarEnCache(hashQuery, filtrados);
 
       if (_intereses.isNotEmpty) {
         List<double> vectorUsuario = [
-          _toDouble(_intereses['Restaurante']), _toDouble(_intereses['Cafetería']),
-          _toDouble(_intereses['Bar']), _toDouble(_intereses['Parque']),
+          _toDouble(_intereses['Restaurante']),
+          _toDouble(_intereses['Cafetería']),
+          _toDouble(_intereses['Bar']),
+          _toDouble(_intereses['Parque']),
         ];
-        List<String> sugerencias = await _servicioFiltros.obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
+        List<String> sugerencias = await _servicioFiltros
+            .obtenerSugerenciasOtrosViajeros(_idUsuario, vectorUsuario);
         if (sugerencias.isNotEmpty && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Otros viajeros como tú también consultaron este destino")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Otros viajeros como tú también consultaron este destino",
+              ),
+            ),
+          );
         }
       }
 
       setState(() {
-        lugares = filtrados; 
+        lugares = filtrados;
         cargando = false;
       });
-
     } catch (e) {
       print("❌ ERROR BUSQUEDA: $e");
       setState(() {
@@ -820,49 +958,51 @@ Future<void> _resolverCoordenadas() async {
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
+
   // -------------------------------------------------------------------------
-// PESOS (MODIFICADO PARA DAR PRIORIDAD ABSOLUTA A GOOGLE PLACES)
-// -------------------------------------------------------------------------
-List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
-  return lista.map<Map<String, dynamic>>((lugar) {
-    final rating = _toDouble(lugar['rating'], fb: 5);
-    final popularity = _toDouble(lugar['popularity'], fb: 5);
-    final distancia = _toDouble(lugar['distancia'], fb: 1);
-    final categoria = lugar['categoriaPrincipal'].toString().toLowerCase();
+  // PESOS (MODIFICADO PARA DAR PRIORIDAD ABSOLUTA A GOOGLE PLACES)
+  // -------------------------------------------------------------------------
+  List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
+    return lista.map<Map<String, dynamic>>((lugar) {
+      final rating = _toDouble(lugar['rating'], fb: 5);
+      final popularity = _toDouble(lugar['popularity'], fb: 5);
+      final distancia = _toDouble(lugar['distancia'], fb: 1);
+      final categoria = lugar['categoriaPrincipal'].toString().toLowerCase();
 
-    // Bono de cercanía geográfico
-    double distanciaPeso = 10 / (distancia + 1);
-    if (distanciaPeso > 10) distanciaPeso = 10;
+      // Bono de cercanía geográfico
+      double distanciaPeso = 10 / (distancia + 1);
+      if (distanciaPeso > 10) distanciaPeso = 10;
 
-    // GPS LOCAL
-    if (destinoSeleccionado == null) {
-      // Si es búsqueda local en su ubicación real, ignoramos la popularidad de internet
-      // y ordenamos los lugares puramente por el que el usuario tenga más cerca
-      lugar['relevancia'] = distanciaPeso * 10.0;
-    } else {
-      // Si el usuario buscó un destino turístico, aplicamos la fórmula polinomial base
-      double interes = 0;
-      if (_intereses.containsKey(categoria)) {
-        final puntos = _intereses[categoria];
-        if (puntos is int) interes = puntos >= 8 ? 10 : puntos * 1.25;
+      // GPS LOCAL
+      if (destinoSeleccionado == null) {
+        // Si es búsqueda local en su ubicación real, ignoramos la popularidad de internet
+        // y ordenamos los lugares puramente por el que el usuario tenga más cerca
+        lugar['relevancia'] = distanciaPeso * 10.0;
+      } else {
+        // Si el usuario buscó un destino turístico, aplicamos la fórmula polinomial base
+        double interes = 0;
+        if (_intereses.containsKey(categoria)) {
+          final puntos = _intereses[categoria];
+          if (puntos is int) interes = puntos >= 8 ? 10 : puntos * 1.25;
+        }
+
+        final tieneFotosReales =
+            lugar['photos'] != null &&
+            (lugar['photos'] is List) &&
+            (lugar['photos'] as List).isNotEmpty;
+        double bonoFuenteGoogle = tieneFotosReales ? 20.0 : 0.0;
+
+        lugar['relevancia'] =
+            (rating * 0.3) +
+            (popularity * 0.2) +
+            (distanciaPeso * 0.2) +
+            (interes * 0.2) +
+            bonoFuenteGoogle;
       }
 
-      final tieneFotosReales = lugar['photos'] != null && 
-                               (lugar['photos'] is List) && 
-                               (lugar['photos'] as List).isNotEmpty;
-      double bonoFuenteGoogle = tieneFotosReales ? 20.0 : 0.0;
-
-      lugar['relevancia'] =
-          (rating * 0.3) +
-          (popularity * 0.2) +
-          (distanciaPeso * 0.2) +
-          (interes * 0.2) +
-          bonoFuenteGoogle;
-    }
-
-    return lugar;
-  }).toList();
-} 
+      return lugar;
+    }).toList();
+  }
 
   // -------------------------------------------------------------------------
   // QUICKSORT
@@ -902,23 +1042,27 @@ List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
     // rellenamos con los mejores lugares ordenados por QuickSort hasta llegar a 5
     for (final l in lista) {
       if (res.length >= 5) break;
-      if (!res.any((element) => element['name'] == l['name'] && element['lat'] == l['lat'])) {
+      if (!res.any(
+        (element) => element['name'] == l['name'] && element['lat'] == l['lat'],
+      )) {
         res.add(l);
       }
     }
     return res.take(5).toList();
   }
-  
-  
+
   List<Map<String, dynamic>> get _lugaresFiltrados {
     // 1. Validamos si escribió una ciudad
-    bool esCiudad = _ciudadesMexico.any((c) => 
-        c['nombre'].toString().toLowerCase() == query.toLowerCase().trim() ||
-        c['id'].toString().toLowerCase() == query.toLowerCase().trim()
+    bool esCiudad = _ciudadesMexico.any(
+      (c) =>
+          c['nombre'].toString().toLowerCase() == query.toLowerCase().trim() ||
+          c['id'].toString().toLowerCase() == query.toLowerCase().trim(),
     );
 
     // 2. Validamos si escribió exactamente lo mismo que el botón (ej. "cafeteria")
-    bool esCategoria = query.toLowerCase().trim() == (tipoSeleccionado ?? '').toLowerCase().trim();
+    bool esCategoria =
+        query.toLowerCase().trim() ==
+        (tipoSeleccionado ?? '').toLowerCase().trim();
 
     return FiltrosEtiquetasServicio.filtrarYObtenerTop5(
       listaCompleta: lugares,
@@ -926,29 +1070,41 @@ List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
       precio: precioSeleccionado,
       experiencia: estiloSeleccionado,
       // Si escribió la ciudad o la categoría, vaciamos el texto para no asfixiar el filtro
-      queryTexto: (esCiudad || esCategoria) ? '' : query, 
+      queryTexto: (esCiudad || esCategoria) ? '' : query,
     );
   }
-// -------------------------------------------------------------------------
+
+  // -------------------------------------------------------------------------
   // IMÁGENES DE RESPALDO (A prueba de bloqueos y CORS)
   // -------------------------------------------------------------------------
   String _obtenerImagenRespaldo(String categoria) {
     switch (categoria.toLowerCase()) {
-      case 'zona_arqueologica': return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Chichen_Itza_3.jpg/800px-Chichen_Itza_3.jpg";
-      case 'cafeteria': return "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/A_small_cup_of_coffee.JPG/800px-A_small_cup_of_coffee.JPG";
-      case 'restaurante': return "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Restaurant_in_Bogot%C3%A1.jpg/800px-Restaurant_in_Bogot%C3%A1.jpg";
-      case 'playa': return "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Playa_del_Carmen%2C_Quintana_Roo%2C_Mexico.jpg/800px-Playa_del_Carmen%2C_Quintana_Roo%2C_Mexico.jpg";
-      case 'museo': return "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Museo_Nacional_de_Antropolog%C3%ADa_-_Patio_Central.jpg/800px-Museo_Nacional_de_Antropolog%C3%ADa_-_Patio_Central.jpg";
-      case 'bar': return "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Irish_Pub_interior.jpg/800px-Irish_Pub_interior.jpg";
-      case 'parque': return "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Parque_M%C3%A9xico_04.jpg/800px-Parque_M%C3%A9xico_04.jpg";
-      case 'mirador': return "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Mirador_de_La_Quebrada.jpg/800px-Mirador_de_La_Quebrada.jpg";
-      case 'centro_comercial': return "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Centro_Comercial_Santa_Fe.jpg/800px-Centro_Comercial_Santa_Fe.jpg";
-      case 'actividades_extremas': return "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Tirolesa_en_Xplor.jpg/800px-Tirolesa_en_Xplor.jpg";
-      case 'monumento': return "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/El_Angel_de_la_Independencia.jpg/800px-El_Angel_de_la_Independencia.jpg";
-      default: return "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Z%C3%B3calo_CDMX.jpg/800px-Z%C3%B3calo_CDMX.jpg";
+      case 'zona_arqueologica':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Chichen_Itza_3.jpg/800px-Chichen_Itza_3.jpg";
+      case 'cafeteria':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/A_small_cup_of_coffee.JPG/800px-A_small_cup_of_coffee.JPG";
+      case 'restaurante':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Restaurant_in_Bogot%C3%A1.jpg/800px-Restaurant_in_Bogot%C3%A1.jpg";
+      case 'playa':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Playa_del_Carmen%2C_Quintana_Roo%2C_Mexico.jpg/800px-Playa_del_Carmen%2C_Quintana_Roo%2C_Mexico.jpg";
+      case 'museo':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Museo_Nacional_de_Antropolog%C3%ADa_-_Patio_Central.jpg/800px-Museo_Nacional_de_Antropolog%C3%ADa_-_Patio_Central.jpg";
+      case 'bar':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Irish_Pub_interior.jpg/800px-Irish_Pub_interior.jpg";
+      case 'parque':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Parque_M%C3%A9xico_04.jpg/800px-Parque_M%C3%A9xico_04.jpg";
+      case 'mirador':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Mirador_de_La_Quebrada.jpg/800px-Mirador_de_La_Quebrada.jpg";
+      case 'centro_comercial':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Centro_Comercial_Santa_Fe.jpg/800px-Centro_Comercial_Santa_Fe.jpg";
+      case 'actividades_extremas':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Tirolesa_en_Xplor.jpg/800px-Tirolesa_en_Xplor.jpg";
+      case 'monumento':
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/El_Angel_de_la_Independencia.jpg/800px-El_Angel_de_la_Independencia.jpg";
+      default:
+        return "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Z%C3%B3calo_CDMX.jpg/800px-Z%C3%B3calo_CDMX.jpg";
     }
   }
-
 
   // -------------------------------------------------------------------------
   // HELPERS
@@ -962,35 +1118,38 @@ List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
   }
 
   // -------------------------------------------------------------------------
-// TRADUCTOR DE EMERGENCIA PARA NOMBRES
-// -------------------------------------------------------------------------
-String _traducirNombre(String nombreOriginal) {
-  String nombre = nombreOriginal;
-  // Diccionario para forzar los lugares que la API manda en inglés
-  final traducciones = {
-    'temple of immaculate': 'Templo de la Inmaculada',
-    'temple of the immaculate': 'Templo de la Inmaculada',
-    'bust of': 'Busto de',
-    'statue of': 'Estatua de',
-    'monument to': 'Monumento a',
-    'church of': 'Iglesia de',
-    'museum of': 'Museo de',
-    'cathedral of': 'Catedral de',
-    'historic center': 'Centro Histórico',
-    'main square': 'Plaza Principal',
-    'city hall': 'Palacio Municipal',
-  };
+  // TRADUCTOR DE EMERGENCIA PARA NOMBRES
+  // -------------------------------------------------------------------------
+  String _traducirNombre(String nombreOriginal) {
+    String nombre = nombreOriginal;
+    // Diccionario para forzar los lugares que la API manda en inglés
+    final traducciones = {
+      'temple of immaculate': 'Templo de la Inmaculada',
+      'temple of the immaculate': 'Templo de la Inmaculada',
+      'bust of': 'Busto de',
+      'statue of': 'Estatua de',
+      'monument to': 'Monumento a',
+      'church of': 'Iglesia de',
+      'museum of': 'Museo de',
+      'cathedral of': 'Catedral de',
+      'historic center': 'Centro Histórico',
+      'main square': 'Plaza Principal',
+      'city hall': 'Palacio Municipal',
+    };
 
-  String nombreMin = nombre.toLowerCase();
-  traducciones.forEach((ingles, espanol) {
-    if (nombreMin.contains(ingles)) {
-      // Reemplaza el texto sin importar si viene en mayúsculas o minúsculas
-      nombre = nombre.replaceAll(RegExp(ingles, caseSensitive: false), espanol);
-    }
-  });
-  
-  return nombre;
-}
+    String nombreMin = nombre.toLowerCase();
+    traducciones.forEach((ingles, espanol) {
+      if (nombreMin.contains(ingles)) {
+        // Reemplaza el texto sin importar si viene en mayúsculas o minúsculas
+        nombre = nombre.replaceAll(
+          RegExp(ingles, caseSensitive: false),
+          espanol,
+        );
+      }
+    });
+
+    return nombre;
+  }
 
   // -------------------------------------------------------------------------
   // UI
@@ -1023,7 +1182,7 @@ String _traducirNombre(String nombreOriginal) {
                       children: [
                         const SizedBox(height: 16),
 
-                       //  BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
+                        //  BUSCADOR INTELIGENTE CON AUTOCOMPLETADO DIFUSO
                         BarraBusqueda(
                           onChanged: (v) {
                             final textoLimpio = v.trim();
@@ -1031,7 +1190,10 @@ String _traducirNombre(String nombreOriginal) {
                               // Cambiamos el texto usando la función interna que limpia/actualiza tu buscador
                               _buscar(texto: textoLimpio);
                               // Calcula las sugerencias usando el motor Levenshtein centralizado
-                              sugerenciasAutocompletado = FiltrosEtiquetasServicio.autocompletarDestinos(textoLimpio);
+                              sugerenciasAutocompletado =
+                                  FiltrosEtiquetasServicio.autocompletarDestinos(
+                                    textoLimpio,
+                                  );
                             });
                           },
                         ),
@@ -1045,21 +1207,30 @@ String _traducirNombre(String nombreOriginal) {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
                               ],
                             ),
                             child: Column(
-                              children: sugerenciasAutocompletado.map((destinoSugerido) {
+                              children: sugerenciasAutocompletado.map((
+                                destinoSugerido,
+                              ) {
                                 return ListTile(
-                                  leading: const Icon(Icons.location_on, color: Colors.blue),
+                                  leading: const Icon(
+                                    Icons.location_on,
+                                    color: Colors.blue,
+                                  ),
                                   title: Text(destinoSugerido),
                                   onTap: () {
                                     setState(() {
                                       // 1. Asignamos de forma oficial el destino correcto al filtro superior
                                       destinoSeleccionado = destinoSugerido;
-                                      
+
                                       // 2. Cerramos el menú flotante para que no estorbe en la UI
-                                      sugerenciasAutocompletado = []; 
+                                      sugerenciasAutocompletado = [];
                                     });
 
                                     // 3. Ejecuta la función de búsqueda original de tu pantalla
@@ -1069,7 +1240,7 @@ String _traducirNombre(String nombreOriginal) {
                               }).toList(),
                             ),
                           ),
-                          
+
                         const SizedBox(height: 12),
 
                         // FILTROS
@@ -1237,21 +1408,33 @@ String _traducirNombre(String nombreOriginal) {
           lat: _toDouble(l['lat']),
           lng: _toDouble(l['lng']),
           categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
-          imagenUrl: l['foto'] ?? l['imagen'],        
+          imagenUrl: l['foto'] ?? l['imagen'],
           lugar: l, // EL PUENTE QUE LE MANDA LOS DATOS A LA TARJETA
           onTap: () {
             if (widget.esSeleccion) {
-              Navigator.pop(context, {
-                "nombre": l['name'],
-                "categoria": l['categoriaPrincipal'],
-                "lat": l['lat'],
-                "lng": l['lng'],
-                "hours": l['hours'],
-                "foto": l['imagen'] ?? l['photo'],
-                "direccion": l['direccion'],
-                "rating": l['rating'],
-              });
-              return;
+              // Extraemos opening_hours.weekday_text de Google Places (List → String)
+              // o el campo hours si ya viene como string.
+              String hoursStr = '';
+              final openingHours = l['opening_hours'];
+              if (openingHours != null && openingHours is Map) {
+                final weekday = openingHours['weekday_text'];
+                if (weekday is List && weekday.isNotEmpty) {
+                  hoursStr = weekday.join(', ');
+                }
+              }
+              if (hoursStr.isEmpty) {
+                final h = l['hours'];
+                if (h is List && h.isNotEmpty) {
+                  hoursStr = h.join(', ');
+                } else if (h is String && h.trim().isNotEmpty) {
+                  hoursStr = h.trim();
+                }
+              }
+
+              if (widget.esSeleccion) {
+                Navigator.pop(context, l);
+                return;
+              }
             }
 
             Navigator.push(

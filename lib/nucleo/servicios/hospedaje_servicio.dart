@@ -97,7 +97,6 @@ class HospedajeServicio {
 
     final texto = '$vicinity $name $formatted';
 
-    // Excluir resultados claramente fuera de México
     if (texto.contains('united states') ||
         texto.contains('usa') ||
         texto.contains('españa') ||
