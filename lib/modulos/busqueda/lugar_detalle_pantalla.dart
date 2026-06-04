@@ -145,13 +145,23 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
   Future<void> _configurarMapa() async {
     final lat = getLat();
     final lng = getLng();
+
     if (lat == null || lng == null) return;
+
     await mapboxMap.setCamera(
       CameraOptions(center: Point(coordinates: Position(lng, lat)), zoom: 16),
     );
-    final manager = await mapboxMap.annotations.createPointAnnotationManager();
+
+    final manager = await mapboxMap.annotations.createCircleAnnotationManager();
+
     await manager.create(
-      PointAnnotationOptions(geometry: Point(coordinates: Position(lng, lat))),
+      CircleAnnotationOptions(
+        geometry: Point(coordinates: Position(lng, lat)),
+        circleRadius: 10,
+        circleColor: 0xFFF6A230,
+        circleStrokeWidth: 3,
+        circleStrokeColor: 0xFFFFFFFF,
+      ),
     );
   }
 
@@ -486,10 +496,11 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
     return partes.length > 1 ? partes[partes.length - 2].trim() : "Otros";
   }
 
-    // 1. Aquí pegas el helper, justo arriba del build
+  // 1. Aquí pegas el helper, justo arriba del build
   String _formatearPrecioDinamico() {
-    final apiPriceLevel = widget.lugar?['price_level'] ?? widget.lugar?['price'];
-    
+    final apiPriceLevel =
+        widget.lugar?['price_level'] ?? widget.lugar?['price'];
+
     if (apiPriceLevel != null) {
       int level = int.tryParse(apiPriceLevel.toString()) ?? -1;
       if (level == 0 || level == 1) return "\$ - Económico";
@@ -497,27 +508,33 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
       if (level == 3) return "\$\$\$ - Costoso";
       if (level == 4) return "\$\$\$\$ - Muy Exclusivo";
     }
-    
+
     return widget.lugar?['precio'] ?? "\$";
   }
+
   // 1. Variables de estado para los horarios
   bool? estaAbierto;
   List<String> horarioSemana = [];
   bool cargandoHorarios = true;
 
-
   Future<void> _cargarHorarios() async {
-    final id = widget.lugar?['place_id']; 
-    print(" ID DEL LUGAR A BUSCAR: $id"); 
+    final id = widget.lugar?['place_id'];
+    print(" ID DEL LUGAR A BUSCAR: $id");
     if (id != null && id.toString().isNotEmpty) {
-      final detalles = await GooglePlacesServicio.obtenerDetallesHorario(id.toString());
-      print(" RESPUESTA GOOGLE DETALLES: $detalles"); 
+      final detalles = await GooglePlacesServicio.obtenerDetallesHorario(
+        id.toString(),
+      );
+      print(" RESPUESTA GOOGLE DETALLES: $detalles");
       if (mounted) {
         setState(() {
           estaAbierto = detalles['abierto'];
-          horarioSemana = (detalles['dias'] as List<dynamic>?)
-          ?.map((item) => item.toString()) // Convierte cualquier cosa a texto seguro
-          .toList() ?? [];
+          horarioSemana =
+              (detalles['dias'] as List<dynamic>?)
+                  ?.map(
+                    (item) => item.toString(),
+                  ) // Convierte cualquier cosa a texto seguro
+                  .toList() ??
+              [];
           cargandoHorarios = false;
         });
       }
@@ -527,9 +544,8 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
       }
     }
   }
-      
 
- @override
+  @override
   Widget build(BuildContext context) {
     final nombre =
         widget.lugar?['name'] ??
@@ -624,124 +640,146 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
               const SizedBox(height: 16),
 
               // ==============================================================
-              // PRECIO Y HORARIOS 
+              // PRECIO Y HORARIOS
               // ==============================================================
               Row(
                 children: [
-                  const Icon(Icons.monetization_on_rounded, color: Color(0xFFF6A230), size: 20),
+                  const Icon(
+                    Icons.monetization_on_rounded,
+                    color: Color(0xFFF6A230),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     "Precio estimado: ${_formatearPrecioDinamico()}",
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
                   ),
                 ],
               ),
 
               const SizedBox(height: 20),
-            //MÓDULO DE HORARIOS Y ESTADO 
-            if (cargandoHorarios)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF0066D2),
-                    strokeWidth: 2,
+              //MÓDULO DE HORARIOS Y ESTADO
+              if (cargandoHorarios)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF0066D2),
+                      strokeWidth: 2,
+                    ),
                   ),
-                ),
-              )
-            else if (estaAbierto != null || horarioSemana.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (estaAbierto != null)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.circle,
-                            color: estaAbierto! ? Colors.green : Colors.red,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            estaAbierto! ? 'Abierto ahora' : 'Cerrado en este momento',
-                            style: TextStyle(
+                )
+              else if (estaAbierto != null || horarioSemana.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (estaAbierto != null)
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.circle,
                               color: estaAbierto! ? Colors.green : Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              size: 14,
                             ),
+                            const SizedBox(width: 8),
+                            Text(
+                              estaAbierto!
+                                  ? 'Abierto ahora'
+                                  : 'Cerrado en este momento',
+                              style: TextStyle(
+                                color: estaAbierto! ? Colors.green : Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (estaAbierto != null && horarioSemana.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Divider(height: 1),
+                        ),
+                      if (horarioSemana.isNotEmpty) ...[
+                        const Text(
+                          'Horario de la semana',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                    if (estaAbierto != null && horarioSemana.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Divider(height: 1),
-                      ),
-                    if (horarioSemana.isNotEmpty) ...[
-                      const Text(
-                        'Horario de la semana',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      ...horarioSemana.map((dia) => Padding(
+                        ),
+                        const SizedBox(height: 12),
+                        ...horarioSemana.map(
+                          (dia) => Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                                const Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     dia,
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          )),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              )
-            else
-              // Mensaje si no hay horario
-              Container(
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "Por el momento no contamos con información de horarios para este lugar.",
-                        style: TextStyle(color: Colors.orange),
+                  ),
+                )
+              else
+                // Mensaje si no hay horario
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Por el momento no contamos con información de horarios para este lugar.",
+                          style: TextStyle(color: Colors.orange),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               ExpansionTile(
                 title: const Text(
@@ -944,7 +982,6 @@ class _LugarDetallePantallaState extends State<LugarDetallePantalla> {
                   ),
                 ),
             ],
-            
           ),
         ),
       ),
