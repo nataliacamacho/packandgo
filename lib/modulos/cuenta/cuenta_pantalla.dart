@@ -11,7 +11,6 @@ import 'package:proyecto/modulos/cuenta/misresenas_pantalla.dart';
 class CuentaPantalla extends StatelessWidget {
   const CuentaPantalla({super.key});
 
-  // 🔥 Obtener viajes del usuario
   Stream<QuerySnapshot> obtenerViajesUsuario() {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -93,7 +92,7 @@ class CuentaPantalla extends StatelessWidget {
 
                         const SizedBox(height: 30),
 
-                        // ✏️ EDITAR
+                        // EDITAR
                         ElevatedButton(
                           onPressed: () {
                             Navigator.push(
@@ -184,7 +183,7 @@ class CuentaPantalla extends StatelessWidget {
 
                         const SizedBox(height: 40),
 
-                        // 🔴 CERRAR SESIÓN
+                        // CERRAR SESIÓN
                         ElevatedButton(
                           onPressed: () async {
                             await FirebaseAuth.instance.signOut();
@@ -209,7 +208,7 @@ class CuentaPantalla extends StatelessWidget {
     );
   }
 
-  // 🔘 BOTONES DE SECCIÓN
+  // BOTONES DE SECCIÓN
   Widget _botonSeccion(BuildContext context, String titulo, EstadoViaje tipo) {
     return GestureDetector(
       onTap: () {
@@ -264,7 +263,7 @@ class CuentaPantalla extends StatelessWidget {
     );
   }
 
-  // 👤 INVITADO
+  // INVITADO
   Widget _vistaInvitado(BuildContext context) {
     return Center(
       child: Padding(
@@ -292,7 +291,7 @@ class CuentaPantalla extends StatelessWidget {
                 backgroundColor: const Color(0xFFF6A230),
               ),
               onPressed: () async {
-                // ✅ Cierra sesión anónima → AuthWrapper detecta el cambio
+                // Cierra sesión anónima → AuthWrapper detecta el cambio
                 // y muestra LoginPantalla automáticamente desde su stream
                 await FirebaseAuth.instance.signOut();
                 // Sin Navigator — el AuthWrapper ya navega solo

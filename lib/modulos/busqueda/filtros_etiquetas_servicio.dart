@@ -306,22 +306,33 @@ class FiltrosEtiquetasServicio {
     return "Otro";
   }
 
-  /// ASIGNADOR DE PRECIO SIMULADO (Para que los filtros de precio tengan datos variados)
   static String calcularPrecioSimulado(dynamic apiPrice, String placeName) {
-    if (apiPrice != null && apiPrice.toString().isNotEmpty) {
-      String value = apiPrice.toString().trim();
-      if (value == "1" || value == "\$") return "\$";
-      if (value == "2" || value == "\$\$") return "\$\$";
-      if (value == "3" || value == "\$\$\$") return "\$\$\$\$"; // O tu formato estándar
-    }
-    
-    final length = placeName.length;
-    if (placeName.toLowerCase().contains("tacos") || placeName.toLowerCase().contains("tortas")) return "\$";
-    
-    if (length % 3 == 0) return "\$";
-    if (length % 3 == 1) return "\$\$";
-    return "\$\$\$";
+  String nameLower = placeName.toLowerCase();
+  
+  // 1. DICCIONARIO DE PRECIOS CONOCIDOS (Fuerza de filtrado)
+  // Si es una cadena, no queremos que el usuario la vea en "$" si es más cara
+  if (nameLower.contains("burger king") || nameLower.contains("vips") || nameLower.contains("starbucks")) {
+    return "\$\$"; // Los sacamos del filtro "$" para que no aparezcan ahí
   }
+
+  // 2. LÓGICA DE API (Si Google trae dato, lo respetamos)
+  if (apiPrice != null && apiPrice.toString().isNotEmpty) {
+    String value = apiPrice.toString().trim();
+    if (value == "1" || value == "\$") return "\$";
+    if (value == "2" || value == "\$\$") return "\$\$";
+    if (value == "3" || value == "\$\$\$") return "\$\$\$";
+    if (value == "4" || value == "\$\$\$\$") return "\$\$\$\$";
+  }
+  
+  // 3. REGLA DE ORO: Solo asignar "$" a lo que es indudablemente barato
+  if (nameLower.contains("tacos") || nameLower.contains("tortas") || nameLower.contains("puesto")) {
+    return "\$";
+  }
+  
+  // 4. DEFAULT: Si no tenemos info, asignamos un nivel medio/alto 
+  // para que no saturen tu filtro de "$"
+  return "\$\$"; 
+}
 
   static List<Map<String, dynamic>> filtrarYObtenerTop5({
     required List<Map<String, dynamic>> listaCompleta,
@@ -427,20 +438,22 @@ class FiltrosEtiquetasServicio {
     // ====================================================================
     // CANDADO DE GARANTÍA DE CONTROL DE CUOTA: 5 TARJETAS SIN DISFRAZ
     // ====================================================================
-    if (procesados.length < 5) {
-      for (var lugarGen in listaCompleta) {
-        if (procesados.length >= 5) break;
+        if (procesados.length < 5) {
+          for (var lugarGen in listaCompleta) {
+            if (procesados.length >= 5) break;
 
-        // Verificamos que no esté ya metido en la lista limpia
-        bool yaExiste = procesados.any((element) => element['name'] == lugarGen['name']);
-        
-        if (!yaExiste) {
-          // REGLA CLAVE: Lo metemos para cumplir las 5 tarjetas obligatorias,
-          // pero conservando sus datos reales intactos para que NO se disfrace con el icono del filtro.
-          procesados.add(lugarGen);
-        }
-      }
-    }
+            bool yaExiste = procesados.any((element) => element['name'] == lugarGen['name']);
+            
+            // Validamos de nuevo los filtros antes de agregar el relleno
+            final precioLugar = (lugarGen["precio"] ?? "").toString().trim();
+            bool cumplePrecio = (precio == null || precioLugar == precio.trim());
+            
+            // Solo agregamos si no existe Y cumple con los filtros activos
+            if (!yaExiste && cumplePrecio) { 
+              procesados.add(lugarGen);
+            }
+          }
+}
     // ====================================================================
     // CANDADO DE GARANTÍA DE CONTROL DE CUOTA CORREGIDO
     // ====================================================================

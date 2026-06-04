@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// 🔥 Asegúrate de que estas dos rutas apunten correctamente a tus archivos:
 import 'package:proyecto/nucleo/servicios/itinerario_servicio.dart';
 import 'package:proyecto/modulos/viajes/apartados/diario_personal/diario_pantalla.dart';
 
@@ -25,7 +24,6 @@ class _ListaDiarioPantallaState extends State<ListaDiarioPantalla> {
   @override
   void initState() {
     super.initState();
-    // ¡Reciclamos tu excelente función del itinerario!
     diasDelViaje = ItinerarioServicio.generarListaDias(
       widget.fechaInicio,
       widget.fechaFin,
@@ -37,7 +35,6 @@ class _ListaDiarioPantallaState extends State<ListaDiarioPantalla> {
     return Scaffold(
       extendBodyBehindAppBar: false,
 
-      /// 🔶 HEADER IGUAL QUE ITINERARIO
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(180),
         child: Stack(
@@ -87,7 +84,7 @@ class _ListaDiarioPantallaState extends State<ListaDiarioPantalla> {
         ),
       ),
 
-      /// 🔥 LISTA DE DÍAS (MISMO ESTILO QUE ITINERARIO)
+      ///LISTA DE DÍAS
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: diasDelViaje.length,
