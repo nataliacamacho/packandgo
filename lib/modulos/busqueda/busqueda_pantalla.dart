@@ -374,19 +374,19 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
             // para que no choque con el parámetro &type de la API de Google
             textoConsultaApi = tipoSeleccionado!;
           } else {
-            // Truco maestro para zonas arqueológicas, miradores, playas y actividades extremas:
+            // para zonas arqueológicas, miradores, playas y actividades extremas:
             // Forzamos la búsqueda por texto explícito agregando la ciudad si existe
             textoConsultaApi = (destinoSeleccionado != null)
                 ? "${tipoSeleccionado!} en $destinoSeleccionado"
                 : tipoSeleccionado!;
           }
         } else {
-          // Si no hay ningún chip seleccionado
+          // Si no hay ninguno  seleccionado
           if (destinoSeleccionado != null) {
             textoConsultaApi =
                 "puntos de interes historicos, atracciones locales, monumentos";
           } else {
-            // Si tampoco hay destino (Modo GPS local en tu ubicación real)
+            // Si tampoco hay destino (Modo GPS local en la ubicación real)
             textoConsultaApi = "atracciones populares, lugares de interes";
           }
         }
@@ -415,7 +415,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           tipoParaApi = 'shopping_mall';
       }
 
-      // 5. LLAMADAS (Con limitador desde el servicio)
+      // 5. LLAMADAS 
       final google = await GooglePlacesServicio.buscarLugares(
         _latActual,
         _lngActual,
@@ -485,7 +485,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
               urlImagen = _obtenerImagenRespaldo(categoriaHomologada);
             }
 
-            // DISTRIBUCIÓN DE EXPERIENCIAS (Ajustada a la realidad)
+            // DISTRIBUCIÓN DE EXPERIENCIAS
             List<String> etiquetasNLP = [];
             final nombreMinuscula = name.toLowerCase();
 
@@ -908,7 +908,7 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
   }
 
   // -------------------------------------------------------------------------
-  // PESOS (MODIFICADO PARA DAR PRIORIDAD ABSOLUTA A GOOGLE PLACES)
+  // PESOS (MODIFICADO PARA DAR PRIORIDAD A GOOGLE PLACES)
   // -------------------------------------------------------------------------
   List<Map<String, dynamic>> _aplicarPesos(List<Map<String, dynamic>> lista) {
     return lista.map<Map<String, dynamic>>((lugar) {
@@ -1335,9 +1335,8 @@ class _BusquedaPantallaState extends State<BusquedaPantalla> {
           lng: _toDouble(l['lng']),
           categoria: l['categoriaPrincipal']?.toString() ?? 'otro',
           imagenUrl: l['foto'] ?? l['imagen'],
-          lugar: l, // EL PUENTE QUE LE MANDA LOS DATOS A LA TARJETA
+          lugar: l,
           onTap: () {
-            // Manejo correcto de la selección de lugares
             if (widget.esSeleccion) {
               Navigator.pop(context, {
                 "nombre": l['name'],
