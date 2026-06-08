@@ -177,7 +177,7 @@ class _CarroPantallaState extends State<CarroPantalla> {
         ),
       );
 
-      // 🔥 DECISIÓN DEL USUARIO
+      //  DECISIÓN DEL USUARIO
       if (decision == "mixta") {
         Navigator.pushReplacement(
           context,

@@ -62,7 +62,7 @@ class ServicioAutobus {
     required String origen,
     required String destino,
   }) async {
-    // 1. Intentar cache de Firestore (RQF74/75)
+    // 1. Intentar cache de Firestore 
     final cached = await _firestore.obtenerDatosAutobus(
       origen: origen,
       destino: destino,
@@ -97,7 +97,7 @@ class ServicioAutobus {
     );
 
     if (data == null) {
-      // RQF79 — ticket de error
+      // ticket de error
       await _firestore.registrarError(
         origen: origen,
         destino: destino,
@@ -142,7 +142,7 @@ class ServicioAutobus {
       paraGuardar.add(ruta.toMap());
     }
 
-    // 3. Guardar en Firestore (RQF74)
+    // 3. Guardar en Firestore 
     await _firestore.guardarDatosAutobus(
       origen: origen,
       destino: destino,

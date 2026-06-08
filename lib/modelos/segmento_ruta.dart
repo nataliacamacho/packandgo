@@ -3,7 +3,7 @@ class SegmentoRuta {
   final String origen;
   final String destino;
 
-  // 🔥 Coordenadas (opcionales ahora)
+  // Coordenadas (opcionales ahora)
   final double origenLat;
   final double origenLng;
   final double destinoLat;

@@ -674,7 +674,7 @@ class _RutaMixtaPantallaState extends State<RutaMixtaPantalla> {
         ),
       );
     }
-    // RQF78 — sumar tiempos de espera entre transportes
+    //  — sumar tiempos de espera entre transportes
     double tiempoEspera = 0;
     for (int i = 0; i < segmentos.length - 1; i++) {
       final actual = segmentos[i].tipo;

@@ -41,7 +41,7 @@ class _SelectorTransporteState extends State<SelectorTransporte> {
     _cargarDistancia();
   }
 
-  // RQNF26 — usar Mapbox para verificar distancia real
+  //  usar Mapbox para verificar distancia real
   Future<void> _cargarDistancia() async {
     try {
       final pos = await _ubicacion.obtenerUbicacionActual();
@@ -101,12 +101,12 @@ class _SelectorTransporteState extends State<SelectorTransporte> {
       nombreCorregido = correccion["nombre"];
     }
 
-    // Usar distancia real de Mapbox si está disponible (RQNF26)
+    // Usar distancia real de Mapbox si está disponible 
     final distanciaAprox =
         _distanciaReal ??
         _distanciaSimple(20.6597, -103.3496, latCorregida, lngCorregida);
-
-    // RQF66 — recomendación por menor tiempo y costo
+ 
+    // recomendación por menor tiempo y costo
     final costoAvion = (distanciaAprox * 2.5).clamp(900.0, 15000.0);
     final costoAutobus = distanciaAprox * 1.1 + 150;
     final costoCarro = distanciaAprox * 2.0;

@@ -2,7 +2,7 @@ import 'dart:math';
 
 class RecomendacionesServicio {
   // =========================
-  // 📊 DISTANCIA EUCLIDIANA
+  //  DISTANCIA EUCLIDIANA
   // =========================
   static double distancia(Map a, Map b) {
     double sum = 0;
@@ -15,7 +15,7 @@ class RecomendacionesServicio {
   }
 
   // =========================
-  // 🧠 KNN SIMPLE
+  //  KNN SIMPLE
   // =========================
   static List<Map<String, dynamic>> knn({
     required Map<String, double> usuarioActual,

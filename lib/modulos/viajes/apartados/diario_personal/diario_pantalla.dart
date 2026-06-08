@@ -69,10 +69,10 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
       if (foto == null) return;
 
-      // 📁 Carpeta privada permanente de la app
+      // Carpeta privada permanente de la app
       final directorioBase = await getApplicationDocumentsDirectory();
 
-      // 📁 Carpeta específica del viaje
+      // Carpeta específica del viaje
       final carpetaViaje = Directory(
         '${directorioBase.path}/diarios/${widget.idViaje}',
       );
@@ -88,10 +88,10 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
       // Ruta final
       final rutaDestino = '${carpetaViaje.path}/$nombreArchivo';
 
-      // ✅ Copiar imagen a almacenamiento local permanente
+      // Copiar imagen a almacenamiento local permanente
       final fotoGuardada = await File(foto.path).copy(rutaDestino);
 
-      // 🔍 Verificar ruta guardada
+      // Verificar ruta guardada
       debugPrint('Foto guardada en: ${fotoGuardada.path}');
 
       setState(() {
@@ -106,7 +106,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
 
       await guardarDiario();
     } catch (e) {
-      debugPrint("❌ Error al obtener foto: $e");
+      debugPrint(" Error al obtener foto: $e");
     }
   }
 
@@ -123,13 +123,13 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
           'fechaAgregado': fechasFotos[i],
         });
       }
-      // 🔥 Obtenemos el ID de tu usuario que inició sesión
+      // Obtenemos el ID de tu usuario que inició sesión
       String uid = FirebaseAuth.instance.currentUser!.uid;
 
       await FirebaseFirestore.instance
-          .collection('usuarios') // 🔥 Entramos a usuarios
-          .doc(uid) // 🔥 Buscamos a este usuario
-          .collection('viajes') // 🔥 Entramos a sus viajes
+          .collection('usuarios') // Entramos a usuarios
+          .doc(uid) // Buscamos a este usuario
+          .collection('viajes') // Entramos a sus viajes
           .doc(widget.idViaje)
           .collection('diario')
           .doc(widget.dia.toIso8601String().split('T')[0])
@@ -215,7 +215,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
   @override
   void initState() {
     super.initState();
-    // 🔥 Esto hace que la app busque tus recuerdos apenas entres a la pantalla
+    // Esto hace que la app busque tus recuerdos apenas entres a la pantalla
     cargarDiario();
   }
 
@@ -297,7 +297,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
         ),
       ),
 
-      /// 🔥 CONTENIDO TIPO ITINERARIO (CARDS)
+      /// CONTENIDO TIPO ITINERARIO (CARDS)
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -620,7 +620,7 @@ class _DiarioPantallaState extends State<DiarioPantalla> {
             ),
           ),
 
-          /// 📝 TEXTO DIARIO
+          /// TEXTO DIARIO
           Card(
             color: const Color.fromARGB(255, 255, 255, 255),
             elevation: 4,

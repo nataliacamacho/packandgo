@@ -12,7 +12,7 @@ class ServicioAvion {
     required String origen,
     required String destino,
   }) async {
-    // 1. Intentar cache de Firestore (RQNF28/29)
+    // 1. Intentar cache de Firestore
     final cached = await _firestore.obtenerDatosAvion(
       origen: origen,
       destino: destino,
@@ -81,7 +81,7 @@ class ServicioAvion {
       paraGuardar.add(ruta.toMap());
     }
 
-    // 3. Guardar en Firestore (RQNF28)
+    // 3. Guardar en Firestore 
     await _firestore.guardarDatosAvion(
       origen: origen,
       destino: destino,

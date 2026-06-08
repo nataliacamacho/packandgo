@@ -9,7 +9,7 @@ class CiudadNodo {
     required this.lng,
   });
 
-  // 🔥 Convertir desde Map (útil para Firebase/API)
+  // Convertir desde Map (útil para Firebase/API)
   factory CiudadNodo.fromMap(Map<String, dynamic> map) {
     return CiudadNodo(
       nombre: map['nombre'] ?? '',
@@ -18,7 +18,7 @@ class CiudadNodo {
     );
   }
 
-  // 🔥 Convertir a Map
+  // Convertir a Map
   Map<String, dynamic> toMap() {
     return {
       'nombre': nombre,
